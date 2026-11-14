@@ -117,7 +117,7 @@ join it to readings by `channel` and to findings by `id`.
 }
 ```
 
-- `channels` has one entry per channel the backend accepts (the simulator's 34).
+- `channels` has one entry per channel the backend accepts (the simulator's 35).
 - `findings` has all 10 findings; `channels` lists each one's inputs, empty for
   the three that are not monitored.
 - `environments` has four entries, in dropdown order: `iss_leo`, `lunar_surface`,
