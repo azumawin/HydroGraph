@@ -68,6 +68,19 @@ class PreviewState:
 
     def baseline(self, observation: Observation) -> float | None:
         """Configured synthetic references; never infer total body water or edema."""
+        fault = self.settings.hypercapnia_scenario
+        if fault is not None:
+            if observation.reading.channel == "ambient_ppco2":
+                from .units import MMHG_TO_PA
+
+                return fault.baseline_ppco2_mmhg * MMHG_TO_PA
+            from .scenarios import hypercapnia_references
+
+            profile = next((p for p in self.settings.crew if p.id == observation.owner), None)
+            if profile is not None:
+                reference = hypercapnia_references(0, profile, fault)
+                if observation.reading.channel in reference:
+                    return reference[observation.reading.channel]
         profile = next((p for p in self.settings.crew if p.id == observation.owner), None)
         if observation.scope != "crew" or profile is None:
             return None

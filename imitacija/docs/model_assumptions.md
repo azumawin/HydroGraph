@@ -74,3 +74,19 @@ Every enabled owner/channel starts with exactly one fixture at time zero, tagged
 Startup point channels use their modeled time-zero values. Startup HR is the configured resting pulse, RMSSD is the profile reference, respiration is 14/min, glucose is approximately 5.1 mmol/L with the existing channel noise, NTx equals its baseline with 0% change, and nominal 24-hour urine volume is 2.7 L. Local sweat flow and sodium use the configured references and their product. Environment values use the latent model at zero, including configured initial monitor dose. No pre-start history or collection is synthesized.
 
 The fixtures have a zero actual collection window and no lab processing delay because they are supplied baseline values, not new assay results. Communication delay remains active. Scheduled windows still have to complete normally; future labs retain their configured processing delay and future resting sweat sampling remains unavailable. Both kinds use the same four-field reading; transport/preview metadata distinguishes them so downstream clinical analysis can exclude synthetic initialization when appropriate.
+
+## Scenario 2: shared-cabin hypercapnia
+
+Run from the simulator root:
+`uv run imitacija --config config/badscenario2.toml --preview`.
+The cabin reference rises from 2.2 to 4.8 mmHg during seconds 120–210.
+Cardiorespiratory compensation uses the same 90-second smooth ramp delayed by
+10 seconds (HR reference 104 bpm, RR 24 br/min); oxygenation and synthetic CFE
+use a 30-second delay (SpO₂ reference 92%, CFE 1.28). Delays are configurable
+fixture assumptions. This is not a gas-exchange or EEG sensor model.
+All crew share one cabin exposure. Cabin partial pressure converts to Pa inside
+the physiology model; the channel conversion factor remains one. Existing
+activity/noise terms remain in vital measurements; minute windows average the
+changing references. HRV retains its target while using the affected beat timing.
+Startup values are reference fixtures with zero collection windows. Simultaneous
+SANS/hypercapnia configuration is rejected. Recovery is not modeled.

@@ -73,3 +73,13 @@ not physical hydrogel sensor behavior or calibrated ICP measurement.
 Startup values are synthetic references with zero window, including visual values.
 Only subsequent scheduled screens represent completed tests. Scenario timing and
 indicator targets are declared engineering assumptions in `config/badscenario1.toml`.
+
+## Acute cabin hypercapnia scenario
+
+`config/badscenario2.toml` enables `FAULT_02_HYPERCAPNIA_CO2`. Existing
+`ambient_ppco2` (Pa), `heart_rate` (`s^-1`), `respiratory_rate` (`s^-1`) and
+`spo2` (fraction) carry the changing cabin/vital signals. New crew channel
+`eeg_cfe_ratio` is dimensionless, published as a completed 60-second mean of a
+synthetic ratio fixture. It has no raw EEG acquisition or spectral processing.
+The full registry has 35 channels; healthy defaults enable 29, SANS defaults 34,
+and hypercapnia defaults 30. Explicit channel selection can narrow these sets.

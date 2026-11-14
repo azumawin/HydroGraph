@@ -77,3 +77,19 @@ The existing finding function does not use HRV, ICP indicators or visual results
 as classification inputs. Readings arrive at `/api/readings/`; the HydroGraph
 backend grades `jugular_strain_pct` and `icp_risk_indicator_mmHg` and runs Finding 9
 from `jugular_strain_pct`, as above.
+
+## Scenario 2 mapping and severity
+
+`ambient_ppco2` remains an environment-owned Pa reading; convert to mmHg by
+`value / 133.322387415`. Convert `spo2` to percent using `100 * value` and
+respiratory/heart rates from `s^-1` using `60 * value`. The CFE ratio is contextual
+and dimensionless. Bodies retain exactly four fields; existing headers carry
+scope, owner, run identity, sample kind and window provenance.
+
+The existing `hypoxia_co2_2_2()` returns WARNING at 4.8 mmHg / 92% SpO₂,
+whereas the source scenario asks for red. CRITICAL currently requires SpO₂ below
+90%. No severity-policy change is included in simulator support. RR trend and reported headache remain upstream inputs; missing symptom
+reports must not be inferred from the generated CFE or cabin signal. Registering
+the new CFE channel in the receiver, a five-second evaluation loop and a resolved
+severity policy remain prerequisites
+for the source's end-to-end Critical Red Alert. See `badscenario2.md`, section 7.

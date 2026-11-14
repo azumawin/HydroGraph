@@ -12,8 +12,9 @@ import math
 import random
 from functools import lru_cache
 
-from .models import AstronautProfile, Environment, SansScenario
-from .scenarios import sans_rmssd_reference
+from .models import AstronautProfile, Environment, HypercapniaScenario, SansScenario
+from .scenarios import hypercapnia_cabin_mmhg, hypercapnia_references, sans_rmssd_reference
+from .units import MMHG_TO_PA
 
 DAY = 86400.0
 
@@ -43,10 +44,20 @@ def hydration(t: float) -> float:
     return 0.18 * activity(t) + 0.04 * math.sin(2 * math.pi * t / DAY)
 
 
-def heart_rate(t: float, profile: AstronautProfile, seed: int) -> float:
+def heart_rate(
+    t: float,
+    profile: AstronautProfile,
+    seed: int,
+    *,
+    hypercapnia: HypercapniaScenario | None = None,
+) -> float:
     """Activity, circadian phase and low-amplitude pulse noise share a continuous context."""
     return (
-        profile.resting_hr_bpm
+        (
+            hypercapnia_references(t, profile, hypercapnia)["heart_rate"]
+            if hypercapnia
+            else profile.resting_hr_bpm
+        )
         + 48 * activity(t)
         + 3 * math.sin(2 * math.pi * (t / DAY - 0.32))
         + 0.8 * noise(t, seed, profile.id, "heart_rate", 30)
@@ -59,6 +70,8 @@ def rmssd(
     seed: int,
     window_s: float = 60,
     scenario: SansScenario | None = None,
+    *,
+    hypercapnia: HypercapniaScenario | None = None,
 ) -> float:
     """Compute RMSSD from a complete 60-second simulated NN-interval window.
 
@@ -74,7 +87,7 @@ def rmssd(
     squared = 0.0
     differences = 0
     while beat < t:
-        base = 60 / heart_rate(beat, profile, seed)
+        base = 60 / heart_rate(beat, profile, seed, hypercapnia=hypercapnia)
         target = sans_rmssd_reference(beat, profile, scenario) / 1000 * (1 - 0.5 * activity(beat))
         # Consecutive samples of a sine differ by 2*sin(pi*f*NN); normalize so
         # varying mean heart rate does not itself dictate the intended RMSSD.
@@ -104,6 +117,8 @@ def crew_values(
     profile: AstronautProfile,
     seed: int,
     scenario: SansScenario | None = None,
+    *,
+    hypercapnia: HypercapniaScenario | None = None,
 ) -> dict[str, float | bool]:
     """Produce one physical acquisition group in conventional source units."""
     a = activity(t)
@@ -116,19 +131,28 @@ def crew_values(
                 raise ValueError("HR needs a completed 60-second window")
             return {
                 "heart_rate": sum(
-                    heart_rate(t - 60 + (i + 0.5) * 5, profile, seed) for i in range(12)
+                    heart_rate(t - 60 + (i + 0.5) * 5, profile, seed, hypercapnia=hypercapnia)
+                    for i in range(12)
                 )
                 / 12
             }
         case "hrv":
-            return {"hrv_rmssd": rmssd(t, profile, seed, scenario=scenario)}
+            return {
+                "hrv_rmssd": rmssd(t, profile, seed, scenario=scenario, hypercapnia=hypercapnia)
+            }
         case "bp":
             return {
                 "bp_systolic": profile.sbp_mmhg + 18 * a + 1.2 * n,
                 "bp_diastolic": profile.dbp_mmhg + 3 * a + 0.8 * n,
             }
         case "spo2":
-            return {"spo2": 98.1 - 0.25 * a + 0.25 * n}
+            return {
+                "spo2": (
+                    hypercapnia_references(t, profile, hypercapnia)["spo2"] if hypercapnia else 98.1
+                )
+                - 0.25 * a
+                + 0.25 * n
+            }
         case "temperature":
             # Thermal response trails the work bout; the method estimates core,
             # not the much more variable patch skin temperature.
@@ -144,7 +168,13 @@ def crew_values(
                 raise ValueError("Respiratory rate needs a completed 60-second window")
             return {
                 "respiratory_rate": sum(
-                    14
+                    (
+                        hypercapnia_references(t - 60 + (i + 0.5) * 5, profile, hypercapnia)[
+                            "respiratory_rate"
+                        ]
+                        if hypercapnia
+                        else 14
+                    )
                     + 9 * activity(t - 60 + (i + 0.5) * 5)
                     + 0.35 * noise(t - 60 + (i + 0.5) * 5, seed, profile.id, group)
                     for i in range(12)
@@ -244,11 +274,18 @@ def crew_values(
 
 
 def environment_values(
-    group: str, t: float, environment: Environment, seed: int
+    group: str,
+    t: float,
+    environment: Environment,
+    seed: int,
+    *,
+    hypercapnia: HypercapniaScenario | None = None,
 ) -> dict[str, float | bool]:
     """Compartment telemetry depends on compartment time and configuration, never crew count."""
     match group:
         case "co2":
+            if hypercapnia is not None:
+                return {"ambient_ppco2": hypercapnia_cabin_mmhg(t, hypercapnia) * MMHG_TO_PA}
             return {
                 "ambient_ppco2": 250
                 + 25 * math.sin(2 * math.pi * t / DAY)

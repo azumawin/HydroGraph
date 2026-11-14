@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .models import AstronautProfile, SansScenario
+from .models import AstronautProfile, HypercapniaScenario, SansScenario
 
 SANS_CHANNELS = frozenset(
     {
@@ -78,3 +78,55 @@ def sans_values(
         for name, value in sans_state(t - 60 + (i + 0.5) / 50, scenario).items():
             totals[name] += value / 3000
     return dict(totals)
+
+
+HYPERCAPNIA_CHANNELS = frozenset({"eeg_cfe_ratio"})
+
+
+def hypercapnia_progress(t: float, scenario: HypercapniaScenario, delay: float = 0) -> float:
+    start = scenario.onset_s + delay
+    return smoothstep(t, start, start + scenario.ramp_duration_s)
+
+
+def hypercapnia_cabin_mmhg(t: float, scenario: HypercapniaScenario) -> float:
+    return scenario.baseline_ppco2_mmhg + (
+        scenario.affected_ppco2_mmhg - scenario.baseline_ppco2_mmhg
+    ) * hypercapnia_progress(t, scenario)
+
+
+def hypercapnia_references(
+    t: float, profile: AstronautProfile, scenario: HypercapniaScenario
+) -> dict[str, float]:
+    v = hypercapnia_progress(t, scenario, scenario.compensation_delay_s)
+    o = hypercapnia_progress(t, scenario, scenario.oxygenation_delay_s)
+    return {
+        "heart_rate": profile.resting_hr_bpm
+        + (scenario.affected_heart_rate_bpm - profile.resting_hr_bpm) * v,
+        "respiratory_rate": scenario.baseline_respiratory_rate_br_min
+        + (scenario.affected_respiratory_rate_br_min - scenario.baseline_respiratory_rate_br_min)
+        * v,
+        "spo2": scenario.baseline_spo2_pct
+        + (scenario.affected_spo2_pct - scenario.baseline_spo2_pct) * o,
+        "eeg_cfe_ratio": scenario.baseline_cfe_ratio
+        + (scenario.affected_cfe_ratio - scenario.baseline_cfe_ratio) * o,
+    }
+
+
+def hypercapnia_eeg_values(
+    t: float, scenario: HypercapniaScenario, *, startup: bool = False
+) -> dict[str, float]:
+    if startup:
+        return {"eeg_cfe_ratio": scenario.baseline_cfe_ratio}
+    if t < 60:
+        raise ValueError("CFE requires a completed 60s window")
+    mean_progress = (
+        sum(
+            hypercapnia_progress(t - 60 + i + 0.5, scenario, scenario.oxygenation_delay_s)
+            for i in range(60)
+        )
+        / 60
+    )
+    return {
+        "eeg_cfe_ratio": scenario.baseline_cfe_ratio
+        + (scenario.affected_cfe_ratio - scenario.baseline_cfe_ratio) * mean_progress
+    }

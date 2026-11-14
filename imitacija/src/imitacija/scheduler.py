@@ -12,7 +12,7 @@ from .frequency import FREQUENCIES
 from .models import AstronautProfile, Observation, Reading, Settings
 from .physiology import DAY, crew_values, environment_values, startup_crew_values
 from .registry import CHANNELS, Channel, effective_channels
-from .scenarios import SANS_CHANNELS, sans_values
+from .scenarios import SANS_CHANNELS, hypercapnia_eeg_values, hypercapnia_references, sans_values
 from .units import convert
 
 
@@ -106,6 +106,7 @@ def rules(settings: Settings) -> tuple[Rule, ...]:
     )
     return (
         *scenario_rules,
+        *((Rule("eeg_cfe", phase=60, interval=60),) if settings.hypercapnia_scenario else ()),
         periodic("heart", 60),
         periodic("hrv", 61),
         periodic("respiration", 77),
@@ -195,7 +196,9 @@ class Scheduler:
             self.profiles.get(event.owner) if event.scope == "crew" else None
         )
         scenario = self.settings.sans_scenario
-        if event.rule.group in {"cephalic", "eye_screen"} and scenario is not None:
+        if event.rule.group == "eeg_cfe" and self.settings.hypercapnia_scenario is not None:
+            values = hypercapnia_eeg_values(instant, self.settings.hypercapnia_scenario)
+        elif event.rule.group in {"cephalic", "eye_screen"} and scenario is not None:
             values = sans_values(event.rule.group, instant, scenario)
         else:
             values = (
@@ -205,10 +208,15 @@ class Scheduler:
                     profile,
                     self.settings.seed,
                     self.settings.sans_scenario,
+                    hypercapnia=self.settings.hypercapnia_scenario,
                 )
                 if profile is not None
                 else environment_values(
-                    event.rule.group, instant, self.settings.environment, self.settings.seed
+                    event.rule.group,
+                    instant,
+                    self.settings.environment,
+                    self.settings.seed,
+                    hypercapnia=self.settings.hypercapnia_scenario,
                 )
             )
         for name, value in values.items():
@@ -274,6 +282,10 @@ class Scheduler:
         self.started = True
         for profile in self.settings.crew:
             values = startup_crew_values(profile, self.settings.seed)
+            if self.settings.hypercapnia_scenario:
+                values.update(
+                    hypercapnia_references(0, profile, self.settings.hypercapnia_scenario)
+                )
             scenario = self.settings.sans_scenario
             if scenario and profile.id == scenario.owner_id:
                 values.update(sans_values("cephalic", 0, scenario, startup=True))
@@ -288,7 +300,15 @@ class Scheduler:
         environment = self.settings.environment
         values = {}
         for group in ("co2", "light", "radiation", "spe"):
-            values.update(environment_values(group, 0, environment, self.settings.seed))
+            values.update(
+                environment_values(
+                    group,
+                    0,
+                    environment,
+                    self.settings.seed,
+                    hypercapnia=self.settings.hypercapnia_scenario,
+                )
+            )
         for channel in CHANNELS.values():
             if channel.scope == "environment" and channel.id in self.enabled:
                 self._publish(
