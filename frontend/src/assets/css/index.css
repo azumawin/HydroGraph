@@ -3,7 +3,7 @@
 :root {
   --color-background: #242424;
   --color-surface: #ffffff;
-  --color-surface-opaque: #484848;
+  --color-surface-opaque: #2c2c2e;
   --color-backdrop-graphite: #3c3c3c;
   --color-backdrop-silver: #555555;
   --color-backdrop-mist: #737373;
@@ -19,13 +19,16 @@
   --color-backdrop-mars-graphite: #452419;
   --color-backdrop-mars-silver: #7d4128;
   --color-backdrop-mars-mist: #b5643a;
-  --color-text: #f7f7f7;
-  --color-text-secondary: #dedede;
+  --color-text: #ffffff;
+  --color-text-secondary: #b4b4ba;
   --color-accent: #e7e7e7;
   --color-body-neutral: #a6a6a6;
-  --color-status-warning: #edb65b;
-  --color-status-critical: #ef6969;
-  --color-status-nominal: #83d4ac;
+  /* Apple dark system colours, red lightened, so status text keeps 4.5:1 on the
+     panel material over the brightest backdrop */
+  --color-status-warning: #ff9f0a;
+  --color-status-critical: #ff8a82;
+  --color-status-nominal: #30d158;
+  --color-focus-ring: #409cff;
   --color-chart-heart-rate: #ef8585;
   --color-chart-systolic: #c6a4eb;
   --color-chart-diastolic: #88bce8;
@@ -36,7 +39,11 @@
   --color-border: color-mix(in srgb, var(--color-surface) 28%, transparent);
   --color-divider: color-mix(in srgb, var(--color-surface) 16%, transparent);
   --color-accent-wash: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  --color-glass-fill: color-mix(in srgb, var(--color-surface) 8%, transparent);
+  --color-glass-fill: color-mix(in srgb, var(--color-surface) 4%, transparent);
+  --color-glass-sheen: color-mix(in srgb, var(--color-surface) 5%, transparent);
+  /* dark translucent material: text stays legible over every backdrop, the
+     plasma at its brightest included */
+  --color-material: color-mix(in srgb, #1c1c1e 90%, transparent);
   --color-glass-reflection: color-mix(in srgb, var(--color-surface) 16%, transparent);
   --color-edge-highlight: color-mix(in srgb, var(--color-surface) 65%, transparent);
   --color-shadow: color-mix(in srgb, var(--color-background) 30%, transparent);
