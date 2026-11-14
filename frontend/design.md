@@ -39,8 +39,8 @@ NASA  HydroGraph
 - Preserve the existing `3fr / 2fr` columns, `0.9fr / 1.1fr` right-hand rows, and left panel spanning both rows.
 - Preserve the desktop minimum footprint of 1000 × 720 px. Use one desktop composition without breakpoint or device-specific variants.
 - Use a 4 px spacing unit. Set outer horizontal and bottom padding to 20 px, panel gaps to 16 px, panel content padding to 24 px, and small related-item gaps to 8 px.
-- Keep the application header at least 96 px tall. The main panel's tab bar is 60 px tall; the body-scan and assistant panels have no header. Align tabs and content to the same inset.
-- Keep the NASA asset and product identity. Use a 96 px logo height and a 12 px brand gap. Keep the header free of a subtitle and a prominent divider.
+- Keep 16 px above the application header. The main panel's tab bar is 60 px tall; the body-scan and assistant panels have no header. Align tabs and content to the same inset.
+- Keep the NASA asset and product identity. Use a 56 px logo height and a 12 px brand gap. Keep the header free of a subtitle and a prominent divider.
 - Left-align titles, labels, and prose. Right-align comparable numeric columns when future vitals rows are implemented. Center only the body visualization within its own region.
 - Use 14 px radii for the three primary panels, 8–10 px for fields and contained controls, and 4 px for status tags. Avoid capsule shapes. Tabs are plain text with a 2 px underline on the active tab.
 

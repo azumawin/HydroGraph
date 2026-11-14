@@ -21,12 +21,12 @@ const VitalsDashboard = () => {
       {failedReadings && (
         <VitalsDashboardErrorToast key={failedReadings} failedReadings={failedReadings} />
       )}
-      <header className="vitals-dashboard-header flex min-h-16 items-center gap-6 px-6">
+      <header className="vitals-dashboard-header flex min-h-16 items-center gap-6 px-6 pt-4 pb-1">
         <div className="vitals-dashboard-brand flex items-center gap-3">
           <img
             src={nasaLogo}
             alt="NASA"
-            className="vitals-dashboard-logo h-24 w-auto shrink-0 object-contain"
+            className="vitals-dashboard-logo h-14 w-auto shrink-0 object-contain"
           />
           <h1 className="vitals-dashboard-title m-0">HydroGraph</h1>
         </div>
