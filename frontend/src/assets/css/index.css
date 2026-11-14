@@ -87,3 +87,14 @@ select,
 textarea {
   font: inherit;
 }
+
+/* keyboard focus ring, as on Apple platforms: visible for keyboard users only */
+:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline-offset: 0;
+}
