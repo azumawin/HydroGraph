@@ -8,7 +8,14 @@ import math
 from datetime import UTC, datetime
 from typing import Literal, TypedDict, cast, override
 
-from hydrograph_core import CHANNELS, ENVIRONMENTS, Evaluation, evaluate_reading
+from hydrograph_core import (
+    CHANNELS,
+    ENVIRONMENTS,
+    FINDINGS,
+    Evaluation,
+    FindingResult,
+    evaluate_reading,
+)
 from rest_framework import serializers
 
 from api.models import Reading
@@ -109,11 +116,17 @@ class EnvironmentEntry(TypedDict):
     comm_delay_s: float
 
 
+class FindingEntry(TypedDict):
+    name: str
+    channels: list[str]
+
+
 class DictionaryPayload(TypedDict):
-    """The static dictionary for the frontend (docs/json-shape.md, section 3)."""
+    """The static dictionary for the frontend (docs/json-shape.md, section 4)."""
 
     environments: list[EnvironmentEntry]
     channels: dict[str, ChannelEntry]
+    findings: dict[str, FindingEntry]
 
 
 def dictionary_payload() -> DictionaryPayload:
@@ -128,4 +141,16 @@ def dictionary_payload() -> DictionaryPayload:
             }
             for k, v in CHANNELS.items()
         },
+        "findings": {
+            k: {"name": v["name"], "channels": list(v["channels"])}
+            for k, v in FINDINGS.items()
+        },
     }
+
+
+def finding_payload(
+    owner_id: str, finding: str, result: FindingResult
+) -> dict[str, object]:
+    """A finding for the frontend (docs/json-shape.md, section 3): core's result
+    plus which finding and whose."""
+    return {"id": finding, "owner_id": owner_id, **result}

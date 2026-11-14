@@ -14,8 +14,14 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from api.broadcast import publish
+from api.findings import affected_findings
 from api.models import Reading
-from api.serializers import ReadingIn, ReadingInSerializer, reading_payload
+from api.serializers import (
+    ReadingIn,
+    ReadingInSerializer,
+    finding_payload,
+    reading_payload,
+)
 from api.stream import events, sse_event
 
 
@@ -70,7 +76,7 @@ def health(_request: Request) -> Response:
 )
 @api_view(["POST"])
 def readings(request: Request) -> Response:
-    """Store the reading and push it to every open stream."""
+    """Store the reading and push it, and the findings it changes, to every stream."""
     owner_id = request.headers.get("X-Owner-ID", "")
     scope = request.headers.get("X-Simulation-Scope", "")
     serializer = ReadingInSerializer(
@@ -86,6 +92,8 @@ def readings(request: Request) -> Response:
     )
     payload = reading_payload(reading)
     publish(sse_event("reading", payload))
+    for owner, finding, result in affected_findings(owner_id, reading.channel):
+        publish(sse_event("finding", finding_payload(owner, finding, result)))
     return Response(payload, status=status.HTTP_201_CREATED)
 
 
