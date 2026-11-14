@@ -190,4 +190,5 @@ export const VITALS_BACKGROUND = {
   MAX_VOLUME_PIXELS: 900000,
   MAX_FRAME_DELTA_SECONDS: 0.05,
   FALLBACK_MESSAGE: "Animated background unavailable. Showing the static background.",
+  REDUCED_MOTION_QUERY: "(prefers-reduced-motion: reduce)",
 };

@@ -138,10 +138,13 @@ type VitalsDashboardBackgroundProps = {
 const VitalsDashboardBackground = ({ environmentId }: VitalsDashboardBackgroundProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const environmentIdRef = useRef(environmentId);
+  const requestFrameRef = useRef<(() => void) | null>(null);
   const [hasBackgroundError, setHasBackgroundError] = useState(false);
 
   useEffect(() => {
     environmentIdRef.current = environmentId;
+    // with reduced motion nothing else redraws, so repaint in the new colours
+    requestFrameRef.current?.();
   }, [environmentId]);
 
   useEffect(() => {
@@ -171,11 +174,27 @@ const VitalsDashboardBackground = ({ environmentId }: VitalsDashboardBackgroundP
     let elapsedSeconds = 0;
     let hasStopped = false;
     let resizeObserver: ResizeObserver | undefined;
+    // with reduced motion the plasma is drawn once, still, and only redrawn on
+    // resize or an environment change
+    const reducedMotion = window.matchMedia(VITALS_BACKGROUND.REDUCED_MOTION_QUERY);
+
+    const requestFrame = () => {
+      if (hasStopped || document.hidden) return;
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(handleFrameRender);
+    };
+
+    const handleMotionChange = () => {
+      lastFrameTime = 0;
+      requestFrame();
+    };
 
     const handleBackgroundDispose = () => {
       hasStopped = true;
+      requestFrameRef.current = null;
       cancelAnimationFrame(animationFrameId);
       resizeObserver?.disconnect();
+      reducedMotion.removeEventListener("change", handleMotionChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       canvas.removeEventListener("webglcontextlost", handleContextLost);
       gl.deleteBuffer(buffer);
@@ -299,7 +318,7 @@ const VitalsDashboardBackground = ({ environmentId }: VitalsDashboardBackgroundP
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.uniform1i(composite.uniforms.uVolume, 0);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
-        animationFrameId = requestAnimationFrame(handleFrameRender);
+        if (!reducedMotion.matches) animationFrameId = requestAnimationFrame(handleFrameRender);
       };
 
       const handleBackgroundResize = () => {
@@ -336,6 +355,8 @@ const VitalsDashboardBackground = ({ environmentId }: VitalsDashboardBackgroundP
           if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
             throw new Error("Unable to initialize the plasma framebuffer.");
           }
+          // resizing clears the canvas; a still background needs repainting
+          requestFrame();
         } catch (error) {
           handleBackgroundDispose();
           console.error(VITALS_BACKGROUND.FALLBACK_MESSAGE, error);
@@ -345,10 +366,11 @@ const VitalsDashboardBackground = ({ environmentId }: VitalsDashboardBackgroundP
 
       resizeObserver = new ResizeObserver(handleBackgroundResize);
       resizeObserver.observe(canvas);
+      reducedMotion.addEventListener("change", handleMotionChange);
       document.addEventListener("visibilitychange", handleVisibilityChange);
       canvas.addEventListener("webglcontextlost", handleContextLost);
       handleBackgroundResize();
-      if (!hasStopped) animationFrameId = requestAnimationFrame(handleFrameRender);
+      requestFrameRef.current = requestFrame;
     } catch (error) {
       handleBackgroundDispose();
       console.error(VITALS_BACKGROUND.FALLBACK_MESSAGE, error);
