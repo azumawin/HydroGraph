@@ -19,7 +19,7 @@ from imitacija.models import (
     Settings,
 )
 from imitacija.physiology import DAY, crew_values, environment_values, heart_rate, rmssd
-from imitacija.registry import CHANNELS, dictionary
+from imitacija.registry import CHANNELS, dictionary, effective_channels
 from imitacija.scheduler import Scheduler
 from imitacija.units import MMHG_TO_PA, co2_ppm
 
@@ -185,7 +185,7 @@ def test_radiation_integral_and_ppm_pressure() -> None:
 
 def test_registry_dictionary_and_invalid_inputs() -> None:
     d = dictionary(Environment(), 3600)
-    assert len(CHANNELS) == len(d.channels) == 29
+    assert len(CHANNELS) == len(d.channels) == 34
     assert all(c.unit and c.method and c.citations for c in d.channels)
     assert all(c.body_regions == () for c in d.channels if c.scope == "environment")
     assert all("evaluation_basis" not in c.model_dump() for c in d.channels)
@@ -253,7 +253,7 @@ def test_two_day_stream_has_bounded_state_and_channel_coverage() -> None:
     assert len(scheduler.sequences) <= len(CHANNELS)
     sparse_names = tuple(c.id for c in CHANNELS.values() if c.lab or c.group in {"mass", "urine"})
     sparse = simulate(Settings(enabled_channels=sparse_names), 181 * DAY)
-    assert sink.channels | {o.reading.channel for o in sparse} == set(CHANNELS)
+    assert sink.channels | {o.reading.channel for o in sparse} == effective_channels(Settings())
 
 
 def test_matrix_minute_outputs_and_one_hz_environment() -> None:

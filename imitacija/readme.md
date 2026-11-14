@@ -15,7 +15,7 @@ uv run imitacija --config config/healthy.toml --validate-config
 ```
 3)depending on a config, it will simulate a scenario.
 
-healthy.toml is healthy metrics all the time and they will not deviate and will not reach critical or concerning tresholds, others will behave like a disease scenario, where an austronaut is fine at first but then gets sick over time.
+`healthy.toml` generates healthy trajectories with normal variation. `research_demo.toml` changes timing and channel selection. `badscenario1.toml` explicitly enables progressive synthetic SANS.
 
 
 ## See generated JSON before connecting a backend
@@ -74,7 +74,7 @@ All crew and environment readings are POSTed to `http://localhost:9000/data`. Th
 
 The implementation covers **29 channels**, with independent wearable clocks, completed HRV/urine windows, session-based laboratory fixtures, delayed result availability, paired acquisitions and separate environmental ownership. Generated measurements exist only in RAM and outbound requests. Stderr reports aggregate operational counters. Backend history and analysis are separate responsibilities.
 
-For a finite wearable run, add `--duration 600 --speed 10` (600 simulated seconds in about one minute). This is too short for most laboratory sessions. For mission-long sparse sampling, use `config/research_demo.toml`; it enables laboratory channels and advances 181 days in about 26 seconds. High acceleration may coalesce late collections and exceed receiver capacity; counters report drops. Healthy disease/scenario switching is deferred.
+For a finite wearable run, add `--duration 600 --speed 10` (600 simulated seconds in about one minute). This is too short for most laboratory sessions. For mission-long sparse sampling, use `config/research_demo.toml`; it enables laboratory channels and advances 181 days in about 26 seconds. High acceleration may coalesce late collections and exceed receiver capacity; counters report drops. Progressive SANS is available through `sans_scenario`; other disease scenarios are not implemented.
 
 ```sh
 uv run imitacija --config config/research_demo.toml
@@ -192,3 +192,36 @@ Include `timestamp` and `user_state` as payload metadata. The state machine desc
 - The troponin formula specifies a fixed bound density but does not connect concentration to that density. It cannot yet define a concentration-dependent voltage simulation without an additional model.
 - Many inputs lack units, baseline ranges, noise models, or conversion/scoring rules. These need explicit simulation assumptions; they should not be presented as values extracted from the PDF.
 - Serotonin and dopamine appear only in a reference title on page 6, not as requested measurement channels, so they are excluded from the simulation inventory.
+
+
+## Progressive SANS scenario
+
+```sh
+uv run imitacija --config config/badscenario1.toml --validate-config
+uv run imitacija --config config/badscenario1.toml --preview
+```
+
+The default demo lasts 4200 simulation seconds (about seven minutes at speed 10).
+The astronaut is healthy for 600 seconds, reaches the warning endpoint at 1800 s,
+and the critical endpoint at 3600 s. Set `escalate_to_critical = false` to hold the
+warning state. Times and fixture targets are configurable in `[sans_scenario]`.
+`owner_id` selects the affected astronaut; microgravity (`gravity_g = 0`) is required.
+
+Strain, resistance change and the synthetic ICP indicator publish completed minute
+windows evaluated on a 50 Hz latent grid. HRV changes inside the generated beat model.
+Eye results publish only at `eye_screen_times_s` (empty disables later screens).
+Startup eye values are reference fixtures, not completed tests. The ICP indicator
+and compressed progression are engineering fixtures, not measured ICP or validated
+clinical disease kinetics. No recovery or interactive screen control is modeled.
+
+The `/dictionary` JSON includes scenario settings, units and enabled channels. Healthy
+configs retain their original active channels. Registering the new channels increases
+the complete dictionary to 34 entries; disabled channels are marked accordingly.
+The four-field transport body remains unchanged. Strain is a fraction on the wire:
+0.0155 means 1.55%; a receiver must multiply by 100 before calling the backend's
+`sans_fluid_shift_1_3(jugular_distension_pct=...)` evaluator.
+
+For backend delivery, set `base_url` and `data_route` and remove `--preview`. The
+current repository backend does not yet expose a telemetry receiver; preview works
+independently, while HTTP alerts require separate receiver integration. See
+[the implementation plan](badscenario1.md) for signal formulas and assumptions.

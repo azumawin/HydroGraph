@@ -1,0 +1,36 @@
+# Compressed synthetic SANS demonstration, not clinical disease kinetics.
+seed = 42
+speed = 10
+duration_s = 4200
+enabled_channels = ["jugular_strain_pct", "delta_R_over_R0", "icp_risk_indicator_mmHg", "hrv_rmssd", "visual_acuity_logmar", "amsler_grid_distortion"]
+base_url = "http://127.0.0.1:8000"
+data_route = "/api/readings/"
+
+[environment]
+gravity_g = 0
+
+[[crew]]
+id = "crew-1"
+resting_hr_bpm = 72
+sbp_mmhg = 118
+dbp_mmhg = 78
+rmssd_ms = 48
+
+[sans_scenario]
+id = "FAULT_01_SANS_CEPHALIC"
+owner_id = "crew-1"
+onset_s = 600
+warning_at_s = 1800
+escalate_to_critical = true
+critical_start_s = 2400
+critical_at_s = 3600
+baseline_strain_pct = 0.65
+warning_strain_pct = 1.55
+critical_strain_pct = 2.05
+gauge_factor = 15.5
+affected_rmssd_ms = 36
+baseline_icp_indicator_mmhg = 10.0
+warning_icp_indicator_mmhg = 16.2
+critical_icp_indicator_mmhg = 19.0
+affected_logmar = 0.20
+eye_screen_times_s = [1860, 3660]

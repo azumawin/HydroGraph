@@ -7,7 +7,7 @@ from collections import Counter
 
 from imitacija.clock import ManualClock
 from imitacija.models import AstronautProfile, Environment, Observation, Settings
-from imitacija.registry import CHANNELS
+from imitacija.registry import CHANNELS, effective_channels
 from imitacija.scheduler import Scheduler
 
 
@@ -23,7 +23,9 @@ def test_every_metric_once_at_start_with_immediate_available_baselines() -> None
     settings = Settings(lab_delay_s=86400, il6_event_times_s=(), troponin_event_times_s=())
     sink = Collected()
     asyncio.run(Scheduler(settings, ManualClock(), sink).run(0))
-    assert Counter(o.reading.channel for o in sink.items) == Counter({name: 1 for name in CHANNELS})
+    assert Counter(o.reading.channel for o in sink.items) == Counter(
+        {name: 1 for name in effective_channels(settings)}
+    )
     assert all(o.acquired_s == o.available_s == 0 for o in sink.items)
     assert all(o.reading.measured_at == settings.start for o in sink.items)
     assert all(o.window_s == 0 and o.sample_kind == "startup_baseline" for o in sink.items)

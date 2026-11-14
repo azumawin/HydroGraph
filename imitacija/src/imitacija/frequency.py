@@ -22,6 +22,8 @@ class Frequency:
 
 
 FREQUENCIES: dict[str, Frequency] = {
+    "cephalic": Frequency("60s mean synthetic strain trend; 50Hz latent grid", 50, 60, 60, (9,)),
+    "eye_screen": Frequency("configured synthetic completed eye-screen events", rows=(9,)),
     "heart": Frequency("60s HR estimate; first complete window at 60s", 100, 60, 60, (1,)),
     "hrv": Frequency("60s RMSSD window every 60s; first at 61s", 100, 60, 60, (1,)),
     "bp": Frequency(

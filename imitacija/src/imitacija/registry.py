@@ -7,6 +7,7 @@ from typing import Literal
 
 from .frequency import FREQUENCIES
 from .models import Environment, FrozenModel, Settings
+from .scenarios import SANS_CHANNELS
 from .units import MMHG_TO_PA
 
 NASA = "https://www.nasa.gov/wp-content/uploads/2024/09/ochmo-std-100-1a-rev-a-signed.pdf"
@@ -102,6 +103,68 @@ def channel(
 
 
 _CHANNELS = (
+    channel(
+        "jugular_strain_pct",
+        "Jugular reference strain",
+        "cephalic",
+        "neuro-ocular",
+        "neck patch",
+        "%",
+        "1",
+        "Synthetic strain trend; no pulse waveform",
+        "60s",
+        "docs/hydrogfn_unhealthy_simulation_specification (1).md",
+        factor=0.01,
+    ),
+    channel(
+        "delta_R_over_R0",
+        "Fractional resistance change",
+        "cephalic",
+        "neuro-ocular",
+        "neck patch",
+        "1",
+        "1",
+        "Gauge factor times fractional strain",
+        "60s",
+        "docs/hydrogfn_unhealthy_simulation_specification (1).md",
+    ),
+    channel(
+        "icp_risk_indicator_mmHg",
+        "Synthetic ICP risk indicator",
+        "cephalic",
+        "neuro-ocular",
+        "model fixture",
+        "mmHg",
+        "Pa",
+        "Uncalibrated synthetic proxy, not measured ICP",
+        "60s",
+        "docs/hydrogfn_unhealthy_simulation_specification (1).md",
+        factor=MMHG_TO_PA,
+    ),
+    channel(
+        "visual_acuity_logmar",
+        "Visual acuity LogMAR",
+        "eye_screen",
+        "neuro-ocular",
+        "simulated screen",
+        "logMAR",
+        "1",
+        "Synthetic logarithmic visual-screen result",
+        "events",
+        "docs/hydrogfn_unhealthy_simulation_specification (1).md",
+    ),
+    channel(
+        "amsler_grid_distortion",
+        "Amsler distortion",
+        "eye_screen",
+        "neuro-ocular",
+        "simulated screen",
+        "boolean",
+        "boolean",
+        "Synthetic completed screen result",
+        "events",
+        "docs/hydrogfn_unhealthy_simulation_specification (1).md",
+    ),
     channel(
         "heart_rate",
         "Heart rate",
@@ -503,14 +566,29 @@ CHANNELS = {
     )
     for item in _CHANNELS
 }
+
+
+def effective_channels(settings: Settings) -> set[str]:
+    enabled = (
+        set(settings.enabled_channels)
+        if settings.enabled_channels is not None
+        else set(CHANNELS) - (SANS_CHANNELS if settings.sans_scenario is None else set())
+    )
+    if unknown := enabled - CHANNELS.keys():
+        raise ValueError(f"unknown enabled channels: {sorted(unknown)}")
+    if settings.sans_scenario is None and enabled & SANS_CHANNELS:
+        raise ValueError("SANS channels require sans_scenario configuration")
+    return enabled
+
+
 EXCLUDED = (
     "sleep/stages/debt",
     "mood/PHQ9/GAD7",
     "EEG/CFE/PVT",
-    "headache/visual/Amsler",
+    "headache and interactive visual-screen control",
     "kinematics/exercise compliance",
-    "cephalic impedance/jugular/ICP",
-    "hydrogel/GFET",
+    "cephalic impedance and calibrated measured ICP",
+    "physical hydrogel/GFET sensor models",
     "NEWS2/qSOFA/diagnosis/recommendations (backend-owned)",
     "postural changes/shock index/weekly and endocrine slopes (backend-owned)",
 )
@@ -547,6 +625,7 @@ class Dictionary(FrozenModel):
     environment: Environment
     channels: tuple[ChannelMetadata, ...]
     excluded: tuple[str, ...] = EXCLUDED
+    sans_scenario: dict[str, object] | None = None
     startup_behavior: str = (
         "One immediately available synthetic startup_baseline per enabled owner/channel, "
         "then the listed schedule. Startup has no completed collection window or lab delay; "
@@ -573,8 +652,15 @@ def dictionary(
             "lactate": f"baseline plus exercise tests on days {settings.exercise_test_days}; "
             "17:00 pre-test and 18:05/18:15/18:30 recovery",
         }
+    if settings and settings.sans_scenario:
+        overrides["eye_screen"] = f"screen events at {settings.sans_scenario.eye_screen_times_s}"
     return Dictionary(
         environment=environment,
+        sans_scenario=(
+            settings.sans_scenario.model_dump(mode="json")
+            if settings and settings.sans_scenario
+            else None
+        ),
         channels=tuple(
             ChannelMetadata(
                 channel=c.id,
@@ -602,9 +688,7 @@ def dictionary(
                 value_schema="boolean" if c.unit == "boolean" else "number",
                 raw_acquisition_hz=FREQUENCIES[c.group].raw_hz,
                 frequency_matrix_rows=FREQUENCIES[c.group].rows,
-                enabled=settings is None
-                or settings.enabled_channels is None
-                or c.id in settings.enabled_channels,
+                enabled=settings is None or c.id in effective_channels(settings),
             )
             for c in CHANNELS.values()
         ),

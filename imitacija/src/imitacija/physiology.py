@@ -12,7 +12,8 @@ import math
 import random
 from functools import lru_cache
 
-from .models import AstronautProfile, Environment
+from .models import AstronautProfile, Environment, SansScenario
+from .scenarios import sans_rmssd_reference
 
 DAY = 86400.0
 
@@ -52,7 +53,13 @@ def heart_rate(t: float, profile: AstronautProfile, seed: int) -> float:
     )
 
 
-def rmssd(t: float, profile: AstronautProfile, seed: int, window_s: float = 60) -> float:
+def rmssd(
+    t: float,
+    profile: AstronautProfile,
+    seed: int,
+    window_s: float = 60,
+    scenario: SansScenario | None = None,
+) -> float:
     """Compute RMSSD from a complete 60-second simulated NN-interval window.
 
     Respiratory sinus arrhythmia modulates beat intervals around instantaneous pulse.
@@ -68,7 +75,7 @@ def rmssd(t: float, profile: AstronautProfile, seed: int, window_s: float = 60) 
     differences = 0
     while beat < t:
         base = 60 / heart_rate(beat, profile, seed)
-        target = profile.rmssd_ms / 1000 * (1 - 0.5 * activity(beat))
+        target = sans_rmssd_reference(beat, profile, scenario) / 1000 * (1 - 0.5 * activity(beat))
         # Consecutive samples of a sine differ by 2*sin(pi*f*NN); normalize so
         # varying mean heart rate does not itself dictate the intended RMSSD.
         amplitude = target / (math.sqrt(2) * max(0.2, abs(math.sin(math.pi * 0.23 * base))))
@@ -96,6 +103,7 @@ def crew_values(
     t: float,
     profile: AstronautProfile,
     seed: int,
+    scenario: SansScenario | None = None,
 ) -> dict[str, float | bool]:
     """Produce one physical acquisition group in conventional source units."""
     a = activity(t)
@@ -113,7 +121,7 @@ def crew_values(
                 / 12
             }
         case "hrv":
-            return {"hrv_rmssd": rmssd(t, profile, seed)}
+            return {"hrv_rmssd": rmssd(t, profile, seed, scenario=scenario)}
         case "bp":
             return {
                 "bp_systolic": profile.sbp_mmhg + 18 * a + 1.2 * n,

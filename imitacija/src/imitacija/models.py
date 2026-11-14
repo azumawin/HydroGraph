@@ -70,12 +70,53 @@ class Environment(FrozenModel):
     initial_monitor_dose_msv: float = Field(default=0, ge=0)
 
 
+class SansScenario(FrozenModel):
+    """Explicit synthetic SANS fixture; durations are demonstration assumptions."""
+
+    id: Literal["FAULT_01_SANS_CEPHALIC"] = "FAULT_01_SANS_CEPHALIC"
+    owner_id: str = "crew-1"
+    onset_s: float = Field(default=600, ge=0)
+    warning_at_s: float = Field(default=1800, gt=0)
+    escalate_to_critical: bool = True
+    critical_start_s: float = Field(default=2400, ge=0)
+    critical_at_s: float = Field(default=3600, gt=0)
+    baseline_strain_pct: float = Field(default=0.65, ge=0, lt=1.1)
+    warning_strain_pct: float = Field(default=1.55, ge=1.1, le=1.8)
+    critical_strain_pct: float = Field(default=2.05, gt=1.8)
+    gauge_factor: float = Field(default=15.5, gt=0)
+    affected_rmssd_ms: float = Field(default=36, gt=0)
+    baseline_icp_indicator_mmhg: float = Field(default=10, ge=0)
+    warning_icp_indicator_mmhg: float = Field(default=16.2, ge=0)
+    critical_icp_indicator_mmhg: float = Field(default=19, ge=0)
+    affected_logmar: float = Field(default=0.2, ge=0)
+    eye_screen_times_s: tuple[float, ...] = (1860, 3660)
+
+    @model_validator(mode="after")
+    def coherent(self) -> SansScenario:
+        if not self.onset_s < self.warning_at_s:
+            raise ValueError("warning ramp must have positive duration")
+        if not self.warning_at_s <= self.critical_start_s < self.critical_at_s:
+            raise ValueError("critical ramp must follow warning with positive duration")
+        if any(not math.isfinite(t) or t <= 0 for t in self.eye_screen_times_s):
+            raise ValueError("screen times must be finite and positive")
+        if tuple(sorted(set(self.eye_screen_times_s))) != self.eye_screen_times_s:
+            raise ValueError("screen times must be unique and sorted")
+        if not (
+            self.baseline_icp_indicator_mmhg
+            <= self.warning_icp_indicator_mmhg
+            <= self.critical_icp_indicator_mmhg
+        ):
+            raise ValueError("indicator targets must be nondecreasing")
+        return self
+
+
 class Settings(FrozenModel):
     """All timing is simulation seconds except explicitly named wall-clock fields."""
 
     start: datetime = datetime(2026, 11, 14, tzinfo=UTC)
     speed: float = Field(default=1, gt=0, le=1e7)
     duration_s: float | None = Field(default=None, gt=0)
+    sans_scenario: SansScenario | None = None
     seed: int = 42
     crew: tuple[AstronautProfile, ...] = (AstronautProfile(),)
     environment: Environment = Environment()
@@ -120,6 +161,13 @@ class Settings(FrozenModel):
         """Prevent duplicate crew streams and route errors before any network activity."""
         if len({p.id for p in self.crew}) != len(self.crew):
             raise ValueError("crew IDs must be unique")
+        if self.sans_scenario is not None:
+            scenario = self.sans_scenario
+            profiles = {p.id: p for p in self.crew}
+            if scenario.owner_id not in profiles or self.environment.gravity_g != 0:
+                raise ValueError("SANS requires an existing crew owner and gravity_g = 0")
+            if scenario.affected_rmssd_ms > profiles[scenario.owner_id].rmssd_ms:
+                raise ValueError("SANS RMSSD target must not exceed healthy reference")
         if any(day < 0 for day in self.exercise_test_days):
             raise ValueError("exercise test days cannot be negative")
         for instant in (*self.il6_event_times_s, *self.troponin_event_times_s):
