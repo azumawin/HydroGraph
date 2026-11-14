@@ -2,6 +2,7 @@ from typing import cast
 
 import pytest
 from django.urls import reverse
+from hydrograph_core import CHANNELS
 from rest_framework.test import APIClient
 
 from api.models import Reading
@@ -37,8 +38,7 @@ def test_post_reading_returns_doc_shape(client: APIClient) -> None:
     response = client.post(reverse("readings"), body, format="json")
 
     assert response.status_code == 201
-    reading = cast("dict[str, object]", response.json())
-    assert reading == {
+    assert cast("dict[str, object]", response.json()) == {
         "channel": "heart_rate",
         "value": 104.0,
         "unit": "bpm",
@@ -46,7 +46,7 @@ def test_post_reading_returns_doc_shape(client: APIClient) -> None:
         "measured_at": TICK,
         "name": "Heart rate",
         "body_regions": ["heart"],
-        "explanation": reading["explanation"],
+        "explanation": CHANNELS["heart_rate"]["explanation"],
     }
     assert Reading.objects.count() == 1
 

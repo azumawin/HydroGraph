@@ -1,6 +1,7 @@
 import hydrograph_core
 from django.http import HttpRequest, StreamingHttpResponse
 from django.http.response import HttpResponseBase
+from django.views.decorators.http import require_GET
 from drf_spectacular.utils import (
     extend_schema,  # pyright: ignore[reportUnknownVariableType]  # stubs: Serializer[Unknown]
 )
@@ -72,6 +73,7 @@ def readings(request: Request) -> Response:
     return Response(payload, status=status.HTTP_201_CREATED)
 
 
+@require_GET
 async def stream(_request: HttpRequest) -> HttpResponseBase:
     """SSE stream of the environments and readings; plain Django, since DRF is sync.
 

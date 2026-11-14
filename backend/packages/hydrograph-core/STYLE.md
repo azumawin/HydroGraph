@@ -215,3 +215,12 @@ inputs.
   **qualitative** one (headache, SPE, vitamin D trend) is a `bool` argument
   evaluated upstream. Never invent a cutoff.
 
+## Channels
+
+`channels.py` grades one reading of one channel, for the backend's per-reading
+`evaluation`. It follows the Classification rules above, with three differences:
+
+- `evaluate_reading` returns a bare `Status`, no result dict or action: the
+  channel's `explanation` in `CHANNELS` carries the text.
+- Each `case` comments the document and band its cutoffs come from.
+- An unknown channel raises `ValueError`.

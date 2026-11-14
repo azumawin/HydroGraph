@@ -3,7 +3,7 @@
 Pure domain logic for the HydroGFN health monitor: the master plan's 10 Tier 1
 health findings, the sensor channel catalog with single-reading thresholds, and
 the mission environments. No Django imports, no I/O, no state. The backend
-consumes it; any rule about what a value means belongs here, not in `api/`. Consumed by the `api` app in the backend.
+consumes it; any rule about what a value means belongs here, not in `api/`.
 
 Built from two spec documents in this directory:
 

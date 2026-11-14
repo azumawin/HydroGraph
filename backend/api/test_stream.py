@@ -1,12 +1,13 @@
 import asyncio
 from datetime import UTC, datetime
+from typing import cast
 
 import pytest
-from asgiref.sync import async_to_sync, sync_to_async
+from asgiref.sync import async_to_sync
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from api import broadcast, stream
+from api import broadcast, stream, views
 from api.models import Reading
 
 AT = datetime(2026, 11, 8, 7, 12, tzinfo=UTC)
@@ -41,26 +42,36 @@ def test_connect_sends_environments_then_latest_per_channel() -> None:
 
 
 @pytest.mark.django_db(transaction=True)
-def test_post_is_pushed_to_open_streams_immediately() -> None:
-    body = {"channel": "glucose", "value": 2.9, "measured_at": "2026-11-08T07:12:00Z"}
+def test_published_message_reaches_open_stream_and_close_unsubscribes() -> None:
     messages = stream.events()
 
-    async def run() -> tuple[str, str]:
+    async def run() -> str:
         try:
-            environment = await anext(messages)
-            pending = asyncio.ensure_future(anext(messages))  # now subscribed
-            await asyncio.sleep(0)
-            response = await sync_to_async(APIClient().post)(
-                reverse("readings"), body, format="json"
-            )
-            assert response.status_code == 201
-            return environment, await asyncio.wait_for(pending, timeout=0.5)
+            _ = await anext(messages)  # environments
+            pending = asyncio.ensure_future(anext(messages))
+            while not broadcast._queues:  # pyright: ignore[reportPrivateUsage]
+                await asyncio.sleep(0)
+            broadcast.publish("event: test\ndata: {}\n\n")  # not in the DB
+            return await asyncio.wait_for(pending, timeout=1)
         finally:
             await messages.aclose()
 
-    environment, pushed = async_to_sync(run)()
-
-    assert environment.startswith("event: environments\n")
-    assert pushed.startswith("event: reading\ndata: ")
-    assert '"evaluation": "critical"' in pushed and '"unit": "mmol/L"' in pushed
+    assert async_to_sync(run)() == "event: test\ndata: {}\n\n"
     assert not broadcast._queues  # pyright: ignore[reportPrivateUsage]
+
+
+@pytest.mark.django_db
+def test_post_publishes_the_reading_it_returns(monkeypatch: pytest.MonkeyPatch) -> None:
+    published: list[str] = []
+    monkeypatch.setattr(views, "publish", published.append)
+    body = {"channel": "glucose", "value": 2.9, "measured_at": "2026-11-08T07:12:00Z"}
+
+    response = APIClient().post(reverse("readings"), body, format="json")
+
+    assert response.status_code == 201
+    payload = cast("dict[str, object]", response.json())
+    assert published == [stream.sse_event("reading", payload)]
+
+
+def test_stream_is_get_only() -> None:
+    assert APIClient().post(reverse("stream")).status_code == 405

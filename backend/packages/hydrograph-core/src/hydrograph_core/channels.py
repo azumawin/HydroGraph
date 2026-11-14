@@ -148,7 +148,8 @@ def evaluate_reading(channel: str, value: float) -> Status:
                 return Status.WARNING
             return Status.NOMINAL
         case "core_temp":
-            # Master plan Finding 3 (SIRS): > 38.0 or < 36.0 degC.
+            # Master plan Finding 3 (SIRS): > 38.0 or < 36.0 degC. It wins over
+            # NSA 2.2's narrower 36.5-37.5 nominal band, so 36.0-38.0 is nominal.
             if value > 38.0 or value < 36.0:
                 return Status.WARNING
             return Status.NOMINAL
