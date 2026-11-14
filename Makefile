@@ -2,14 +2,16 @@
 # Two terminals: `make run` (backend), then `make sim` (simulator). Or one: `make dev`.
 
 CONFIG ?= config/healthy.toml
-SPEED ?= 30
+# SPEED overrides the config's own speed, e.g. `make dev SPEED=30`.
+SPEED ?=
+SIM = uv run imitacija --config $(CONFIG) $(if $(SPEED),--speed $(SPEED))
 DEMO_URL = http://127.0.0.1:8000/static/demo/index.html
 
 .PHONY: help sync migrate run sim demo dev test lint fmt check
 
 help: ## List targets
 	@grep -E '^[a-z]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-8s %s\n", $$1, $$2}'
-	@echo "  Variables: CONFIG=$(CONFIG) SPEED=$(SPEED)"
+	@echo "  Variables: CONFIG=$(CONFIG) SPEED=$(or $(SPEED),from config)"
 
 sync: ## Install backend and simulator dependencies
 	cd backend && uv sync
@@ -22,7 +24,7 @@ run: migrate ## Start the backend on http://127.0.0.1:8000
 	cd backend && uv run python manage.py runserver
 
 sim: ## Feed the running backend from the simulator (CONFIG, SPEED)
-	cd imitacija && uv run imitacija --config $(CONFIG) --speed $(SPEED)
+	cd imitacija && $(SIM)
 
 demo: ## Open the live demo page
 	uv run --no-project python -m webbrowser $(DEMO_URL)
@@ -31,7 +33,7 @@ dev: migrate ## Backend + simulator together, demo opened; Ctrl+C stops both
 	@(cd backend && exec uv run python manage.py runserver --noreload) & server=$$!; \
 	trap 'kill $$server 2>/dev/null' EXIT INT TERM; \
 	sleep 3; uv run --no-project python -m webbrowser $(DEMO_URL); \
-	cd imitacija && uv run imitacija --config $(CONFIG) --speed $(SPEED)
+	cd imitacija && $(SIM)
 
 test: ## Run backend, core and simulator tests
 	cd backend && uv run pytest -q

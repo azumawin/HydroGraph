@@ -16,3 +16,5 @@ db.sqlite3-journal
 /media/
 *.log
 *.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm

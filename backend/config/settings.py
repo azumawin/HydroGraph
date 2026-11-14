@@ -96,6 +96,12 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        # WAL: the stream's reads never wait on the simulator's writes.
+        # NORMAL: no disk flush per insert (safe with WAL; a crash loses at most
+        # the last few readings).
+        "OPTIONS": {
+            "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;"
+        },
     }
 }
 
