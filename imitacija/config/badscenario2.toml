@@ -1,0 +1,33 @@
+seed = 42
+speed = 10
+#duration_s = 600
+# All available channels report once at startup, then follow their normal schedules.
+
+[environment]
+id = "iss_cabin"
+gravity_g = 0
+pressure_pa = 101325
+
+[[crew]]
+id = "crew-1"
+resting_hr_bpm = 72
+sbp_mmhg = 118
+dbp_mmhg = 78
+rmssd_ms = 48
+
+[hypercapnia_scenario]
+id = "FAULT_02_HYPERCAPNIA_CO2"
+environment_id = "iss_cabin"
+onset_s = 120
+ramp_duration_s = 90
+compensation_delay_s = 10
+oxygenation_delay_s = 30
+baseline_ppco2_mmhg = 2.2
+affected_ppco2_mmhg = 4.8
+baseline_respiratory_rate_br_min = 14
+affected_respiratory_rate_br_min = 24
+affected_heart_rate_bpm = 104
+baseline_spo2_pct = 97
+affected_spo2_pct = 92
+baseline_cfe_ratio = 0.58
+affected_cfe_ratio = 1.28

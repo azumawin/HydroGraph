@@ -110,6 +110,36 @@ class SansScenario(FrozenModel):
         return self
 
 
+class HypercapniaScenario(FrozenModel):
+    """Shared-cabin synthetic fault; delays are demonstration assumptions."""
+
+    id: Literal["FAULT_02_HYPERCAPNIA_CO2"] = "FAULT_02_HYPERCAPNIA_CO2"
+    environment_id: str = "iss_cabin"
+    onset_s: float = Field(default=120, ge=0)
+    ramp_duration_s: float = Field(default=90, gt=0)
+    compensation_delay_s: float = Field(default=10, ge=0)
+    oxygenation_delay_s: float = Field(default=30, ge=0)
+    baseline_ppco2_mmhg: float = Field(default=2.2, gt=0, le=3)
+    affected_ppco2_mmhg: float = Field(default=4.8, ge=3.5, le=6)
+    baseline_respiratory_rate_br_min: float = Field(default=14, gt=0)
+    affected_respiratory_rate_br_min: float = Field(default=24, ge=22, le=26)
+    affected_heart_rate_bpm: float = Field(default=104, ge=96, le=112)
+    baseline_spo2_pct: float = Field(default=97, ge=94, le=100)
+    affected_spo2_pct: float = Field(default=92, ge=91, le=93)
+    baseline_cfe_ratio: float = Field(default=0.58, gt=0)
+    affected_cfe_ratio: float = Field(default=1.28, gt=1.2)
+
+    @model_validator(mode="after")
+    def coherent(self) -> HypercapniaScenario:
+        if self.compensation_delay_s >= self.oxygenation_delay_s:
+            raise ValueError("compensation must precede oxygenation response")
+        if self.baseline_respiratory_rate_br_min >= self.affected_respiratory_rate_br_min:
+            raise ValueError("respiration must rise")
+        if self.baseline_cfe_ratio >= self.affected_cfe_ratio:
+            raise ValueError("CFE must rise")
+        return self
+
+
 class Settings(FrozenModel):
     """All timing is simulation seconds except explicitly named wall-clock fields."""
 
@@ -117,6 +147,7 @@ class Settings(FrozenModel):
     speed: float = Field(default=1, gt=0, le=1e7)
     duration_s: float | None = Field(default=None, gt=0)
     sans_scenario: SansScenario | None = None
+    hypercapnia_scenario: HypercapniaScenario | None = None
     seed: int = 42
     crew: tuple[AstronautProfile, ...] = (AstronautProfile(),)
     environment: Environment = Environment()
@@ -161,6 +192,18 @@ class Settings(FrozenModel):
         """Prevent duplicate crew streams and route errors before any network activity."""
         if len({p.id for p in self.crew}) != len(self.crew):
             raise ValueError("crew IDs must be unique")
+        if self.hypercapnia_scenario is not None:
+            from .units import MMHG_TO_PA
+
+            fault = self.hypercapnia_scenario
+            if self.sans_scenario is not None:
+                raise ValueError("combined SANS and hypercapnia scenarios are unsupported")
+            if not self.crew or fault.environment_id != self.environment.id:
+                raise ValueError("hypercapnia requires crew and the configured environment")
+            if fault.affected_ppco2_mmhg * MMHG_TO_PA >= self.environment.pressure_pa:
+                raise ValueError("CO2 partial pressure must be below cabin pressure")
+            if any(p.resting_hr_bpm >= fault.affected_heart_rate_bpm for p in self.crew):
+                raise ValueError("heart rate must rise")
         if self.sans_scenario is not None:
             scenario = self.sans_scenario
             profiles = {p.id: p for p in self.crew}

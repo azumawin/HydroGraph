@@ -7,7 +7,7 @@ from typing import Literal
 
 from .frequency import FREQUENCIES
 from .models import Environment, FrozenModel, Settings
-from .scenarios import SANS_CHANNELS
+from .scenarios import HYPERCAPNIA_CHANNELS, SANS_CHANNELS
 from .units import MMHG_TO_PA
 
 NASA = "https://www.nasa.gov/wp-content/uploads/2024/09/ochmo-std-100-1a-rev-a-signed.pdf"
@@ -103,6 +103,18 @@ def channel(
 
 
 _CHANNELS = (
+    channel(
+        "eeg_cfe_ratio",
+        "Synthetic theta/alpha ratio",
+        "eeg_cfe",
+        "neurocognitive",
+        "model fixture",
+        "1",
+        "1",
+        "Mean synthetic ratio fixture; no raw EEG or FFT",
+        "60s",
+        "docs/hydrogfn_unhealthy_simulation_specification (1).md",
+    ),
     channel(
         "jugular_strain_pct",
         "Jugular reference strain",
@@ -574,6 +586,10 @@ def effective_channels(settings: Settings) -> set[str]:
         if settings.enabled_channels is not None
         else set(CHANNELS) - (SANS_CHANNELS if settings.sans_scenario is None else set())
     )
+    if settings.enabled_channels is None and settings.hypercapnia_scenario is None:
+        enabled -= HYPERCAPNIA_CHANNELS
+    if settings.hypercapnia_scenario is None and enabled & HYPERCAPNIA_CHANNELS:
+        raise ValueError("CFE channel requires hypercapnia_scenario configuration")
     if unknown := enabled - CHANNELS.keys():
         raise ValueError(f"unknown enabled channels: {sorted(unknown)}")
     if settings.sans_scenario is None and enabled & SANS_CHANNELS:
@@ -584,7 +600,7 @@ def effective_channels(settings: Settings) -> set[str]:
 EXCLUDED = (
     "sleep/stages/debt",
     "mood/PHQ9/GAD7",
-    "EEG/CFE/PVT",
+    "raw EEG acquisition/spectral processing and PVT",
     "headache and interactive visual-screen control",
     "kinematics/exercise compliance",
     "cephalic impedance and calibrated measured ICP",
@@ -626,6 +642,7 @@ class Dictionary(FrozenModel):
     channels: tuple[ChannelMetadata, ...]
     excluded: tuple[str, ...] = EXCLUDED
     sans_scenario: dict[str, object] | None = None
+    hypercapnia_scenario: dict[str, object] | None = None
     startup_behavior: str = (
         "One immediately available synthetic startup_baseline per enabled owner/channel, "
         "then the listed schedule. Startup has no completed collection window or lab delay; "
@@ -656,6 +673,11 @@ def dictionary(
         overrides["eye_screen"] = f"screen events at {settings.sans_scenario.eye_screen_times_s}"
     return Dictionary(
         environment=environment,
+        hypercapnia_scenario=(
+            settings.hypercapnia_scenario.model_dump(mode="json")
+            if settings and settings.hypercapnia_scenario
+            else None
+        ),
         sans_scenario=(
             settings.sans_scenario.model_dump(mode="json")
             if settings and settings.sans_scenario
