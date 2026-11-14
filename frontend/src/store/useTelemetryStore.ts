@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { openTelemetryStream } from "../api/Service.ts";
+import { openTelemetryStream, putEnvironment } from "../api/Service.ts";
 import type {
   ChannelInfo,
   Evaluation,
@@ -29,7 +29,11 @@ type TelemetryStore = {
   history: Record<string, VitalHistoryPoint[]>;
   findings: Record<string, TelemetryFinding>;
   hasTelemetryError: boolean;
+  environmentId: string | null;
+  isSelectingEnvironment: boolean;
+  hasEnvironmentSelectError: boolean;
   connectTelemetry: () => () => void;
+  selectEnvironment: (environmentId: string) => Promise<void>;
 };
 
 const toVitalReading = (reading: TelemetryReading, info: ChannelInfo): VitalReading => {
@@ -62,6 +66,9 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
   history: {},
   findings: {},
   hasTelemetryError: false,
+  environmentId: null,
+  isSelectingEnvironment: false,
+  hasEnvironmentSelectError: false,
   connectTelemetry: () => {
     let pendingReadings: TelemetryReading[] = [];
     let pendingFindings: TelemetryFinding[] = [];
@@ -116,6 +123,7 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
 
     const stream = openTelemetryStream({
       onDictionary: (dictionary) => set({ dictionary, hasTelemetryError: false }),
+      onEnvironment: (environmentId) => set({ environmentId }),
       onReading: (reading) => {
         pendingReadings.push(reading);
         scheduleFlush();
@@ -131,5 +139,19 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
       stream.close();
       window.clearTimeout(flushTimeoutId);
     };
+  },
+  selectEnvironment: async (environmentId) => {
+    if (get().isSelectingEnvironment) return;
+
+    set({ isSelectingEnvironment: true, hasEnvironmentSelectError: false });
+
+    try {
+      const selectedId = await putEnvironment(environmentId);
+      set({ environmentId: selectedId });
+    } catch {
+      set({ hasEnvironmentSelectError: true });
+    } finally {
+      set({ isSelectingEnvironment: false });
+    }
   },
 }));

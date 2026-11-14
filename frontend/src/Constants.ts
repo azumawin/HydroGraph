@@ -1,13 +1,37 @@
 import { Activity, Droplet, HeartPulse, Thermometer, Wind } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://127.0.0.1:8000";
+
 export const TELEMETRY = {
-  STREAM_URL: `${import.meta.env.VITE_BACKEND_URL ?? "http://127.0.0.1:8000"}/api/stream/`,
-  EVENTS: { DICTIONARY: "dictionary", READING: "reading", FINDING: "finding" },
+  STREAM_URL: `${BACKEND_URL}/api/stream/`,
+  ENVIRONMENT_URL: `${BACKEND_URL}/api/environment/`,
+  EVENTS: {
+    DICTIONARY: "dictionary",
+    ENVIRONMENT: "environment",
+    READING: "reading",
+    FINDING: "finding",
+  },
   CONNECTION_LABEL: "live telemetry",
   FLUSH_INTERVAL_MS: 250,
   MALFORMED_MESSAGE: "Received a telemetry message that does not match the backend contract.",
   DISCONNECTED_MESSAGE: "Lost the connection to the telemetry stream.",
+};
+
+export const ENVIRONMENT_LABELS = {
+  SELECT: "Mission environment",
+  GRAVITY: "Gravity",
+  COMM_DELAY: "Comm delay, round trip",
+  DAY_LENGTH: "Day",
+  RADIATION: "Radiation baseline",
+  SELECT_FAILED: "the selected environment",
+};
+
+export const ENVIRONMENT_FORMAT = {
+  NUMBER: new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }),
+  SECONDS_PER_MINUTE: 60,
+  HOURS_PER_DAY: 24,
+  MAX_HOURS_SHOWN: 48,
 };
 
 export const VITALS_HISTORY = {

@@ -1,3 +1,4 @@
+import axios from "axios";
 import { TELEMETRY } from "../Constants.ts";
 
 export type Evaluation = "nominal" | "warning" | "critical" | "unspecified";
@@ -31,13 +32,25 @@ export type FindingInfo = {
   channels: string[];
 };
 
+export type MissionEnvironment = {
+  id: string;
+  name: string;
+  gravity_g: number;
+  comm_delay_rt_s: number;
+  baseline_dose_rate_usv_h: number;
+  storm_shelter_available: boolean;
+  day_length_h: number;
+};
+
 export type TelemetryDictionary = {
+  environments: MissionEnvironment[];
   channels: Record<string, ChannelInfo>;
   findings: Record<string, FindingInfo>;
 };
 
 export type TelemetryStreamHandlers = {
   onDictionary: (dictionary: TelemetryDictionary) => void;
+  onEnvironment: (environmentId: string) => void;
   onReading: (reading: TelemetryReading) => void;
   onFinding: (finding: TelemetryFinding) => void;
   onError: (error: Error) => void;
@@ -66,6 +79,16 @@ const isChannelInfo = (value: unknown): value is ChannelInfo =>
 
 const isFindingInfo = (value: unknown): value is FindingInfo =>
   isRecord(value) && typeof value.name === "string" && isStringArray(value.channels);
+
+const isMissionEnvironment = (value: unknown): value is MissionEnvironment =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.name === "string" &&
+  typeof value.gravity_g === "number" &&
+  typeof value.comm_delay_rt_s === "number" &&
+  typeof value.baseline_dose_rate_usv_h === "number" &&
+  typeof value.storm_shelter_available === "boolean" &&
+  typeof value.day_length_h === "number";
 
 const malformed = () => new TypeError(TELEMETRY.MALFORMED_MESSAGE);
 
@@ -104,9 +127,22 @@ const parseFinding = (data: Record<string, unknown>): TelemetryFinding => {
   return { id, status, triggers, action };
 };
 
+const parseEnvironmentId = (data: Record<string, unknown>): string => {
+  const { id } = data;
+  if (typeof id !== "string") throw malformed();
+  return id;
+};
+
 const parseDictionary = (data: Record<string, unknown>): TelemetryDictionary => {
-  const { channels, findings } = data;
-  if (!isRecord(channels) || !isRecord(findings)) throw malformed();
+  const { environments, channels, findings } = data;
+  if (
+    !Array.isArray(environments) ||
+    !environments.every(isMissionEnvironment) ||
+    !isRecord(channels) ||
+    !isRecord(findings)
+  ) {
+    throw malformed();
+  }
   const channelEntries = Object.entries(channels);
   const findingEntries = Object.entries(findings);
   if (
@@ -116,6 +152,7 @@ const parseDictionary = (data: Record<string, unknown>): TelemetryDictionary => 
     throw malformed();
   }
   return {
+    environments,
     channels: Object.fromEntries(
       channelEntries.flatMap(([channel, info]) => (isChannelInfo(info) ? [[channel, info]] : [])),
     ),
@@ -143,6 +180,7 @@ export const openTelemetryStream = (handlers: TelemetryStreamHandlers): EventSou
   };
 
   listen(TELEMETRY.EVENTS.DICTIONARY, parseDictionary, handlers.onDictionary);
+  listen(TELEMETRY.EVENTS.ENVIRONMENT, parseEnvironmentId, handlers.onEnvironment);
   listen(TELEMETRY.EVENTS.READING, parseReading, handlers.onReading);
   listen(TELEMETRY.EVENTS.FINDING, parseFinding, handlers.onFinding);
   stream.addEventListener("error", () => {
@@ -150,4 +188,10 @@ export const openTelemetryStream = (handlers: TelemetryStreamHandlers): EventSou
   });
 
   return stream;
+};
+
+export const putEnvironment = async (environmentId: string): Promise<string> => {
+  const response = await axios.put<unknown>(TELEMETRY.ENVIRONMENT_URL, { id: environmentId });
+  if (!isRecord(response.data)) throw malformed();
+  return parseEnvironmentId(response.data);
 };

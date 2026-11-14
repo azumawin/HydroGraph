@@ -7,6 +7,18 @@
   --color-backdrop-graphite: #3c3c3c;
   --color-backdrop-silver: #555555;
   --color-backdrop-mist: #737373;
+  --color-backdrop-iss-graphite: #2c3a4a;
+  --color-backdrop-iss-silver: #4b6580;
+  --color-backdrop-iss-mist: #7194b8;
+  --color-backdrop-lunar-graphite: #3c3c3c;
+  --color-backdrop-lunar-silver: #5c5c5c;
+  --color-backdrop-lunar-mist: #8a8a8a;
+  --color-backdrop-transit-graphite: #1f1b3a;
+  --color-backdrop-transit-silver: #3d3470;
+  --color-backdrop-transit-mist: #6a58a8;
+  --color-backdrop-mars-graphite: #452419;
+  --color-backdrop-mars-silver: #7d4128;
+  --color-backdrop-mars-mist: #b5643a;
   --color-text: #f7f7f7;
   --color-text-secondary: #dedede;
   --color-accent: #e7e7e7;

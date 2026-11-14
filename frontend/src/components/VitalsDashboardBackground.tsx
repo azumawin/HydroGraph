@@ -131,9 +131,18 @@ const createPlasmaProgram = (gl: WebGL2RenderingContext, fragmentSource: string)
   }
 };
 
-const VitalsDashboardBackground = () => {
+type VitalsDashboardBackgroundProps = {
+  environmentId: string | null;
+};
+
+const VitalsDashboardBackground = ({ environmentId }: VitalsDashboardBackgroundProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const environmentIdRef = useRef(environmentId);
   const [hasBackgroundError, setHasBackgroundError] = useState(false);
+
+  useEffect(() => {
+    environmentIdRef.current = environmentId;
+  }, [environmentId]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -202,17 +211,28 @@ const VitalsDashboardBackground = () => {
       programs.push(composite.program);
       const hasFloatTargets = gl.getExtension("EXT_color_buffer_float") !== null;
       const colorProbe = document.createElement("canvas").getContext("2d");
-      const color = getComputedStyle(canvas).getPropertyValue(VITALS_BACKGROUND.COLOR_TOKEN).trim();
 
-      if (colorProbe === null || !CSS.supports("color", color)) {
-        throw new Error("Unable to read the plasma theme color.");
-      }
+      // the environment class on the dashboard root redefines the theme token
+      // so the colour is read again whenever the environment changes
+      const readThemeColors = () => {
+        const color = getComputedStyle(canvas)
+          .getPropertyValue(VITALS_BACKGROUND.COLOR_TOKEN)
+          .trim();
 
-      colorProbe.fillStyle = color;
-      colorProbe.fillRect(0, 0, 1, 1);
-      const [red, green, blue] = colorProbe.getImageData(0, 0, 1, 1).data;
-      const baseColor = [red, green, blue].map((channel) => Math.pow(channel / 255, 2.2));
-      const highlightColor = baseColor.map((channel) => channel + (1 - channel) * 0.85);
+        if (colorProbe === null || !CSS.supports("color", color)) {
+          throw new Error("Unable to read the plasma theme color.");
+        }
+
+        colorProbe.clearRect(0, 0, 1, 1);
+        colorProbe.fillStyle = color;
+        colorProbe.fillRect(0, 0, 1, 1);
+        const [red, green, blue] = colorProbe.getImageData(0, 0, 1, 1).data;
+        const base = [red, green, blue].map((channel) => Math.pow(channel / 255, 2.2));
+        return { base, highlight: base.map((channel) => channel + (1 - channel) * 0.85) };
+      };
+
+      let themeColors = readThemeColors();
+      let colorEnvironmentId = environmentIdRef.current;
       const view = { width: 1, height: 1, volumeWidth: 1, volumeHeight: 1 };
 
       gl.bindVertexArray(vertexArray);
@@ -228,6 +248,18 @@ const VitalsDashboardBackground = () => {
 
       handleFrameRender = (now) => {
         if (hasStopped || document.hidden) return;
+
+        if (environmentIdRef.current !== colorEnvironmentId) {
+          colorEnvironmentId = environmentIdRef.current;
+          try {
+            themeColors = readThemeColors();
+          } catch (error) {
+            handleBackgroundDispose();
+            console.error(VITALS_BACKGROUND.FALLBACK_MESSAGE, error);
+            setHasBackgroundError(true);
+            return;
+          }
+        }
 
         const deltaSeconds =
           lastFrameTime === 0
@@ -258,8 +290,8 @@ const VitalsDashboardBackground = () => {
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.useProgram(composite.program);
         gl.uniform2f(composite.uniforms.uResolution, canvas.width, canvas.height);
-        gl.uniform3fv(composite.uniforms.uColor, baseColor);
-        gl.uniform3fv(composite.uniforms.uHighlight, highlightColor);
+        gl.uniform3fv(composite.uniforms.uColor, themeColors.base);
+        gl.uniform3fv(composite.uniforms.uHighlight, themeColors.highlight);
         gl.uniform1f(composite.uniforms.uGain, VITALS_BACKGROUND.BRIGHTNESS * 4.8);
         gl.uniform1f(composite.uniforms.uShine, VITALS_BACKGROUND.SHINE * 0.025);
         gl.uniform1f(composite.uniforms.uOpacity, VITALS_BACKGROUND.OPACITY);
