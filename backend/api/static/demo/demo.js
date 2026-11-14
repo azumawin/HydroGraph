@@ -50,6 +50,9 @@ const stream = new EventSource("/api/stream/");
 
 stream.addEventListener("dictionary", (event) => {
   channels = JSON.parse(event.data).channels;
+  if (received === 0) {
+    statusLine.textContent = "Connected · waiting for readings (is the simulator running?)";
+  }
 });
 
 stream.addEventListener("reading", (event) => {
