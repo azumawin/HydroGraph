@@ -23,7 +23,7 @@ class PreviewEntry(FrozenModel):
     scope: str
     owner: str
     unit: str
-    source_value: float | bool
+    source_value: float | bool | str
     source_unit: str
     baseline_source_value: float | None = None
     window_s: float
@@ -68,6 +68,15 @@ class PreviewState:
 
     def baseline(self, observation: Observation) -> float | None:
         """Configured synthetic references; never infer total body water or edema."""
+        infection = self.settings.acute_infection_scenario
+        if infection and observation.owner == infection.owner_id:
+            from .scenarios import infection_references
+
+            infection_profile = next(p for p in self.settings.crew if p.id == infection.owner_id)
+            refs = infection_references(0, infection_profile, infection)
+            refs["il6_serum"] = infection.baseline_il6_pg_ml
+            if observation.reading.channel in refs:
+                return refs[observation.reading.channel]
         eva = self.settings.eva_dehydration_scenario
         if eva and observation.owner == eva.owner_id:
             from .scenarios import eva_sweat_values
@@ -122,7 +131,7 @@ class PreviewState:
                         baseline_source_value=self.baseline(o),
                         source_value=(
                             o.reading.value
-                            if isinstance(o.reading.value, bool)
+                            if isinstance(o.reading.value, (bool, str))
                             else (o.reading.value - CHANNELS[o.reading.channel].offset)
                             / CHANNELS[o.reading.channel].factor
                         ),

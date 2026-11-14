@@ -7,7 +7,7 @@ from typing import Literal
 
 from .frequency import FREQUENCIES
 from .models import Environment, FrozenModel, Settings
-from .scenarios import EVA_CHANNELS, HYPERCAPNIA_CHANNELS, SANS_CHANNELS
+from .scenarios import EVA_CHANNELS, HYPERCAPNIA_CHANNELS, INFECTION_CHANNELS, SANS_CHANNELS
 from .units import MMHG_TO_PA
 
 NASA = "https://www.nasa.gov/wp-content/uploads/2024/09/ochmo-std-100-1a-rev-a-signed.pdf"
@@ -103,6 +103,55 @@ def channel(
 
 
 _CHANNELS = (
+    channel(
+        "il6_pg_mL",
+        "Synthetic GFET IL-6",
+        "infection_gfet",
+        "immune",
+        "interstitial fixture",
+        "pg/mL",
+        "kg/m^3",
+        "Synthetic concentration; not calibrated serum equivalence",
+        "60s",
+        "docs/badscenario4.md",
+        factor=1e-9,
+    ),
+    channel(
+        "consciousness_level",
+        "Configured consciousness",
+        "infection_context",
+        "neurological",
+        "state fixture",
+        "ACVPU",
+        "ACVPU",
+        "Configured ACVPU state, not an examination",
+        "60s",
+        "docs/badscenario4.md",
+    ),
+    channel(
+        "supplemental_o2",
+        "Supplemental oxygen",
+        "infection_context",
+        "respiratory",
+        "state fixture",
+        "boolean",
+        "boolean",
+        "Configured oxygen context",
+        "60s",
+        "docs/badscenario4.md",
+    ),
+    channel(
+        "post_ared_exercise_window",
+        "Post-ARED window",
+        "infection_context",
+        "immune",
+        "state fixture",
+        "boolean",
+        "boolean",
+        "Configured exercise context",
+        "60s",
+        "docs/badscenario4.md",
+    ),
     channel(
         "whole_body_sweat_rate",
         "Whole-body sweat fixture",
@@ -607,6 +656,10 @@ def effective_channels(settings: Settings) -> set[str]:
         enabled -= EVA_CHANNELS
     if settings.eva_dehydration_scenario is None and enabled & EVA_CHANNELS:
         raise ValueError("whole-body sweat requires eva_dehydration_scenario")
+    if settings.enabled_channels is None and settings.acute_infection_scenario is None:
+        enabled -= INFECTION_CHANNELS
+    if settings.acute_infection_scenario is None and enabled & INFECTION_CHANNELS:
+        raise ValueError("infection channels require acute_infection_scenario")
     if unknown := enabled - CHANNELS.keys():
         raise ValueError(f"unknown enabled channels: {sorted(unknown)}")
     if settings.sans_scenario is None and enabled & SANS_CHANNELS:
@@ -661,6 +714,7 @@ class Dictionary(FrozenModel):
     sans_scenario: dict[str, object] | None = None
     hypercapnia_scenario: dict[str, object] | None = None
     eva_dehydration_scenario: dict[str, object] | None = None
+    acute_infection_scenario: dict[str, object] | None = None
     startup_behavior: str = (
         "One immediately available synthetic startup_baseline per enabled owner/channel, "
         "then the listed schedule. Startup has no completed collection window or lab delay; "
@@ -702,8 +756,22 @@ def dictionary(
                 "sweat_summary": "EVA target: complete active 60s means; other crew: active/wet",
             }
         )
+    if settings and settings.acute_infection_scenario:
+        fault = settings.acute_infection_scenario
+        overrides.update(
+            {
+                "bp": "infection target: synthetic minute BP; others: healthy schedule",
+                "il6": f"infection target specimens at {fault.serum_il6_event_times_s}",
+                "saliva_pcr": f"infection target specimens at {fault.saliva_pcr_event_times_s}",
+            }
+        )
     return Dictionary(
         environment=environment,
+        acute_infection_scenario=(
+            settings.acute_infection_scenario.model_dump(mode="json")
+            if settings and settings.acute_infection_scenario
+            else None
+        ),
         eva_dehydration_scenario=(
             settings.eva_dehydration_scenario.model_dump(mode="json")
             if settings and settings.eva_dehydration_scenario
@@ -743,7 +811,11 @@ def dictionary(
                 window_s=c.window_s,
                 availability_delay_s=lab_delay_s if c.lab else 0,
                 citations=(c.source,),
-                value_schema="boolean" if c.unit == "boolean" else "number",
+                value_schema="enum:ALERT,CONFUSION,VOICE,PAIN,UNRESPONSIVE"
+                if c.unit == "ACVPU"
+                else "boolean"
+                if c.unit == "boolean"
+                else "number",
                 raw_acquisition_hz=FREQUENCIES[c.group].raw_hz,
                 frequency_matrix_rows=FREQUENCIES[c.group].rows,
                 enabled=settings is None or c.id in effective_channels(settings),

@@ -13,6 +13,7 @@ import random
 from functools import lru_cache
 
 from .models import (
+    AcuteInfectionScenario,
     AstronautProfile,
     Environment,
     EvaDehydrationScenario,
@@ -26,7 +27,10 @@ from .scenarios import (
     eva_weight,
     hypercapnia_cabin_mmhg,
     hypercapnia_references,
+    infection_context_values,
+    infection_references,
     sans_rmssd_reference,
+    smoothstep,
 )
 from .units import MMHG_TO_PA
 
@@ -65,8 +69,17 @@ def heart_rate(
     *,
     hypercapnia: HypercapniaScenario | None = None,
     dehydration: EvaDehydrationScenario | None = None,
+    infection: AcuteInfectionScenario | None = None,
 ) -> float:
     """Activity, circadian phase and low-amplitude pulse noise share a continuous context."""
+    if infection and infection.owner_id == profile.id:
+        jitter = 0.8 * noise(t, seed, profile.id, "heart_rate", 30)
+        w = smoothstep(t, infection.onset_s, infection.affected_at_s)
+        return (
+            (heart_rate(t, profile, seed) - jitter) * (1 - w)
+            + infection.affected_heart_rate_bpm * w
+            + jitter
+        )
     if dehydration is not None and dehydration.owner_id == profile.id:
         healthy = heart_rate(t, profile, seed)
         jitter = 0.8 * noise(t, seed, profile.id, "heart_rate", 30)
@@ -93,6 +106,7 @@ def rmssd(
     *,
     hypercapnia: HypercapniaScenario | None = None,
     dehydration: EvaDehydrationScenario | None = None,
+    infection: AcuteInfectionScenario | None = None,
 ) -> float:
     """Compute RMSSD from a complete 60-second simulated NN-interval window.
 
@@ -109,7 +123,12 @@ def rmssd(
     differences = 0
     while beat < t:
         base = 60 / heart_rate(
-            beat, profile, seed, hypercapnia=hypercapnia, dehydration=dehydration
+            beat,
+            profile,
+            seed,
+            hypercapnia=hypercapnia,
+            dehydration=dehydration,
+            infection=infection,
         )
         target = sans_rmssd_reference(beat, profile, scenario) / 1000 * (1 - 0.5 * activity(beat))
         # Consecutive samples of a sine differ by 2*sin(pi*f*NN); normalize so
@@ -143,10 +162,60 @@ def crew_values(
     *,
     hypercapnia: HypercapniaScenario | None = None,
     dehydration: EvaDehydrationScenario | None = None,
-) -> dict[str, float | bool]:
+    infection: AcuteInfectionScenario | None = None,
+) -> dict[str, float | bool | str]:
     """Produce one physical acquisition group in conventional source units."""
     if dehydration is not None and dehydration.owner_id != profile.id:
         dehydration = None
+    if infection and infection.owner_id == profile.id:
+        refs = infection_references(t, profile, infection)
+        w = smoothstep(t, infection.onset_s, infection.affected_at_s)
+        if group == "infection_context":
+            return infection_context_values(t, infection)
+        if group == "infection_gfet":
+            if t < 60:
+                raise ValueError("GFET requires a completed minute")
+            return {
+                "il6_pg_mL": sum(
+                    infection_references(t - 60 + i + 0.5, profile, infection)["il6_pg_mL"]
+                    for i in range(60)
+                )
+                / 60
+            }
+        if group == "il6":
+            return {"il6_serum": refs["il6_pg_mL"]}
+        if group == "saliva_pcr":
+            return {
+                "viral_ebv_detected": t >= infection.reactivation_at_s
+                and infection.reactivated_virus == "EBV",
+                "viral_vzv_detected": t >= infection.reactivation_at_s
+                and infection.reactivated_virus == "VZV",
+            }
+        if group in {"temperature", "spo2", "bp", "respiration"}:
+            healthy = crew_values(group, t, profile, seed)
+            key = {
+                "temperature": "body_temperature",
+                "spo2": "spo2",
+                "bp": "bp_systolic",
+                "respiration": "respiratory_rate",
+            }[group]
+            if group == "respiration":
+                healthy[key] = (
+                    sum(
+                        infection_references(t - 60 + (i + 0.5) * 5, profile, infection)[key]
+                        + 0.35 * noise(t - 60 + (i + 0.5) * 5, seed, profile.id, group)
+                        for i in range(12)
+                    )
+                    / 12
+                )
+            else:
+                jitter = {"temperature": 0.025, "spo2": 0.25, "bp": 1.2}[group] * noise(
+                    t, seed, profile.id, group
+                )
+                base = {"temperature": 36.85, "spo2": 98.1, "bp": profile.sbp_mmhg}[group]
+                healthy[key] = refs[key] + (float(healthy[key]) - base - jitter) * (1 - w) + jitter
+
+            return healthy
     a = activity(t)
     h = hydration(t)
     if dehydration is not None:
@@ -157,7 +226,7 @@ def crew_values(
         if group in {"sweat", "sweat_summary", "eva_sweat"}:
             if group == "sweat_summary" and t < dehydration.onset_s + 60:
                 return {}
-            return eva_sweat_values(t, dehydration)
+            return dict(eva_sweat_values(t, dehydration))
         if group == "bp":
             w = eva_weight(t, profile, dehydration)
             n = noise(t, seed, profile.id, group)
@@ -183,6 +252,7 @@ def crew_values(
                         seed,
                         hypercapnia=hypercapnia,
                         dehydration=dehydration,
+                        infection=infection,
                     )
                     for i in range(12)
                 )
@@ -197,6 +267,7 @@ def crew_values(
                     scenario=scenario,
                     hypercapnia=hypercapnia,
                     dehydration=dehydration,
+                    infection=infection,
                 )
             }
         case "bp":
@@ -341,7 +412,7 @@ def environment_values(
     seed: int,
     *,
     hypercapnia: HypercapniaScenario | None = None,
-) -> dict[str, float | bool]:
+) -> dict[str, float | bool | str]:
     """Compartment telemetry depends on compartment time and configuration, never crew count."""
     match group:
         case "co2":
@@ -374,7 +445,7 @@ def environment_values(
             raise ValueError(f"unknown environment acquisition group: {group}")
 
 
-def startup_crew_values(profile: AstronautProfile, seed: int) -> dict[str, float | bool]:
+def startup_crew_values(profile: AstronautProfile, seed: int) -> dict[str, float | bool | str]:
     """Supply a complete run-start profile without inventing pre-start collections.
 
     Point-like channels can use their latent value at time zero. Windowed/dry
@@ -382,7 +453,7 @@ def startup_crew_values(profile: AstronautProfile, seed: int) -> dict[str, float
     daily urine volume and local sweat reference conditions. These values must be
     transported as startup_baseline, not as completed in-flight sensor windows.
     """
-    values: dict[str, float | bool] = {}
+    values: dict[str, float | bool | str] = {}
     for group in (
         "bp",
         "spo2",

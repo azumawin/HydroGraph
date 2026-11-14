@@ -73,7 +73,12 @@ function renderFinding(finding) {
   const [label, level] = statusLabel(finding.status);
   status.textContent = label;
   status.className = level;
-  triggers.textContent = finding.triggers.join("; ");
+  const details = [...finding.triggers];
+  if (finding.qsofa_score !== undefined) {
+    details.push(`NEWS2 ${finding.news2_score} / qSOFA ${finding.qsofa_score}`);
+    if (finding.il6_source_channel) details.push(`IL-6 source: ${finding.il6_source_channel}`);
+  }
+  triggers.textContent = details.join("; ");
   action.textContent = finding.action;
   flash(row);
 }

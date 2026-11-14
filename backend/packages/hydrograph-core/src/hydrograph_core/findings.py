@@ -29,7 +29,7 @@ D     Domain              Function                                 Plan finding
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 Severity = Literal["nominal", "warning", "critical"]
 """``status`` of a finding with several severities."""
@@ -56,9 +56,15 @@ class DehydrationResult(TypedDict):
 
 
 class InfectionResult(TypedDict):
+    context_values: NotRequired[dict[str, float | bool | str]]
+    qsofa_score: NotRequired[int]
+    news2_components: NotRequired[dict[str, int]]
+    il6_source_channel: NotRequired[str | None]
+    context_provenance: NotRequired[dict[str, str]]
+    unavailable_assays: NotRequired[list[str]]
     news2_score: int
     core_temp_c: float
-    il6_pg_ml: float
+    il6_pg_ml: float | None
     triggers: list[str]
     status: Severity
     action: str
@@ -280,7 +286,7 @@ def acute_infection_3_1(
     news2_score: int,
     news2_max_parameter_score: int,
     core_temp_c: float,
-    il6_pg_ml: float,
+    il6_pg_ml: float | None,
     post_ared_window: bool,
     herpesvirus_reactivation: bool,
 ) -> InfectionResult:
@@ -330,7 +336,7 @@ def acute_infection_3_1(
         triggers.append("core temp < 36.0 °C")
     if herpesvirus_reactivation:
         triggers.append("latent herpesvirus reactivation")
-    if il6_pg_ml > 3.0 and not post_ared_window:
+    if il6_pg_ml is not None and il6_pg_ml > 3.0 and not post_ared_window:
         triggers.append("IL-6 > 3.0 pg/mL")
 
     action = (

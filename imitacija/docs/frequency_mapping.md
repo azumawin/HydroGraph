@@ -76,3 +76,13 @@ synthetic spot events. These are demonstration acquisition assumptions, not
 continuous in-suit weighing or automatic urine tests. Other crew keep healthy
 schedules. No scheduled sweat is emitted outside the EVA, but startup includes
 all enabled channel references once.
+
+## Scenario 4 infection acquisition
+
+`infection_gfet` publishes a completed 60-second synthetic concentration mean
+at 60-second intervals; no raw electrical waveform or acquisition Hz is claimed.
+`infection_context` publishes configured states every minute with zero windows.
+The target uses synthetic paired BP every minute and configured serum/saliva
+specimen events; other crew retain their ordinary schedules. Default specimens
+are collected at 1860 s and available at 1980 s with the demo lab delay. State
+heartbeats are not repeated clinical exams, and startup references are not specimens.
