@@ -22,7 +22,7 @@ def test_empty_dashboard_before_any_reading(dashboard: Page) -> None:
         expect(ui.status(row)).to_have_text("Not measured")
         expect(ui.value(row)).to_have_text(re.compile("^—(/—)?$"))
         expect(row.locator(".vitals-dashboard-chart-message")).to_have_text("No readings yet.")
-    expect(dashboard.locator(".vitals-dashboard-findings-empty")).to_have_text("No findings yet.")
+    expect(dashboard.locator(".vitals-dashboard-chat-message")).to_have_count(0)
     expect(ui.region_status(ui.region(dashboard, "Upper body"))).to_have_text("No reading")
 
 
@@ -121,38 +121,35 @@ def test_single_severity_finding_shows_as_warning_with_triggers_and_action(
     backend.post("bone_ntx_pct_baseline", 0.30, "1")
     backend.post("urine_volume_24h", 1.5e-3, "m^3")
 
-    bone = ui.finding(dashboard, "Bone demineralization & renal stone risk")
-    expect(ui.finding_status(bone)).to_have_text("Warning")
-    expect(bone.locator(".vitals-dashboard-finding-triggers")).to_have_text(
-        "NTx > +25% from baseline · urine volume < 2.0 L/day"
-    )
-    expect(bone.locator(".vitals-dashboard-finding-action")).to_contain_text(
-        "Increase ARED resistive exercise load"
-    )
+    bone = ui.finding_message(dashboard, "Bone demineralization & renal stone risk")
+    expect(bone).to_contain_text("Warning:")
+    expect(bone).to_contain_text("NTx > +25% from baseline · urine volume < 2.0 L/day")
+    expect(bone).to_contain_text("Increase ARED resistive exercise load")
 
 
-def test_severity_finding_escalates_and_recovers(dashboard: Page, backend: Backend) -> None:
+def test_severity_finding_escalates_to_critical(dashboard: Page, backend: Backend) -> None:
     backend.post("ambient_integrated_dose", 0.001, "Sv", scope="environment")
     backend.post("ambient_dose_rate", 5e-9, "Sv/s", scope="environment")
     backend.post("spe_flag", True, "boolean", minutes=1, scope="environment")
 
-    radiation = ui.finding(dashboard, "Radiation dose & solar particle events")
-    expect(ui.finding_status(radiation)).to_have_text("Critical")
-    expect(radiation.locator(".vitals-dashboard-finding-action")).to_contain_text("storm shelter")
+    radiation = ui.finding_message(dashboard, "Radiation dose & solar particle events")
+    expect(radiation).to_contain_text("Critical:")
+    expect(radiation).to_contain_text("storm shelter")
 
     backend.post("spe_flag", False, "boolean", minutes=2, scope="environment")
 
-    expect(ui.finding_status(radiation)).to_have_text("Nominal")
-    expect(radiation.locator(".vitals-dashboard-finding-action")).to_have_count(0)
+    radiation_messages = ui.finding_messages(dashboard, "Radiation dose & solar particle events")
+    expect(radiation_messages).to_have_count(1)
+    expect(radiation).to_contain_text("Critical:")
 
 
 def test_finding_combines_crew_and_cabin_readings(dashboard: Page, backend: Backend) -> None:
     backend.post("spo2", 0.97, "1")
     backend.post("ambient_ppco2", 3.5 * MMHG, "Pa", scope="environment")
 
-    hypoxia = ui.finding(dashboard, "Hypoxia & CO2 exposure")
-    expect(ui.finding_status(hypoxia)).to_have_text("Warning")
-    expect(hypoxia.locator(".vitals-dashboard-finding-triggers")).to_have_text("ppCO2 > 3.0 mmHg")
+    hypoxia = ui.finding_message(dashboard, "Hypoxia & CO2 exposure")
+    expect(hypoxia).to_contain_text("Warning:")
+    expect(hypoxia).to_contain_text("ppCO2 > 3.0 mmHg")
 
 
 def test_rejected_reading_changes_nothing(dashboard: Page, backend: Backend) -> None:

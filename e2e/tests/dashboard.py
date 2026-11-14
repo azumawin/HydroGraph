@@ -38,13 +38,16 @@ def chart_points(row: Locator) -> int:
     return int(match.group(1))
 
 
-def finding(page: Page, name: str) -> Locator:
-    heading = page.locator(".vitals-dashboard-finding-name", has_text=name)
-    return page.locator(".vitals-dashboard-finding").filter(has=heading)
+def finding_messages(page: Page, name: str) -> Locator:
+    return page.locator(".vitals-dashboard-chat-message.is-assistant", has_text=name)
 
 
-def finding_status(item: Locator) -> Locator:
-    return item.locator(".vitals-dashboard-finding-status")
+def finding_message(page: Page, name: str) -> Locator:
+    return finding_messages(page, name).last
+
+
+def finding_messages_with_status(page: Page, name: str, status: str) -> Locator:
+    return finding_messages(page, name).filter(has_text=status)
 
 
 def region(page: Page, name: str) -> Locator:

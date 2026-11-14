@@ -41,8 +41,7 @@ export const ASSISTANT = {
   PLACEHOLDER: "Ask about the findings…",
   SEND_LABEL: "Send",
   THINKING: "Thinking…",
-  STARTER: "Summarize the current findings and tell me what to do.",
-  STARTER_LABEL: "Summarize findings and advise",
+  MAX_CONTEXT_MESSAGES: 40,
   FALLBACK_ERROR: "The assistant could not answer. Try again.",
 };
 

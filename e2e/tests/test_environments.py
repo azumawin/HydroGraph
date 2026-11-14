@@ -15,11 +15,17 @@ from conftest import Backend
 from playwright.sync_api import Page, expect
 
 ENVIRONMENT_NAMES = ["ISS, low Earth orbit", "Lunar surface", "Mars transit", "Mars surface"]
+RADIATION_FINDING = "radiation_exposure_3_2"
 USV_H = 1e-6 / 3600  # Sv/s
 
 
 def current_environment(backend: Backend) -> str:
     return httpx.get(f"{backend.url}/api/environment/").json()["id"]
+
+
+def finding_status(backend: Backend, finding_id: str) -> str:
+    findings = httpx.get(f"{backend.url}/api/health-conditions/").json()["findings"]
+    return next(item["status"] for item in findings if item["id"] == finding_id)
 
 
 def latest_dose_rate_usv_h(backend: Backend) -> float | None:
@@ -107,19 +113,18 @@ def test_radiation_is_graded_against_the_selected_environment(
     backend.post("ambient_integrated_dose", 0.001, "Sv", scope="environment")
     backend.post("ambient_dose_rate", 70 * USV_H, "Sv/s", scope="environment")
     backend.post("spe_flag", False, "boolean", scope="environment")
-    radiation = ui.finding(dashboard, "Radiation dose & solar particle events")
+    radiation = ui.finding_message(dashboard, "Radiation dose & solar particle events")
 
     # 70 uSv/h is 55.4 above the ISS background but only 12.9 above the Moon's
-    expect(ui.finding_status(radiation)).to_have_text("Warning")
-    expect(radiation.locator(".vitals-dashboard-finding-triggers")).to_have_text(
-        "dose rate > 50 µSv/h above baseline"
-    )
+    expect(radiation).to_contain_text("Warning:")
+    expect(radiation).to_contain_text("dose rate > 50 µSv/h above baseline")
+    assert finding_status(backend, RADIATION_FINDING) == "warning"
 
     ui.environment_select(dashboard).select_option("lunar_surface")
-    expect(ui.finding_status(radiation)).to_have_text("Nominal")
+    assert finding_status(backend, RADIATION_FINDING) == "nominal"
 
     ui.environment_select(dashboard).select_option("iss_leo")
-    expect(ui.finding_status(radiation)).to_have_text("Warning")
+    assert finding_status(backend, RADIATION_FINDING) == "warning"
 
 
 def test_running_simulator_follows_the_dashboard(
@@ -133,8 +138,7 @@ def test_running_simulator_follows_the_dashboard(
     ui.environment_select(dashboard).select_option("lunar_surface")
 
     wait_for_dose_rate(backend, 57.1)
-    radiation = ui.finding(dashboard, "Radiation dose & solar particle events")
-    expect(ui.finding_status(radiation)).to_have_text("Nominal")  # background, not a spike
+    assert finding_status(backend, RADIATION_FINDING) == "nominal"  # background, not a spike
 
     run.wait()
     assert "environment: lunar_surface" in run.output.read_text()
