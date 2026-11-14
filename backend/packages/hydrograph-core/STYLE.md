@@ -80,7 +80,7 @@ class SansResult(TypedDict):
     action: str
 
 
-def sans_fluid_shift_9(...) -> SansResult:
+def sans_fluid_shift_1_3(...) -> SansResult:
     ...
 ```
 
@@ -95,9 +95,12 @@ def sans_fluid_shift_9(...) -> SansResult:
 
 Names put the number(s) **after** a descriptive name:
 
-- Finding function: `<finding>_N` for finding N (`orthostatic_intolerance_1`,
-  `radiation_exposure_10`). Every one is exported from `__init__.py` and
-  listed in `__all__`.
+- Finding function: `<finding>_D_S`, D the finding's hazard domain and S its
+  place within that domain (`orthostatic_intolerance_1_1`,
+  `radiation_exposure_3_2`). The master plan does not number domains; the
+  numbering and the map to plan finding numbers are in the `findings.py`
+  module docstring. Every one is exported from `__init__.py` and listed in
+  `__all__`.
 
 ## Signatures
 

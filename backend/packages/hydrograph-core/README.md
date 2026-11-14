@@ -20,13 +20,13 @@ pytest packages/hydrograph-core  # this package's tests
 
 A self-contained flat module in `src/hydrograph_core/` (Python >= 3.14, no
 runtime dependencies). `import hydrograph_core` exports the 10 finding
-functions (`orthostatic_intolerance_1` ... `radiation_exposure_10`) and
-`Status`. Conventions: `STYLE.md`.
+functions, named `<finding>_D_S` (D = hazard domain, S = place in it;
+map to plan finding numbers in the `findings.py` docstring), and `Status`. Conventions: `STYLE.md`.
 
 ```python
 import hydrograph_core
 
-finding = hydrograph_core.sans_fluid_shift_9(1.5)
+finding = hydrograph_core.sans_fluid_shift_1_3(1.5)
 finding["status"], finding["triggers"]  # Status.WARNING, ["jugular distension >= 1.1%"]
 ```
 
@@ -44,9 +44,9 @@ JSON column (e.g. Django `JSONField`) or a response.
    (e.g. supine and standing BP; `None` for an hs-cTnI assay that was not run):
 
    ```python
-   from hydrograph_core import orthostatic_intolerance_1
+   from hydrograph_core import orthostatic_intolerance_1_1
 
-   finding = orthostatic_intolerance_1(120, 95, 80, 72, 70, 105, None)
+   finding = orthostatic_intolerance_1_1(120, 95, 80, 72, 70, 105, None)
    ```
 
    Store whatever history a finding needs; the library keeps none.

@@ -4,6 +4,27 @@ Each function evaluates one finding for the main window and returns its
 immediate action card. Criteria the master plan quantifies are computed here.
 Criteria it names without a cutoff are either keyword-only arguments the
 caller must supply (numeric) or booleans evaluated upstream (qualitative).
+
+Naming: ``<finding>_D_S``. The master plan numbers the findings 1-10 and gives
+each a "Primary Domain" (hazard), but does not number the domains. Our
+numbering: domains in order of first appearance in the plan's table, findings
+in plan order within each domain. The ``finding`` key of each result keeps the
+plan's own number.
+
+====  ==================  =======================================  ============
+D     Domain              Function                                 Plan finding
+====  ==================  =======================================  ============
+1     Gravity             ``orthostatic_intolerance_1_1``          1
+1     Gravity             ``bone_demineralization_1_2``            8
+1     Gravity             ``sans_fluid_shift_1_3``                 9
+2     Closed environment  ``dehydration_2_1``                      2
+2     Closed environment  ``hypoxia_co2_2_2``                      4
+2     Closed environment  ``negative_energy_balance_2_3``          7
+3     Radiation           ``acute_infection_3_1``                  3
+3     Radiation           ``radiation_exposure_3_2``               10
+4     Isolation           ``sleep_deficiency_4_1``                 5
+4     Isolation           ``behavioral_health_decline_4_2``        6
+====  ==================  =======================================  ============
 """
 
 from __future__ import annotations
@@ -113,7 +134,7 @@ class RadiationResult(TypedDict):
     action: str
 
 
-def orthostatic_intolerance_1(
+def orthostatic_intolerance_1_1(
     sbp_supine_mmhg: float,
     sbp_standing_mmhg: float,
     dbp_supine_mmhg: float,
@@ -202,7 +223,7 @@ def orthostatic_intolerance_1(
     }
 
 
-def dehydration_2(
+def dehydration_2_1(
     body_mass_kg: float,
     baseline_body_mass_kg: float,
     urine_specific_gravity: float,
@@ -268,7 +289,7 @@ def dehydration_2(
     }
 
 
-def acute_infection_3(
+def acute_infection_3_1(
     news2_score: int,
     news2_max_parameter_score: int,
     core_temp_c: float,
@@ -346,7 +367,7 @@ def acute_infection_3(
     }
 
 
-def hypoxia_co2_4(
+def hypoxia_co2_2_2(
     spo2_pct: float,
     respiratory_rate_rising: bool,
     ppco2_mmhg: float,
@@ -405,7 +426,7 @@ def hypoxia_co2_4(
     }
 
 
-def sleep_deficiency_5(
+def sleep_deficiency_4_1(
     sleep_hours: float,
     pvt_reaction_times_ms: Sequence[float],
     cfe_ratio: float,
@@ -475,7 +496,7 @@ def sleep_deficiency_5(
     }
 
 
-def behavioral_health_decline_6(
+def behavioral_health_decline_4_2(
     phq9_score: int,
     gad7_score: int,
     pvt_reaction_times_ms: Sequence[float],
@@ -558,7 +579,7 @@ def behavioral_health_decline_6(
     }
 
 
-def negative_energy_balance_7(
+def negative_energy_balance_2_3(
     body_mass_loss_pct_week: float,
     glucose_mmol_l: float,
     resting_lactate_mm: float,
@@ -624,7 +645,7 @@ def negative_energy_balance_7(
     }
 
 
-def bone_demineralization_8(
+def bone_demineralization_1_2(
     ntx_change_pct: float,
     urine_volume_l_day: float,
 ) -> BoneResult:
@@ -674,7 +695,7 @@ def bone_demineralization_8(
     }
 
 
-def sans_fluid_shift_9(jugular_distension_pct: float) -> SansResult:
+def sans_fluid_shift_1_3(jugular_distension_pct: float) -> SansResult:
     r"""
     Finding 9: SANS & cephalic fluid shift (gravity / neuro-ocular).
 
@@ -725,7 +746,7 @@ def sans_fluid_shift_9(jugular_distension_pct: float) -> SansResult:
     }
 
 
-def radiation_exposure_10(
+def radiation_exposure_3_2(
     cumulative_dose_msv: float,
     dose_rate_usv_h: float,
     spe_flag: bool,

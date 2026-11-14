@@ -13,33 +13,33 @@ def _ortho(
     ctni: float | None = None,
 ) -> findings.OrthostaticResult:
     """(supine, standing) pairs for SBP, DBP and HR."""
-    return findings.orthostatic_intolerance_1(*sbp, *dbp, *hr, ctni)
+    return findings.orthostatic_intolerance_1_1(*sbp, *dbp, *hr, ctni)
 
 
 def _infection(
     news2: int, max_param: int = 0, temp: float = 37.0, il6: float = 1.0
 ) -> findings.InfectionResult:
-    return findings.acute_infection_3(news2, max_param, temp, il6, False, False)
+    return findings.acute_infection_3_1(news2, max_param, temp, il6, False, False)
 
 
 def _sleep(hours: float, cfe: float = 0.5) -> findings.SleepResult:
-    return findings.sleep_deficiency_5(hours, [], cfe, max_pvt_lapses=2)
+    return findings.sleep_deficiency_4_1(hours, [], cfe, max_pvt_lapses=2)
 
 
 def _hypoxia(spo2: float, ppco2: float) -> findings.HypoxiaResult:
-    return findings.hypoxia_co2_4(spo2, False, ppco2, False)
+    return findings.hypoxia_co2_2_2(spo2, False, ppco2, False)
 
 
 def _energy(mmol: float) -> findings.EnergyBalanceResult:
-    return findings.negative_energy_balance_7(0.0, mmol, 1.0)
+    return findings.negative_energy_balance_2_3(0.0, mmol, 1.0)
 
 
 def _bone(litres: float) -> findings.BoneResult:
-    return findings.bone_demineralization_8(0.0, litres)
+    return findings.bone_demineralization_1_2(0.0, litres)
 
 
 def _rad(cum: float, rate: float, spe: bool) -> findings.RadiationResult:
-    return findings.radiation_exposure_10(cum, rate, spe)
+    return findings.radiation_exposure_3_2(cum, rate, spe)
 
 
 class TestHydrogfnFindings(unittest.TestCase):
@@ -83,32 +83,32 @@ class TestHydrogfnFindings(unittest.TestCase):
     # 2 Dehydration
     def test_dehydration_small_loss_nominal(self) -> None:
         """Source: BML < 2 % and USG < 1.020 euhydrated, https://pmc.ncbi.nlm.nih.gov/articles/PMC9214901, https://pmc.ncbi.nlm.nih.gov/articles/PMC4912946"""
-        r = findings.dehydration_2(99.0, 100.0, 1.010)
+        r = findings.dehydration_2_1(99.0, 100.0, 1.010)
         self.assertEqual(r["status"], Status.NOMINAL)
 
     # RESEARCH MISMATCH: code warns only when mass loss > 2 % (98 kg gives NOMINAL) vs research BML >= 2 % is hypohydration (Munoz, PMC9214901)
     @unittest.expectedFailure
     def test_dehydration_bml_exactly_2pct_warning(self) -> None:
         """Source: Munoz BML >= 2 % hypohydration, https://pmc.ncbi.nlm.nih.gov/articles/PMC9214901, https://pmc.ncbi.nlm.nih.gov/articles/PMC4912946"""
-        r = findings.dehydration_2(98.0, 100.0, 1.010)
+        r = findings.dehydration_2_1(98.0, 100.0, 1.010)
         self.assertEqual(r["status"], Status.WARNING)
 
     # RESEARCH MISMATCH: code warns only when USG > 1.020 (1.020 gives NOMINAL) vs research USG >= 1.020 is hypohydration (PMC4912946)
     @unittest.expectedFailure
     def test_dehydration_usg_exactly_1020_warning(self) -> None:
         """Source: euhydration USG < 1.020, so >= 1.020 hypohydrated, https://pmc.ncbi.nlm.nih.gov/articles/PMC9214901, https://pmc.ncbi.nlm.nih.gov/articles/PMC4912946"""
-        r = findings.dehydration_2(100.0, 100.0, 1.020)
+        r = findings.dehydration_2_1(100.0, 100.0, 1.020)
         self.assertEqual(r["status"], Status.WARNING)
 
     def test_dehydration_fluid_deficit(self) -> None:
         """Source: 1 kg acute body-mass loss ~ 1 L fluid, Sawka 2007 ACSM https://pubmed.ncbi.nlm.nih.gov/17277604/"""
         self.assertEqual(
-            findings.dehydration_2(97.4, 100.0, 1.010)["fluid_deficit_ml"], 2600
+            findings.dehydration_2_1(97.4, 100.0, 1.010)["fluid_deficit_ml"], 2600
         )
 
     def test_dehydration_usg_1030_warning(self) -> None:
         """Source: USG >= 1.020 hypohydration, https://pmc.ncbi.nlm.nih.gov/articles/PMC9214901, https://pmc.ncbi.nlm.nih.gov/articles/PMC4912946"""
-        r = findings.dehydration_2(100.0, 100.0, 1.030)
+        r = findings.dehydration_2_1(100.0, 100.0, 1.030)
         self.assertEqual(r["status"], Status.WARNING)
 
     # 3 Infection
@@ -142,7 +142,7 @@ class TestHydrogfnFindings(unittest.TestCase):
     def test_infection_il6_gated_after_ared(self) -> None:
         """Source: master plan p.3, IL-6 > 3.0 pg/mL warns only outside the 2-hr post-ARED window."""
         self.assertEqual(_infection(0, il6=4.0)["status"], Status.WARNING)
-        r = findings.acute_infection_3(0, 0, 37.0, 4.0, True, False)
+        r = findings.acute_infection_3_1(0, 0, 37.0, 4.0, True, False)
         self.assertEqual(r["status"], Status.NOMINAL)
 
     # 4 Hypoxia / CO2
@@ -169,7 +169,7 @@ class TestHydrogfnFindings(unittest.TestCase):
     # 5 Sleep
     def test_sleep_pvt_lapse_threshold(self) -> None:
         """Source: PVT lapse = RT > 500 ms, Basner 2011 PVT https://pmc.ncbi.nlm.nih.gov/articles/PMC3197786"""
-        r = findings.sleep_deficiency_5(
+        r = findings.sleep_deficiency_4_1(
             8.0, [500.0, 501.0, 300.0], 0.5, max_pvt_lapses=2
         )
         self.assertEqual(r["pvt_lapses"], 1)
@@ -193,7 +193,7 @@ class TestHydrogfnFindings(unittest.TestCase):
     # 6 Behavioral
     def test_behavioral_pvt_lapses_counted(self) -> None:
         """Source: PVT lapse = RT > 500 ms, Basner 2011 PVT https://pmc.ncbi.nlm.nih.gov/articles/PMC3197786"""
-        r = findings.behavioral_health_decline_6(
+        r = findings.behavioral_health_decline_4_2(
             0,
             0,
             [450.0, 520.0, 700.0],
@@ -208,7 +208,7 @@ class TestHydrogfnFindings(unittest.TestCase):
 
     def test_behavioral_phq9_10_warning(self) -> None:
         """Source: PHQ-9 >= 10 moderate depression, Kroenke 2001 https://pmc.ncbi.nlm.nih.gov/articles/PMC1495268/"""
-        r = findings.behavioral_health_decline_6(
+        r = findings.behavioral_health_decline_4_2(
             10, 0, [], 0.0, False, 10.0, max_pvt_lapses=5, max_sleep_debt_hours=10.0
         )
         self.assertEqual(r["status"], Status.WARNING)
@@ -251,10 +251,10 @@ class TestHydrogfnFindings(unittest.TestCase):
     # 9 SANS
     def test_sans_jugular_distension_bands(self) -> None:
         """Source: master plan p.4, < 1.1 % nominal, 1.1-1.8 % warning, > 1.8 % critical (Roy et al., 2024)."""
-        self.assertEqual(findings.sans_fluid_shift_9(1.0)["status"], Status.NOMINAL)
-        self.assertEqual(findings.sans_fluid_shift_9(1.1)["status"], Status.WARNING)
-        self.assertEqual(findings.sans_fluid_shift_9(1.8)["status"], Status.WARNING)
-        self.assertEqual(findings.sans_fluid_shift_9(1.9)["status"], Status.CRITICAL)
+        self.assertEqual(findings.sans_fluid_shift_1_3(1.0)["status"], Status.NOMINAL)
+        self.assertEqual(findings.sans_fluid_shift_1_3(1.1)["status"], Status.WARNING)
+        self.assertEqual(findings.sans_fluid_shift_1_3(1.8)["status"], Status.WARNING)
+        self.assertEqual(findings.sans_fluid_shift_1_3(1.9)["status"], Status.CRITICAL)
 
     # 10 Radiation
     def test_radiation_below_limits_nominal(self) -> None:
