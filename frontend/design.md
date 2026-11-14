@@ -77,7 +77,7 @@ Derive supporting treatments from these tokens with the project's existing `colo
 | Divider         | Surface 16%, transparent 84%    |
 | Soft shadow ink | Background 30%, transparent 70% |
 
-Keep icons and ordinary text neutral white. The backdrop supplies tonal variation; panel outlines should read as reflections rather than neon strokes. Use the platinum accent for selection and actions. Label each chart series explicitly; reserve semantic text colors for evaluation statuses.
+Keep ordinary text neutral white. Vital icons take their chart series color; tab icons and the environment icon each take one chart color. The backdrop supplies tonal variation; panel outlines should read as reflections rather than neon strokes. Use the platinum accent for selection and actions. Label each chart series explicitly; reserve semantic text colors for evaluation statuses.
 
 ## Materials and light
 
@@ -97,7 +97,7 @@ Keep edge reflections thin and neutral. The Plasma canvas is the single animated
 
 ## Typography
 
-Use one deliberate native UI stack: `system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`. It uses the platform's interface font, including Apple's system face where available, without downloading or redistributing San Francisco. The same hierarchy and layout apply across platforms; glyph shapes depend on the installed system font.
+Use Apple's UI font throughout: `-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", system-ui, sans-serif`. It uses the platform's interface font, including Apple's system face where available, without downloading or redistributing San Francisco. The same hierarchy and layout apply across platforms; glyph shapes depend on the installed system font.
 
 The improvement comes from size, weight, spacing, and contrast. Avoid introducing a display face, a futuristic font, or monospace styling for ordinary labels.
 

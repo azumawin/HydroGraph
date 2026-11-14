@@ -40,7 +40,9 @@
   --color-glass-tint: color-mix(in srgb, var(--color-background) 80%, transparent);
   --color-shadow: color-mix(in srgb, var(--color-background) 30%, transparent);
 
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", system-ui,
+    sans-serif;
   line-height: 1.5;
   color: var(--color-text);
   background-color: var(--color-background);
