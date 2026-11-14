@@ -1,0 +1,90 @@
+.vitals-dashboard .vitals-dashboard-body-scan-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 164px;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  padding: 8px 24px 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.vitals-dashboard .vitals-dashboard-body-scan-viewer {
+  position: relative;
+  min-height: 200px;
+  padding: 0;
+  cursor: grab;
+}
+
+.vitals-dashboard .vitals-dashboard-body-regions {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vitals-dashboard .vitals-dashboard-body-region {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 12px;
+  border: 1px solid var(--color-divider);
+  border-radius: 12px;
+  background: var(--color-glass-fill);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.vitals-dashboard .vitals-dashboard-body-region-name {
+  font-weight: 500;
+}
+
+.vitals-dashboard .vitals-dashboard-body-region-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+}
+
+.vitals-dashboard .vitals-dashboard-body-region-status.is-unusual {
+  color: var(--color-status-unusual);
+}
+
+.vitals-dashboard .vitals-dashboard-body-region-status.is-critical {
+  color: var(--color-status-critical);
+}
+
+.vitals-dashboard .vitals-dashboard-body-region-status.is-normal,
+.vitals-dashboard .vitals-dashboard-body-region-status.is-optimal {
+  color: var(--color-status-normal);
+}
+
+.vitals-dashboard .vitals-dashboard-body-region-dot {
+  width: 6px;
+  height: 6px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.vitals-dashboard
+  .vitals-dashboard-body-region-status:not(.is-unmeasured)
+  .vitals-dashboard-body-region-dot {
+  background: currentColor;
+}
+
+.vitals-dashboard .vitals-dashboard-body-scan-viewer:active {
+  cursor: grabbing;
+}
+
+.vitals-dashboard .vitals-dashboard-body-scan-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
