@@ -1,9 +1,7 @@
 import pytest
 from django.urls import reverse
-from hydrograph_core import Status
 from rest_framework.test import APIClient
 
-from api.channels import CHANNELS
 from api.models import Reading
 
 
@@ -74,29 +72,3 @@ def test_post_readings_rejects_whole_batch_with_per_item_errors(
         "2": {"measured_at": ["This field is required."]},
     }
     assert Reading.objects.count() == 0
-
-
-@pytest.mark.parametrize(
-    ("channel", "value", "expected"),
-    [
-        ("heart_rate", 45, Status.UNSPECIFIED),
-        ("heart_rate", 90, Status.NOMINAL),
-        ("heart_rate", 95, Status.WARNING),
-        ("bp_systolic", 118, Status.UNSPECIFIED),
-        ("spo2", 94, Status.NOMINAL),
-        ("spo2", 93.9, Status.WARNING),
-        ("spo2", 89.9, Status.CRITICAL),
-        ("core_temp", 38.0, Status.NOMINAL),
-        ("core_temp", 35.9, Status.WARNING),
-        ("glucose", 3.9, Status.NOMINAL),
-        ("glucose", 3.8, Status.WARNING),
-        ("glucose", 2.9, Status.CRITICAL),
-        ("glucose", 7.1, Status.UNSPECIFIED),
-        ("ppco2", 3.1, Status.WARNING),
-        ("dose_rate", 50, Status.NOMINAL),
-        ("jugular_distension", 1.1, Status.WARNING),
-        ("jugular_distension", 1.9, Status.CRITICAL),
-    ],
-)
-def test_channel_thresholds(channel: str, value: float, expected: Status) -> None:
-    assert CHANNELS[channel].evaluate(value) is expected

@@ -2,6 +2,7 @@ import hydrograph_core
 from django.http import HttpRequest, JsonResponse, StreamingHttpResponse
 from django.http.response import HttpResponseBase
 from drf_spectacular.utils import extend_schema
+from hydrograph_core import ENVIRONMENTS
 from rest_framework import status
 from rest_framework.decorators import (
     api_view,
@@ -12,7 +13,6 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from api.channels import ENVIRONMENTS
 from api.models import Reading
 from api.serializers import ReadingInSerializer, ReadingOutSerializer, reading_payload
 from api.stream import events

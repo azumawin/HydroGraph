@@ -18,9 +18,13 @@ directory, standard library only. Its docs stay in this package directory.
 
 ```
 hydrograph_core/
-  __init__.py         public API: the 10 finding functions + Status
+  __init__.py         public API: the 10 finding functions, Status, the
+                      channel and environment catalogs
   shared.py           code shared across files (the Status enum)
   findings.py         Tier 1: main-window health findings 1-10
+  channels.py         sensor channels: display info (CHANNELS) and the grade of
+                      one reading on its own (evaluate_reading)
+  environments.py     mission environments (ENVIRONMENTS)
 ```
 
 Tier 1 combines vitals and Tier 2 values (sensor readings turned into

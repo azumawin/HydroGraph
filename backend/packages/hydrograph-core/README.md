@@ -1,7 +1,9 @@
 # hydrograph-core
 
 Pure domain logic for the HydroGFN health monitor: the master plan's 10 Tier 1
-health findings. No Django imports, no I/O, no state. Consumed by the `api` app in the backend.
+health findings, the sensor channel catalog with single-reading thresholds, and
+the mission environments. No Django imports, no I/O, no state. The backend
+consumes it; any rule about what a value means belongs here, not in `api/`. Consumed by the `api` app in the backend.
 
 Built from two spec documents in this directory:
 
@@ -21,7 +23,8 @@ pytest packages/hydrograph-core  # this package's tests
 A self-contained flat module in `src/hydrograph_core/` (Python >= 3.14, no
 runtime dependencies). `import hydrograph_core` exports the 10 finding
 functions, named `<finding>_D_S` (D = hazard domain, S = place in it;
-map to plan finding numbers in the `findings.py` docstring), and `Status`. Conventions: `STYLE.md`.
+map to plan finding numbers in the `findings.py` docstring), `Status`,
+`CHANNELS` + `evaluate_reading(channel, value)`, and `ENVIRONMENTS`. Conventions: `STYLE.md`.
 
 ```python
 import hydrograph_core

@@ -65,7 +65,8 @@ the stream never sends anything.
 
 ## Readings endpoints
 
-Channels, units and thresholds: `api/channels.py`. `evaluation` is a
+Channels, units and thresholds: `hydrograph_core.channels` (core); the backend only
+stores and ships readings. `evaluation` is a
 `hydrograph_core.Status` value (`nominal` / `warning` / `critical` / `unspecified`).
 
 `POST /api/readings/` takes a bare array and stores all items or none:

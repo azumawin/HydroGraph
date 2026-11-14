@@ -9,8 +9,8 @@ import json
 from collections.abc import AsyncGenerator, Mapping
 
 from django.db.models import Max
+from hydrograph_core import CHANNELS, ENVIRONMENTS
 
-from api.channels import CHANNELS, ENVIRONMENTS
 from api.models import Reading
 from api.serializers import reading_payload
 
@@ -41,8 +41,7 @@ async def events(environment_id: str, after_id: int | None) -> AsyncGenerator[st
         "environment",
         {
             "id": environment_id,
-            "gravity_g": environment.gravity_g,
-            "comm_delay_s": environment.comm_delay_s,
+            **environment,
         },
     )
 

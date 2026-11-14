@@ -6,9 +6,9 @@ Keep these thin: validation and shaping only. Domain logic belongs in
 
 from typing import Any
 
+from hydrograph_core import CHANNELS, evaluate_reading
 from rest_framework import serializers
 
-from api.channels import CHANNELS
 from api.models import Reading
 
 
@@ -49,19 +49,19 @@ class ReadingOutSerializer(serializers.ModelSerializer[Reading]):
         )
 
     def get_unit(self, obj: Reading) -> str:
-        return CHANNELS[obj.channel].unit
+        return CHANNELS[obj.channel]["unit"]
 
     def get_evaluation(self, obj: Reading) -> str:
-        return CHANNELS[obj.channel].evaluate(obj.value).value
+        return evaluate_reading(obj.channel, obj.value).value
 
     def get_name(self, obj: Reading) -> str:
-        return CHANNELS[obj.channel].name
+        return CHANNELS[obj.channel]["name"]
 
     def get_body_regions(self, obj: Reading) -> list[str]:
-        return list(CHANNELS[obj.channel].body_regions)
+        return list(CHANNELS[obj.channel]["body_regions"])
 
     def get_explanation(self, obj: Reading) -> str:
-        return CHANNELS[obj.channel].explanation
+        return CHANNELS[obj.channel]["explanation"]
 
 
 def reading_payload(reading: Reading) -> dict[str, Any]:
