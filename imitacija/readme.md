@@ -42,11 +42,11 @@ uv run imitacija --config config/healthy.toml
 Set `base_url` and `data_route` in `config/healthy.toml` to your receiver before starting:
 
 ```toml
-base_url = "http://localhost:9000"
-data_route = "/data"
+base_url = "http://127.0.0.1:8000"
+data_route = "/api/readings/"
 ```
 
-All crew and environment readings are POSTed to `http://localhost:9000/data`. The receiver distinguishes them using the `X-Simulation-Scope` and `X-Owner-ID` headers and the body’s `channel`. `data_route` replaces the older separate route settings; remove `crew_route`, `environment_route` and `channel_routes` from existing configurations. Optional authentication comes from `IMITACIJA_TOKEN`; credentials do not belong in configuration URLs. Stop with Ctrl+C for a bounded drain. Normal mode is a push-only worker; the optional preview opens a read-only localhost JSON endpoints.
+All crew and environment readings are POSTed to `http://127.0.0.1:8000/api/readings/`, the HydroGraph backend (`backend/`). The receiver distinguishes them using the `X-Simulation-Scope` and `X-Owner-ID` headers and the body’s `channel`. `data_route` replaces the older separate route settings; remove `crew_route`, `environment_route` and `channel_routes` from existing configurations. Optional authentication comes from `IMITACIJA_TOKEN`; credentials do not belong in configuration URLs. Stop with Ctrl+C for a bounded drain. Normal mode is a push-only worker; the optional preview opens a read-only localhost JSON endpoints.
 
 The implementation covers **29 channels**, with independent wearable clocks, completed HRV/urine windows, session-based laboratory fixtures, delayed result availability, paired acquisitions and separate environmental ownership. Generated measurements exist only in RAM and outbound requests. Stderr reports aggregate operational counters. Backend history and analysis are separate responsibilities.
 
