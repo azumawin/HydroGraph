@@ -153,7 +153,7 @@ def orthostatic_intolerance_1(
         hr_supine_bpm: Heart rate lying down [BPM].
         hr_standing_bpm: Heart rate within 10 min of standing [BPM].
         ctni_ng_ml: Event-triggered hs-cTnI [ng/mL], e.g. from
-            :func:`hydrograph_core.troponin_1_2`; ``None`` when no assay was run.
+            Parameter 1.2; ``None`` when no assay was run.
 
     Returns:
         ``finding``, ``delta_sbp_mmhg``, ``delta_dbp_mmhg``, ``hr_rise_bpm``,
@@ -295,7 +295,7 @@ def acute_infection_3(
         news2_score: Aggregate NEWS2 early-warning score [0-20].
         news2_max_parameter_score: Highest single-vital NEWS2 score [0-3].
         core_temp_c: ZHF core-equivalent temperature [°C], e.g. from
-            :func:`hydrograph_core.core_temperature_2_2`.
+            Parameter 2.2.
         il6_pg_ml: GFET IL-6 concentration [pg/mL].
         post_ared_window: The reading is within 2 h after an ARED workout.
         herpesvirus_reactivation: Latent EBV, VZV or CMV reactivation detected.
@@ -430,7 +430,7 @@ def sleep_deficiency_5(
         sleep_hours: Wrist actigraphy sleep duration [h].
         pvt_reaction_times_ms: Reaction times from the daily 5-min PVT [ms].
         cfe_ratio: Prefrontal EEG CFE, e.g. from
-            :func:`hydrograph_core.cognitive_fatigue_4_2` [unitless].
+            Parameter 4.2 [unitless].
         max_pvt_lapses: Lapse-count cutoff; the plan gives no value.
 
     Returns:
@@ -507,7 +507,7 @@ def behavioral_health_decline_6(
         cortisol_slope_flattened: Diurnal cortisol degradation slope has
             flattened (from the Tier 2 cortisol series).
         cortisol_nm: Time-of-day normalized ISF cortisol [nM], e.g. from
-            :func:`hydrograph_core.cortisol_4_1`.
+            Parameter 4.1.
         max_pvt_lapses: Lapse-count cutoff; the plan gives no value.
         max_sleep_debt_hours: Sleep-debt cutoff; the plan gives no value.
 
@@ -583,7 +583,7 @@ def negative_energy_balance_7(
         body_mass_loss_pct_week: Weekly body-mass loss as % of baseline
             [%/week], positive = loss.
         glucose_mmol_l: Blood glucose [mM], e.g. from
-            :func:`hydrograph_core.glucose_2_1`.
+            Parameter 2.1.
         resting_lactate_mm: Resting blood lactate [mM].
 
     Returns:
@@ -694,7 +694,7 @@ def sans_fluid_shift_9(jugular_distension_pct: float) -> SansResult:
     Args:
         jugular_distension_pct: Baseline-relative jugular distension from the
             carrageenan neck patch [%], e.g. ``strain_pct`` of
-            :func:`hydrograph_core.cephalic_fluid_shift_1_1`.
+            Parameter 1.1.
 
     Returns:
         ``finding``, ``jugular_distension_pct``, ``triggers``, ``status``,

@@ -1,7 +1,7 @@
 [project]
 name = "hydrograph-core"
 version = "0.1.0"
-description = "HydroGFN sensor formulas, Tier 1 findings, polling table and payload; no Django imports"
+description = "HydroGFN Tier 1 health findings; no Django imports"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = []
