@@ -48,6 +48,7 @@ export const ASSISTANT = {
 export const MAIN_PANEL_TABS = [
   { ID: "vitals", LABEL: "Vitals" },
   { ID: "measurements", LABEL: "All measurements" },
+  { ID: "trends", LABEL: "Trends" },
 ] as const;
 
 export type MainPanelTabId = (typeof MAIN_PANEL_TABS)[number]["ID"];
@@ -62,6 +63,22 @@ export const MEASUREMENTS = {
     maximumFractionDigits: 1,
     signDisplay: "exceptZero",
   }),
+};
+
+const HOUR_MS = 3600000;
+
+export const TRENDS = {
+  PERIODS: [
+    { ID: "day", LABEL: "Day", DURATION_MS: 24 * HOUR_MS },
+    { ID: "week", LABEL: "Week", DURATION_MS: 7 * 24 * HOUR_MS },
+    { ID: "month", LABEL: "Month", DURATION_MS: 30 * 24 * HOUR_MS },
+    { ID: "half_year", LABEL: "6 months", DURATION_MS: 182 * 24 * HOUR_MS },
+  ],
+  BUCKET_COUNT: 24,
+  HISTORY_LIMIT: 1000,
+  NOT_EVALUATED: "Not evaluated",
+  NO_READING: "No reading",
+  HISTORY_ERROR: "Could not load the reading history. Switch tabs to try again.",
 };
 
 const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });

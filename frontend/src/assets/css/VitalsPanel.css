@@ -323,3 +323,128 @@
   gap: 4px;
   font-variant-numeric: tabular-nums;
 }
+
+.vitals-dashboard .vitals-dashboard-tab-message.is-error {
+  color: var(--color-status-critical);
+}
+
+.vitals-dashboard .vitals-dashboard-trends {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.vitals-dashboard .vitals-dashboard-trends-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px 8px;
+}
+
+.vitals-dashboard .vitals-dashboard-trends-context {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.vitals-dashboard .vitals-dashboard-trends-periods {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-glass-tint);
+}
+
+.vitals-dashboard .vitals-dashboard-trends-period {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &.is-active {
+    color: var(--color-background);
+    background: var(--color-accent);
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-trends-list {
+  display: grid;
+  align-content: start;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0 24px 24px;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.vitals-dashboard .vitals-dashboard-trends-row {
+  display: grid;
+  gap: 8px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-divider);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-trends-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vitals-dashboard .vitals-dashboard-trends-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.vitals-dashboard .vitals-dashboard-trends-strip {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 2px;
+  height: 20px;
+}
+
+.vitals-dashboard .vitals-dashboard-trends-cell {
+  border-radius: 3px;
+  background: var(--color-glass-fill);
+
+  &.is-nominal {
+    background: color-mix(in srgb, var(--color-status-nominal) 55%, transparent);
+  }
+
+  &.is-unspecified {
+    background: var(--color-border);
+  }
+
+  &.is-warning {
+    background: var(--color-status-warning);
+  }
+
+  &.is-critical {
+    background: var(--color-status-critical);
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-trends-axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 14px;
+}
