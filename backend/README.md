@@ -24,6 +24,10 @@ or just use Nix
 
 ## Getting started
 
+From the repo root, `make dev` migrates, starts the backend, opens the live demo and
+feeds it from the simulator; Ctrl+C stops both. `make` lists every target (`run`,
+`sim`, `test`, `lint`, `check`, ...).
+
 create `.env` with env vars described in [here](##Configuration)
 
 if u use nix:
