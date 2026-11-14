@@ -62,6 +62,15 @@ export const VITALS_FORMAT = {
   VALUE: new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }),
 };
 
+// a reading for display: numbers formatted, text codes such as "UNRESPONSIVE"
+// or "NOT_SET" in sentence case ("Unresponsive", "Not set")
+export const formatReadingValue = (value: number | boolean | string): string => {
+  if (typeof value === "number") return VITALS_FORMAT.VALUE.format(value);
+  if (typeof value === "boolean") return String(value);
+  const words = value.replaceAll("_", " ").trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
 export const VITALS_EVALUATION_LABELS = {
   nominal: "Nominal",
   warning: "Warning",

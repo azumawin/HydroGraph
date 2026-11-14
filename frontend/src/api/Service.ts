@@ -5,9 +5,12 @@ export type Evaluation = "nominal" | "warning" | "critical" | "unspecified";
 
 export type FindingSeverity = "nominal" | "warning" | "critical";
 
+// text channels (e.g. consciousness_level, ACVPU) send an upper-case code
+export type ReadingValue = number | boolean | string;
+
 export type TelemetryReading = {
   channel: string;
-  value: number | boolean;
+  value: ReadingValue;
   measured_at: string;
   evaluation: Evaluation;
 };
@@ -123,7 +126,7 @@ const parseReading = (data: Record<string, unknown>): TelemetryReading => {
   const { channel, value, measured_at, evaluation } = data;
   if (
     typeof channel !== "string" ||
-    (typeof value !== "number" && typeof value !== "boolean") ||
+    (typeof value !== "number" && typeof value !== "boolean" && typeof value !== "string") ||
     typeof measured_at !== "string" ||
     !isEvaluation(evaluation)
   ) {

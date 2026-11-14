@@ -1,5 +1,5 @@
 import { CircleAlert, Check, Minus } from "lucide-react";
-import { VITALS_EVALUATION_LABELS, VITALS_FORMAT } from "../Constants.ts";
+import { VITALS_EVALUATION_LABELS, VITALS_FORMAT, formatReadingValue } from "../Constants.ts";
 import type { VitalMetric } from "../Constants.ts";
 import type { VitalReading } from "../store/useTelemetryStore.ts";
 import { BODY_EVALUATION_PRIORITY } from "./model/ModelConstants.ts";
@@ -45,13 +45,7 @@ const VitalReadingRow = ({
     isLoadingReading || hasReadingError
       ? "—"
       : orderedReadings
-          .map((reading) =>
-            reading === undefined
-              ? "—"
-              : typeof reading.value === "number"
-                ? VITALS_FORMAT.VALUE.format(reading.value)
-                : String(reading.value),
-          )
+          .map((reading) => (reading === undefined ? "—" : formatReadingValue(reading.value)))
           .join("/");
   const measurementTimes = [
     ...new Set(
