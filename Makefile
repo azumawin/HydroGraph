@@ -25,7 +25,7 @@ migrate: ## Create or update the backend database
 run: migrate ## Start the backend on http://127.0.0.1:8000
 	cd backend && uv run python manage.py runserver
 
-frontend: ## Start the frontend on http://127.0.0.1:5173 (proxies /api to the backend)
+frontend: ## Start the frontend on http://127.0.0.1:5173 (streams from the backend on :8000)
 	cd frontend && $(VITE)
 
 sim: ## Feed the running backend from the simulator (CONFIG, SPEED)

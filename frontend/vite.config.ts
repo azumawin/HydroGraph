@@ -6,6 +6,4 @@ import { defineConfig } from "vite";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()],
-  // same origin as the django backend so the event stream needs no cors
-  server: { proxy: { "/api": process.env.HYDROGRAPH_BACKEND ?? "http://127.0.0.1:8000" } },
 });

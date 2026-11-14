@@ -5,9 +5,9 @@ health findings, all live from the backend's event stream (`/api/stream/`, shape
 `../docs/json-shape.md`).
 
 From the repo root: `make sync` once, then `make dev` (backend, this frontend on
-http://127.0.0.1:5173 and the simulator together). On its own: `make frontend`; the Vite
-dev server proxies `/api` to the backend on http://127.0.0.1:8000 (override with
-`HYDROGRAPH_BACKEND`).
+http://127.0.0.1:5173 and the simulator together). On its own: `make frontend`. The
+browser connects straight to the backend's stream on http://127.0.0.1:8000 (override
+with `VITE_BACKEND_URL`); a Vite proxy would buffer the stream.
 
 Readings arrive in SI units; `VITALS_DISPLAY_UNITS` in `src/Constants.ts` converts the
 displayed ones (bpm, mmHg, °C, mmol/L, %). Evaluations are the backend's

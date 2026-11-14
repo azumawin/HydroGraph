@@ -136,4 +136,6 @@ async def stream(_request: HttpRequest) -> HttpResponseBase:
     response = StreamingHttpResponse(events(), content_type="text/event-stream")
     response["Cache-Control"] = "no-cache"
     response["X-Accel-Buffering"] = "no"  # stop nginx-style proxies buffering
+    # The frontend dev server is another origin; proxying it buffers the stream.
+    response["Access-Control-Allow-Origin"] = "*"
     return response

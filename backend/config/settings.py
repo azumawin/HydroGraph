@@ -133,3 +133,11 @@ MAILERS = {
         "BACKEND": "django.core.mail.backends.console.EmailBackend",
     },
 }
+
+# runserver logs every request; with the simulator posting several per second that
+# buries everything else, so only 4xx/5xx responses are logged.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "loggers": {"django.channels.server": {"level": "WARNING"}},
+}

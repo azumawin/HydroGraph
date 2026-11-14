@@ -2,7 +2,7 @@ import { Activity, Droplet, HeartPulse, Thermometer, Wind } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export const TELEMETRY = {
-  STREAM_URL: "/api/stream/",
+  STREAM_URL: `${import.meta.env.VITE_BACKEND_URL ?? "http://127.0.0.1:8000"}/api/stream/`,
   EVENTS: { DICTIONARY: "dictionary", READING: "reading", FINDING: "finding" },
   CONNECTION_LABEL: "live telemetry",
   MALFORMED_MESSAGE: "Received a telemetry message that does not match the backend contract.",
