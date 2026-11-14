@@ -8,16 +8,17 @@ SIM = uv run imitacija --config $(CONFIG) $(if $(SPEED),--speed $(SPEED))
 FRONTEND_URL = http://127.0.0.1:5173
 VITE = ./node_modules/.bin/vite --host 127.0.0.1 --port 5173 --strictPort
 
-.PHONY: help sync migrate run frontend sim open dev test lint fmt check
+.PHONY: help sync migrate run frontend sim open dev test e2e lint fmt check
 
 help: ## List targets
-	@grep -E '^[a-z]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-9s %s\n", $$1, $$2}'
+	@grep -E '^[a-z0-9]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-9s %s\n", $$1, $$2}'
 	@echo "  Variables: CONFIG=$(CONFIG) SPEED=$(or $(SPEED),from config)"
 
-sync: ## Install backend, simulator and frontend dependencies
+sync: ## Install backend, simulator, frontend and e2e dependencies
 	cd backend && uv sync
 	cd imitacija && uv sync
 	cd frontend && npm ci
+	cd e2e && uv sync
 
 migrate: ## Create or update the backend database
 	cd backend && uv run python manage.py migrate
@@ -45,14 +46,19 @@ test: ## Run backend, core and simulator tests
 	cd backend && uv run pytest -q
 	cd imitacija && uv run pytest -q
 
+e2e: ## Browser tests: simulator -> backend -> frontend (see e2e/README.md)
+	cd e2e && uv run pytest -q
+
 lint: ## Check formatting, lint and types
 	cd backend && uv run black --check . && uv run ruff check . && uv run basedpyright
 	cd imitacija && uv run ruff check src tests && uv run mypy
 	cd frontend && npm run lint && npx oxfmt --check src && npx tsc -b
+	cd e2e && uv run ruff format --check . && uv run ruff check .
 
 fmt: ## Format and auto-fix
 	cd backend && uv run black . && uv run ruff check --fix .
 	cd imitacija && uv run ruff check --fix src tests
 	cd frontend && npm run format
+	cd e2e && uv run ruff format . && uv run ruff check --fix .
 
 check: lint test ## Everything CI would run
