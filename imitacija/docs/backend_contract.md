@@ -74,5 +74,5 @@ and their conversions are listed in `channel_catalog.md`. For Finding 9, map
 percentage argument by multiplying by 100. A value of 0.0155 becomes 1.55.
 Keep `startup_baseline` visual fixtures separate from completed scheduled screens.
 The existing finding function does not use HRV, ICP indicators or visual results
-as classification inputs. Its scheduling and HTTP receiver are separate backend
-integration work; the current Django API exposes no telemetry ingestion endpoint.
+as classification inputs. Readings arrive at `/api/readings/`; scheduling Finding 9
+from them is separate backend integration work.

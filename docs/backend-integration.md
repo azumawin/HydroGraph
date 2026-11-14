@@ -1,0 +1,67 @@
+# Backend integration
+
+Run the receiver separately. All crew and environment measurements use one configured `data_route`:
+
+```toml
+base_url = "http://127.0.0.1:8000"
+data_route = "/api/readings/"
+```
+
+Both scopes send `POST http://127.0.0.1:8000/api/readings/`, the HydroGraph backend (`backend/`, run with `python manage.py runserver`). `data_route` is a shared path, without owner/channel placeholders or per-channel overrides. It replaces the previous `crew_route`, `environment_route` and `channel_routes` settings; remove those keys from older configuration files.
+
+Run normal delivery with `uv run imitacija --config config/healthy.toml` (without `--preview`). Set `IMITACIJA_TOKEN` if a Bearer token is required. The receiver distinguishes records using `X-Simulation-Scope` (`crew` / `environment`), `X-Owner-ID`, and the body’s `channel`. Multiple crew members produce independent records; each compartment sample is posted once. Add `[[crew]]` records with unique IDs to configure more crew.
+
+The JSON body contains exactly four fields. Evaluation and result classification belong to a separate backend:
+
+```json
+{
+  "channel": "bp_systolic",
+  "value": 15198.75216531,
+  "unit": "Pa",
+  "measured_at": "2026-11-14T08:00:00Z"
+}
+```
+
+The `unit` field names the wire unit of `value`, as defined by the channel registry. This illustrative 114 mmHg BP is transmitted in Pa. Boolean flags use `unit: "boolean"`; dimensionless numerical ratios use `"1"`. Temperature is K, pulse/respiration s⁻¹, saturation a fraction, volume m³, and dose Sv; consult the dictionary for every unit. The legacy `bone_ntx_pct_baseline` identifier is retained, but its SI-wire value is fractional **change** (0 = baseline, 0.03 = +3%), explicitly documented in the dictionary. The `ambient_light_lux` identifier uses lx. Boolean virus/SPE values remain JSON booleans.
+
+`measured_at` is UTC point acquisition time or the end of the declared observation window. Laboratory results can arrive later and out of order. A receiver should not treat HTTP arrival order as collection order or overwrite a fresh sample with an older delayed specimen. It should not treat a missing/dry/unsampled channel as normal.
+
+Headers supply the context without changing nigelNote's body:
+
+| Header | Meaning |
+| --- | --- |
+| `Idempotency-Key` | Run + owner + channel + sequence; unchanged on retry. Receiver should deduplicate. |
+| `X-Simulation-Run` | New unique delivery run on each process start. |
+| `X-Simulation-Scope` | `crew` or `environment`. |
+| `X-Owner-ID` | Crew ID or compartment ID according to scope. |
+| `X-Sample-Kind` | `startup_baseline` for one immediately available run-start fixture; `scheduled` for normal acquisitions. |
+| `X-Sensor-ID` | Owner + acquisition group; paired results share the physical acquisition group. |
+| `X-Window-Seconds` | 0 for point sampling; duration ending at `measured_at` otherwise. |
+| `X-Simulation-Start`, `X-Simulation-Speed` | Mapping of run time to timestamps; acceleration must be explicit to the backend. |
+| `X-Result-Available-Seconds` | Result eligibility time in elapsed simulation seconds, including configured lab/communication delay. |
+| `X-Dictionary-Version` | Static registry schema/version, currently `1`. |
+| `Authorization` | Optional Bearer token from the `IMITACIJA_TOKEN` environment variable. |
+
+Return 2xx after accepting a reading. The HydroGraph backend answers `201` with the reading plus its `evaluation`, `owner_id` and `scope` (`docs/json-shape.md`, section 2), and `400` with field errors for an unknown channel, wrong unit, wrong value type, missing `X-Owner-ID` or mismatched `X-Simulation-Scope`; the simulator counts a 400 as a failed delivery. Permanent authentication/schema failures count as failed delivery; selected transient failures retry with the same body/key. Finite runs may discard delayed results at their bounded shutdown deadline. The ending counters report delivery, overflow, expiry, failure, retry and shutdown-drop totals. Reconcile accepted results with idempotency keys rather than expecting exactly-once network delivery.
+
+Export static configuration-specific metadata before integration:
+
+```sh
+uv run imitacija --config config/healthy.toml --dictionary
+```
+
+Dictionary JSON retains nigelNote's `environment` and `channels` fields, and adds units, source units, specimen/method, collection/window/availability definitions, citations, enabled flags and exclusions. It is exported explicitly; the worker does not register it automatically or persist it. The receiver decides how to import/serve it and whether its ingestion contract accepts the proposed headers/routes.
+
+
+## Local JSON preview
+
+`--preview` exposes raw JSON at `/`, `/readings` and `/json`, and metadata at `/dictionary`. It replaces backend delivery with bounded latest-result state held only in RAM. The four-field `reading` object is the exact POST body; surrounding preview context includes conventional values, baselines and run/clock/owner metadata. Refresh to obtain another snapshot. Normal backend delivery does not start this local server.
+
+
+## Startup initialization
+
+Every enabled owner/channel emits exactly once with `measured_at` equal to the configured run start, including lab-only, windowed and normally dry/inactive channels. It is a synthetic known-at-start profile value, marked `X-Sample-Kind: startup_baseline`, not a newly processed assay or completed pre-start collection. It bypasses `lab_delay_s` while respecting communication delay and bounded delivery. The four-field body is unchanged.
+
+Startup `X-Window-Seconds` is 0: a nominal 24-hour urine baseline must not be interpreted as urine actually collected during a zero-duration interval. Profile RMSSD, nominal daily urine volume (2.7 L), glucose baseline and configured local sweat references stand in for windows that do not yet exist. Normal scheduled readings use `X-Sample-Kind: scheduled` and their real collection windows/processing delays. Preview snapshots expose the same `sample_kind` as metadata around `reading`.
+
+The first normal acquisition remains at its original time; no time-zero acquisition is duplicated. Empty IL-6/troponin event lists suppress later assay collections, not startup initialization. Use `enabled_channels` to omit a metric entirely. A new process run creates fresh baseline readings with a new run identifier; resuming an existing scheduler does not repeat initialization.

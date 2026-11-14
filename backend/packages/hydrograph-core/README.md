@@ -1,7 +1,9 @@
 # hydrograph-core
 
 Pure domain logic for the HydroGFN health monitor: the master plan's 10 Tier 1
-health findings. No Django imports, no I/O, no state. Consumed by the `api` app in the backend.
+health findings, the sensor channel catalog (the simulator's 29 channels, in SI
+wire units) with single-reading thresholds, and the mission environments. No Django imports, no I/O, no state. The backend
+consumes it; any rule about what a value means belongs here, not in `api/`.
 
 Built from two spec documents in this directory:
 
@@ -21,22 +23,29 @@ pytest packages/hydrograph-core  # this package's tests
 A self-contained flat module in `src/hydrograph_core/` (Python >= 3.14, no
 runtime dependencies). `import hydrograph_core` exports the 10 finding
 functions, named `<finding>_D_S` (D = hazard domain, S = place in it;
-map to plan finding numbers in the `findings.py` docstring), and `Status`. Conventions: `STYLE.md`.
+map to plan finding numbers in the `findings.py` docstring),
+`CHANNELS` + `evaluate_reading(channel, value)`, and `ENVIRONMENTS`. Conventions: `STYLE.md`.
+
+Each function returns only the values it can actually produce: a finding with
+one severity has `status: bool` (`True` = present); one with several has
+`status: Severity` (`"nominal" | "warning" | "critical"`). `evaluate_reading`
+returns an `Evaluation`, which adds `"unspecified"` for readings the specs give
+no cutoff for.
 
 ```python
 import hydrograph_core
 
 finding = hydrograph_core.sans_fluid_shift_1_3(1.5)
-finding["status"], finding["triggers"]  # Status.WARNING, ["jugular distension >= 1.1%"]
+finding["status"], finding["triggers"]  # "warning", ["jugular distension >= 1.1%"]
 ```
 
 ## Using it from the Django backend
 
 The package is a stateless library. The backend owns all state: sessions,
 reading history, sensor processing. Every function takes plain numbers and
-returns a plain `dict` that `json.dumps` accepts as-is (`Status` is a `str`
-enum and serializes to `"warning"`, ...), so results can go straight into a
-JSON column (e.g. Django `JSONField`) or a response.
+returns a plain `dict` of numbers, strings, booleans and lists that `json.dumps`
+accepts as-is, so results can go straight into a JSON column (e.g. Django
+`JSONField`) or a response.
 
 1. It is already a workspace dependency of `backend/pyproject.toml`, so `uv sync`
    installs it editable. Import it from `api/` views.

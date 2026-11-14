@@ -8,8 +8,7 @@ caller must supply (numeric) or booleans evaluated upstream (qualitative).
 Naming: ``<finding>_D_S``. The master plan numbers the findings 1-10 and gives
 each a "Primary Domain" (hazard), but does not number the domains. Our
 numbering: domains in order of first appearance in the plan's table, findings
-in plan order within each domain. The ``finding`` key of each result keeps the
-plan's own number.
+in plan order within each domain.
 
 ====  ==================  =======================================  ============
 D     Domain              Function                                 Plan finding
@@ -30,107 +29,98 @@ D     Domain              Function                                 Plan finding
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TypedDict
+from typing import Literal, TypedDict
 
-from .shared import Status
+Severity = Literal["nominal", "warning", "critical"]
+"""``status`` of a finding with several severities."""
 
 
 class OrthostaticResult(TypedDict):
-    finding: str
     delta_sbp_mmhg: float
     delta_dbp_mmhg: float
     hr_rise_bpm: float
     shock_index: float
     ctni_ng_ml: float | None
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
 class DehydrationResult(TypedDict):
-    finding: str
     body_mass_loss_pct: float
     fluid_deficit_ml: float
     urine_specific_gravity: float
     triggers: list[str]
-    status: Status
+    status: bool
     action: str
 
 
 class InfectionResult(TypedDict):
-    finding: str
     news2_score: int
     core_temp_c: float
     il6_pg_ml: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
 class HypoxiaResult(TypedDict):
-    finding: str
     spo2_pct: float
     ppco2_mmhg: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
 class SleepResult(TypedDict):
-    finding: str
     sleep_hours: float
     pvt_lapses: int
     cfe_ratio: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
 class BehavioralResult(TypedDict):
-    finding: str
     phq9_score: int
     gad7_score: int
     pvt_lapses: int
     sleep_debt_hours: float
     cortisol_nm: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
 class EnergyBalanceResult(TypedDict):
-    finding: str
     body_mass_loss_pct_week: float
     glucose_mg_dl: float
     resting_lactate_mm: float
     triggers: list[str]
-    status: Status
+    status: bool
     action: str
 
 
 class BoneResult(TypedDict):
-    finding: str
     ntx_change_pct: float
     urine_volume_l_day: float
     triggers: list[str]
-    status: Status
+    status: bool
     action: str
 
 
 class SansResult(TypedDict):
-    finding: str
     jugular_distension_pct: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
 class RadiationResult(TypedDict):
-    finding: str
     cumulative_dose_msv: float
     dose_rate_usv_h: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
@@ -177,7 +167,7 @@ def orthostatic_intolerance_1_1(
             Parameter 1.2; ``None`` when no assay was run.
 
     Returns:
-        ``finding``, ``delta_sbp_mmhg``, ``delta_dbp_mmhg``, ``hr_rise_bpm``,
+        ``delta_sbp_mmhg``, ``delta_dbp_mmhg``, ``hr_rise_bpm``,
         ``shock_index``, ``ctni_ng_ml``, ``triggers``, ``status``, ``action``.
         CRITICAL when hs-cTnI > 0.04 ng/mL; otherwise WARNING when ΔSBP >= 20
         mmHg, ΔDBP >= 10 mmHg, ΔHR >= 30 BPM or SI > 0.9. The plan's
@@ -204,14 +194,13 @@ def orthostatic_intolerance_1_1(
 
     action = "Execute 3-min stand test; ingest 600 mL fluid + 1 salt tablet; restrict EVA if hs-cTnI elevated"
     if troponin_high:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
-        "finding": "1",
         "delta_sbp_mmhg": round(delta_sbp, 1),
         "delta_dbp_mmhg": round(delta_dbp, 1),
         "hr_rise_bpm": round(hr_rise, 1),
@@ -254,9 +243,9 @@ def dehydration_2_1(
         urine_specific_gravity: Urine specific gravity [unitless].
 
     Returns:
-        ``finding``, ``body_mass_loss_pct``, ``fluid_deficit_ml``,
+        ``body_mass_loss_pct``, ``fluid_deficit_ml``,
         ``urine_specific_gravity``, ``triggers``, ``status``, ``action``.
-        WARNING when mass loss > 2 % or USG > 1.020. ``fluid_deficit_ml`` is
+        ``status`` is True when mass loss > 2 % or USG > 1.020. ``fluid_deficit_ml`` is
         the action card's "calculated fluid deficit", 0 when mass has not
         dropped. The plan tracks sweat rate and Na+ flux only as
         baseline-relative trends with no cutoff, so they are not used.
@@ -270,16 +259,14 @@ def dehydration_2_1(
     if urine_specific_gravity > 1.020:
         triggers.append("urine specific gravity > 1.020")
 
-    if triggers:
-        status, action = (
-            Status.WARNING,
-            "Drink calculated fluid deficit (e.g., 600 mL electrolyte solution) within 30 minutes",
-        )
-    else:
-        status, action = Status.NOMINAL, "No finding"
+    status = bool(triggers)
+    action = (
+        "Drink calculated fluid deficit (e.g., 600 mL electrolyte solution) within 30 minutes"
+        if status
+        else "No finding"
+    )
 
     return {
-        "finding": "2",
         "body_mass_loss_pct": round(loss_pct, 2),
         "fluid_deficit_ml": round(max(loss_kg, 0.0) * 1000),
         "urine_specific_gravity": urine_specific_gravity,
@@ -322,7 +309,7 @@ def acute_infection_3_1(
         herpesvirus_reactivation: Latent EBV, VZV or CMV reactivation detected.
 
     Returns:
-        ``finding``, ``news2_score``, ``core_temp_c``, ``il6_pg_ml``,
+        ``news2_score``, ``core_temp_c``, ``il6_pg_ml``,
         ``triggers``, ``status``, ``action``.
         CRITICAL when NEWS2 >= 7 (the plan's "emergency"); otherwise WARNING
         when NEWS2 >= 5 or any single vital scores 3 ("urgent review"), core
@@ -350,14 +337,13 @@ def acute_infection_3_1(
         "Initiate medical-kit protocol; reduce physical workload; isolate if febrile"
     )
     if news2_score >= 7:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
-        "finding": "3",
         "news2_score": news2_score,
         "core_temp_c": core_temp_c,
         "il6_pg_ml": il6_pg_ml,
@@ -388,7 +374,7 @@ def hypoxia_co2_2_2(
         headache: Headache reported.
 
     Returns:
-        ``finding``, ``spo2_pct``, ``ppco2_mmhg``, ``triggers``, ``status``,
+        ``spo2_pct``, ``ppco2_mmhg``, ``triggers``, ``status``,
         ``action``.
         CRITICAL when SpO2 < 90 % (hypoxemia); otherwise WARNING when SpO2 <
         94 %, ppCO2 > 3.0 mmHg, respiratory rate is rising, or headache is
@@ -410,14 +396,13 @@ def hypoxia_co2_2_2(
         "Inspect CO2 scrubber, increase module ventilation, or relocate immediately"
     )
     if spo2_pct < 90.0:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
-        "finding": "4",
         "spo2_pct": spo2_pct,
         "ppco2_mmhg": ppco2_mmhg,
         "triggers": triggers,
@@ -455,7 +440,7 @@ def sleep_deficiency_4_1(
         max_pvt_lapses: Lapse-count cutoff; the plan gives no value.
 
     Returns:
-        ``finding``, ``sleep_hours``, ``pvt_lapses``, ``cfe_ratio``,
+        ``sleep_hours``, ``pvt_lapses``, ``cfe_ratio``,
         ``triggers``, ``status``, ``action``.
         CRITICAL when CFE > 1.20; otherwise WARNING when CFE >= 0.70, sleep
         <= 7.5 h, or lapses exceed the cutoff. The plan anchors actigraphy to
@@ -479,14 +464,13 @@ def sleep_deficiency_4_1(
         "Begin 45-min 480 nm blue-enriched light protocol; schedule 30-min recovery nap"
     )
     if cfe_ratio > 1.20:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
-        "finding": "5",
         "sleep_hours": sleep_hours,
         "pvt_lapses": lapses,
         "cfe_ratio": cfe_ratio,
@@ -533,7 +517,7 @@ def behavioral_health_decline_4_2(
         max_sleep_debt_hours: Sleep-debt cutoff; the plan gives no value.
 
     Returns:
-        ``finding``, ``phq9_score``, ``gad7_score``, ``pvt_lapses``,
+        ``phq9_score``, ``gad7_score``, ``pvt_lapses``,
         ``sleep_debt_hours``, ``cortisol_nm``, ``triggers``, ``status``,
         ``action``.
         CRITICAL when cortisol > 30 nM; otherwise WARNING when PHQ-9 or GAD-7
@@ -560,14 +544,13 @@ def behavioral_health_decline_4_2(
 
     action = "Defer non-essential tasks; initiate guided breathing/biofeedback and crew comms break"
     if cortisol_nm > 30.0:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
-        "finding": "6",
         "phq9_score": phq9_score,
         "gad7_score": gad7_score,
         "pvt_lapses": lapses,
@@ -608,11 +591,12 @@ def negative_energy_balance_2_3(
         resting_lactate_mm: Resting blood lactate [mM].
 
     Returns:
-        ``finding``, ``body_mass_loss_pct_week``, ``glucose_mg_dl``,
+        ``body_mass_loss_pct_week``, ``glucose_mg_dl``,
         ``resting_lactate_mm``, ``triggers``, ``status``, ``action``.
-        WARNING when mass loss > 1.0 %/week, glucose < 70 mg/dL (Level 1;
-        the trigger names Level 2 below 54 mg/dL) or resting lactate > 4.0
-        mM. The plan does not mark Level 2 urgent, so it is also WARNING.
+        ``status`` is True when mass loss > 1.0 %/week, glucose < 70 mg/dL
+        (Level 1; the trigger names Level 2 below 54 mg/dL) or resting lactate
+        > 4.0 mM. The plan gives one action card and marks neither level
+        urgent, so the finding has no severity.
     """
     glucose_mg_dl = glucose_mmol_l * 18.0
 
@@ -626,16 +610,14 @@ def negative_energy_balance_2_3(
     if resting_lactate_mm > 4.0:
         triggers.append("resting lactate > 4.0 mM")
 
-    if triggers:
-        status, action = (
-            Status.WARNING,
-            "Consume 400 kcal nutritional ration + Vitamin D3 supplement; re-check glucose in 15 min",
-        )
-    else:
-        status, action = Status.NOMINAL, "No finding"
+    status = bool(triggers)
+    action = (
+        "Consume 400 kcal nutritional ration + Vitamin D3 supplement; re-check glucose in 15 min"
+        if status
+        else "No finding"
+    )
 
     return {
-        "finding": "7",
         "body_mass_loss_pct_week": body_mass_loss_pct_week,
         "glucose_mg_dl": round(glucose_mg_dl, 1),
         "resting_lactate_mm": resting_lactate_mm,
@@ -666,9 +648,9 @@ def bone_demineralization_1_2(
         urine_volume_l_day: 24-hour urine volume [L/day].
 
     Returns:
-        ``finding``, ``ntx_change_pct``, ``urine_volume_l_day``, ``triggers``,
+        ``ntx_change_pct``, ``urine_volume_l_day``, ``triggers``,
         ``status``, ``action``.
-        WARNING when NTx is > +25 % or urine volume < 2.0 L/day. The plan's
+        ``status`` is True when NTx is > +25 % or urine volume < 2.0 L/day. The plan's
         BMD loss of 1.0-1.5 %/month is context, not a criterion.
     """
     triggers: list[str] = []
@@ -677,16 +659,14 @@ def bone_demineralization_1_2(
     if urine_volume_l_day < 2.0:
         triggers.append("urine volume < 2.0 L/day")
 
-    if triggers:
-        status, action = (
-            Status.WARNING,
-            "Increase ARED resistive exercise load +10%; raise daily water target to >= 2.5 L/day",
-        )
-    else:
-        status, action = Status.NOMINAL, "No finding"
+    status = bool(triggers)
+    action = (
+        "Increase ARED resistive exercise load +10%; raise daily water target to >= 2.5 L/day"
+        if status
+        else "No finding"
+    )
 
     return {
-        "finding": "8",
         "ntx_change_pct": ntx_change_pct,
         "urine_volume_l_day": urine_volume_l_day,
         "triggers": triggers,
@@ -718,7 +698,7 @@ def sans_fluid_shift_1_3(jugular_distension_pct: float) -> SansResult:
             Parameter 1.1.
 
     Returns:
-        ``finding``, ``jugular_distension_pct``, ``triggers``, ``status``,
+        ``jugular_distension_pct``, ``triggers``, ``status``,
         ``action``.
         Nominal < 1.1 %, WARNING 1.1-1.8 %, CRITICAL > 1.8 %. Both bands
         share the one action card.
@@ -731,14 +711,13 @@ def sans_fluid_shift_1_3(jugular_distension_pct: float) -> SansResult:
 
     action = "Run on-screen LogMAR/Amsler eye test; engage 20-min LBNP at -35 mmHg"
     if jugular_distension_pct > 1.8:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
-        "finding": "9",
         "jugular_distension_pct": jugular_distension_pct,
         "triggers": triggers,
         "status": status,
@@ -764,7 +743,7 @@ def radiation_exposure_3_2(
         spe_flag: Telemetry SPE flag (solar particle event in progress).
 
     Returns:
-        ``finding``, ``cumulative_dose_msv``, ``dose_rate_usv_h``, ``triggers``,
+        ``cumulative_dose_msv``, ``dose_rate_usv_h``, ``triggers``,
         ``status``, ``action``.
         CRITICAL (the storm shelter alert) when an SPE is flagged; otherwise
         WARNING when the dose rate is > 50 µSv/h (the plan's "warning") or the
@@ -781,14 +760,13 @@ def radiation_exposure_3_2(
 
     action = "Move to shielded storm shelter zone immediately and confirm hatch closure"
     if spe_flag:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
-        "finding": "10",
         "cumulative_dose_msv": cumulative_dose_msv,
         "dose_rate_usv_h": dose_rate_usv_h,
         "triggers": triggers,
