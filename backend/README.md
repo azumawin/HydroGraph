@@ -142,8 +142,8 @@ the stream, or re-sync after a dropped connection. A test asserts that equality.
 
 A finding whose input channels have no reading yet is **left out**, not reported as
 absent: an empty `findings` array means "nothing evaluated", not "all clear". Three of
-the ten are never in the response at all, because the simulator sends none of their
-channels (orthostatic, sleep, behavioral). The dictionary's `findings` lists all ten
+the master plan's ten are never in the response at all, because the simulator sends none of their
+channels (orthostatic, sleep, behavioral). The dictionary's `findings` lists all ten plus the supplementary blood pressure assessment
 with their input channels, empty for those three.
 
 Entry shape and `status` semantics: `docs/json-shape.md`, section 3.
@@ -194,7 +194,7 @@ To feed it from the simulator, set `base_url = "http://127.0.0.1:8000"` and
   for each finding that uses its channel; an `environment` event on every switch.
 
 Findings come from core (`hydrograph_core.assessment`): seven of the master plan's ten
-are monitored, from the latest crew and cabin readings (`api/findings.py`). The other
+plus `blood_pressure_1_4` are monitored, from the latest crew and cabin readings (`api/findings.py`). The other
 three (orthostatic, sleep, behavioral) need inputs the simulator does not send.
 
 Delivery is an in-memory queue per open stream (`api/broadcast.py`), so it needs a

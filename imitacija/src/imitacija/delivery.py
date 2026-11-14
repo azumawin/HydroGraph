@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from collections import deque
+from collections import Counter, deque
 from dataclasses import asdict, dataclass
 from typing import Protocol
 
@@ -71,7 +71,8 @@ class Delivery:
 
     Requests and backoff occur outside acquisition. Retrying requeues an immutable
     payload with the same idempotency key. The receiver must honor that key to deduplicate.
-    Queue overflow discards the oldest pending acquisition, including delayed lab results.
+    Queue overflow thins the busiest channel first, keeping sparse measurements
+    from being displaced by high-frequency telemetry during accelerated runs.
     """
 
     def __init__(
@@ -95,7 +96,17 @@ class Delivery:
     def _enqueue(self, item: Pending) -> None:
         """Retried items use the same finite capacity as fresh submissions."""
         if len(self.pending) >= self.settings.queue_capacity:
-            oldest = min(self.pending, key=lambda pending: pending.observation.acquired_s)
+            counts = Counter(
+                (pending.observation.owner, pending.observation.reading.channel)
+                for pending in self.pending
+            )
+            oldest = min(
+                self.pending,
+                key=lambda pending: (
+                    -counts[(pending.observation.owner, pending.observation.reading.channel)],
+                    pending.observation.acquired_s,
+                ),
+            )
             self.pending.remove(oldest)
             self.counters.overflow += 1
         self.pending.append(item)

@@ -22,13 +22,20 @@ from .registry import dictionary
 from .scheduler import Scheduler
 
 
-def load_settings(path: Path | None, speed: float | None, duration: float | None) -> Settings:
+def load_settings(
+    path: Path | None,
+    speed: float | None,
+    duration: float | None,
+    bp_demo_interval: float | None = None,
+) -> Settings:
     """Load configuration only; generated observations are never written to this path."""
     raw = tomllib.loads(path.read_text()) if path is not None else {}
     if speed is not None:
         raw["speed"] = speed
     if duration is not None:
         raw["duration_s"] = duration
+    if bp_demo_interval is not None:
+        raw["bp_demo_interval_s"] = bp_demo_interval
     return Settings.model_validate(raw)
 
 
@@ -109,6 +116,12 @@ async def _run_worker(settings: Settings, preview: PreviewState | None) -> None:
             f"speed={settings.speed} channels={len(scheduler.enabled)}",
             file=sys.stderr,
         )
+        if settings.bp_demo_interval_s is not None:
+            print(
+                "blood pressure demo: paired synthetic trends every "
+                f"{settings.bp_demo_interval_s}s",
+                file=sys.stderr,
+            )
         stop = asyncio.Event()
         loop = asyncio.get_running_loop()
         installed: list[signal.Signals] = []
@@ -153,6 +166,11 @@ def main() -> None:
     parser.add_argument("--speed", type=float, help="simulation seconds per wall second")
     parser.add_argument("--duration", type=float, help="finite duration in simulation seconds")
     parser.add_argument(
+        "--bp-demo-interval",
+        type=float,
+        help="enable synthetic paired pressure trends at this simulation-second interval",
+    )
+    parser.add_argument(
         "--dictionary", action="store_true", help="print static metadata JSON and exit"
     )
     parser.add_argument(
@@ -170,7 +188,7 @@ def main() -> None:
     try:
         if not 1 <= args.port <= 65535:
             raise ValueError("preview port must be between 1 and 65535")
-        settings = load_settings(args.config, args.speed, args.duration)
+        settings = load_settings(args.config, args.speed, args.duration, args.bp_demo_interval)
         # Validate registry-dependent names even when only exporting configuration.
         Scheduler(settings, RealClock(settings.speed), _DiscardSink())
         if args.dictionary:

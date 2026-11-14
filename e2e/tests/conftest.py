@@ -233,7 +233,9 @@ def simulate(backend: Backend, simulator_python: str, tmp_path: Path):
 def dashboard(page: Page, frontend: str, backend: Backend) -> Page:
     """The dashboard, connected: the stream's dictionary has arrived."""
     page.goto(frontend)
-    expect(page.locator(".vitals-dashboard-reading-status").first).not_to_have_text("Loading")
+    expect(page.locator(".vitals-dashboard-reading-status").first).not_to_have_text(
+        "Loading", timeout=15000
+    )
     return page
 
 

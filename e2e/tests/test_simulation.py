@@ -41,8 +41,8 @@ def test_healthy_run_fills_every_vital_and_flags_nothing(
 
     for label in VITALS:
         expect(ui.status(ui.vital(dashboard, label))).to_have_text(MEASURED, timeout=15000)
-    # healthy.toml leaves the SANS channels off, so six findings are monitored.
-    expect(dashboard.locator(".vitals-dashboard-finding")).to_have_count(6, timeout=15000)
+    # Six original findings plus the combined blood pressure assessment.
+    expect(dashboard.locator(".vitals-dashboard-finding")).to_have_count(7, timeout=15000)
 
     run.wait()
     assert_delivered_cleanly(run.counters(), backend)
@@ -68,6 +68,24 @@ def test_charts_and_values_update_live_during_a_run(
     heart_rate = ui.vital(dashboard, "Heart rate")
     expect(ui.value(heart_rate)).to_have_text(re.compile(r"^\d{2,3}(\.\d)?$"))
     expect(ui.unit(heart_rate)).to_have_text("bpm")
+
+
+def test_scenario_one_streams_six_hr_measurements_per_minute_at_speed_one(
+    dashboard: Page,
+    backend: Backend,
+    simulate,
+) -> None:
+    run = simulate("badscenario1.toml", speed=1, duration=65)
+    heart = ui.vital(dashboard, "Heart rate")
+    expect(ui.chart(heart)).to_have_attribute(
+        "aria-label", "Heart rate history. 1 recorded timestamps.", timeout=15000
+    )
+    for count in range(2, 8):
+        expect(ui.chart(heart)).to_have_attribute(
+            "aria-label", f"Heart rate history. {count} recorded timestamps.", timeout=20000
+        )
+    run.wait()
+    assert_delivered_cleanly(run.counters(), backend)
 
 
 def test_reload_mid_run_resumes_live_updates(dashboard: Page, backend: Backend, simulate) -> None:
@@ -106,16 +124,17 @@ def test_hypercapnia_scenario_escalates_on_screen(
 
 
 def test_sans_scenario_reaches_critical(dashboard: Page, backend: Backend, simulate) -> None:
-    run = simulate("badscenario1.toml", speed=120, duration=4200)
+    # The scenario itself progresses early; telemetry runs at real-time speed.
+    run = simulate("badscenario1.toml", speed=1, duration=135)
 
     sans = ui.finding(dashboard, "SANS & cephalic fluid shift")
     expect(ui.finding_status(sans)).to_have_text("Nominal", timeout=15000)
-    expect(ui.finding_status(sans)).to_have_text("Warning", timeout=40000)
-    expect(ui.finding_status(sans)).to_have_text("Critical", timeout=40000)
+    expect(ui.finding_status(sans)).to_have_text("Warning", timeout=75000)
+    expect(ui.finding_status(sans)).to_have_text("Critical", timeout=75000)
     expect(sans.locator(".vitals-dashboard-finding-triggers")).to_have_text(
         "jugular distension > 1.8%"
     )
     expect(ui.region_status(ui.region(dashboard, "Head & neck"))).to_have_text("Critical")
 
     run.wait()
-    assert backend.server_errors() == []
+    assert_delivered_cleanly(run.counters(), backend)

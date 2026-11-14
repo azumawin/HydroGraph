@@ -58,7 +58,7 @@ def test_evaluations_match_the_backend(dashboard: Page, backend: Backend) -> Non
         "Heart rate": ("Warning", "is-warning"),
         "Blood oxygen": ("Critical", "is-critical"),
         "Blood sugar": ("Nominal", "is-nominal"),
-        "Blood pressure": ("No threshold", "is-unspecified"),
+        "Blood pressure": ("Nominal", "is-nominal"),
     }
     for label, (text, css) in cases.items():
         row_status = ui.status(ui.vital(dashboard, label))
@@ -86,6 +86,73 @@ def test_blood_pressure_chart_draws_both_series(dashboard: Page, backend: Backen
     )
     expect(ui.chart(row).locator(".recharts-area")).to_have_count(2)
     expect(ui.value(row)).to_have_text("120/80")
+
+
+def test_blood_pressure_curves_connect_samples_with_different_timestamps(
+    dashboard: Page,
+    backend: Backend,
+) -> None:
+    for minute in range(3):
+        backend.post("bp_systolic", (118 + minute) * MMHG, "Pa", minutes=minute)
+        backend.post("bp_diastolic", (78 + minute) * MMHG, "Pa", minutes=minute + 0.1)
+    row = ui.vital(dashboard, "Blood pressure")
+    expect(ui.chart(row)).to_have_attribute(
+        "aria-label", "Blood pressure history. 6 recorded timestamps."
+    )
+    curves = ui.chart(row).locator(".recharts-area-curve")
+    expect(curves).to_have_count(2)
+    for curve in curves.all():
+        expect(curve).to_have_attribute("d", re.compile("L"))
+
+
+def test_blood_pressure_status_uses_pair_and_live_shock_index(
+    dashboard: Page,
+    backend: Backend,
+) -> None:
+    row = ui.vital(dashboard, "Blood pressure")
+    backend.post("bp_systolic", 120 * MMHG, "Pa")
+    expect(ui.status(row)).to_have_text("Not measured")
+    backend.post("bp_diastolic", 80 * MMHG, "Pa")
+    expect(ui.status(row)).to_have_text("Nominal")
+    expect(row.locator(".vitals-dashboard-reading-assessment")).to_contain_text("MAP 93.3 mmHg")
+
+    backend.post("bp_systolic", 130 * MMHG, "Pa", minutes=1)
+    expect(ui.status(row)).to_have_text("Warning")
+    backend.post("bp_diastolic", 90 * MMHG, "Pa", minutes=1)
+    expect(ui.status(row)).to_have_text("Critical")
+
+    backend.post("bp_systolic", 120 * MMHG, "Pa", minutes=2)
+    backend.post("bp_diastolic", 80 * MMHG, "Pa", minutes=2)
+    expect(ui.status(row)).to_have_text("Nominal")
+    backend.post("heart_rate", 120 / 60, "s^-1", minutes=2)
+    expect(ui.status(row)).to_have_text("Critical")
+    expect(row.locator(".vitals-dashboard-reading-assessment")).to_contain_text("Shock index 1.00")
+    expect(row.locator(".vitals-dashboard-reading-assessment")).to_contain_text("shock index > 0.9")
+
+    dashboard.reload()
+    expect(ui.status(ui.vital(dashboard, "Blood pressure"))).to_have_text("Critical")
+    backend.post("heart_rate", 72 / 60, "s^-1", minutes=3)
+    expect(ui.status(ui.vital(dashboard, "Blood pressure"))).to_have_text("Nominal")
+
+
+def test_blood_pressure_sensor_error_and_recovery(dashboard: Page, backend: Backend) -> None:
+    row = ui.vital(dashboard, "Blood pressure")
+    backend.post("bp_systolic", 120 * MMHG, "Pa")
+    backend.post("bp_diastolic", 115 * MMHG, "Pa")
+    expect(ui.status(row)).to_have_text("Sensor error")
+    backend.post("bp_diastolic", 80 * MMHG, "Pa", minutes=1)
+    expect(ui.status(row)).to_have_text("Nominal")
+
+
+def test_sparse_vitals_show_their_startup_points(dashboard: Page, backend: Backend) -> None:
+    backend.post("bp_systolic", 120 * MMHG, "Pa")
+    backend.post("bp_diastolic", 80 * MMHG, "Pa")
+    backend.post("glucose", 5.4, "mol/m^3")
+
+    for label, count in [("Blood pressure", 2), ("Blood sugar", 1)]:
+        chart = ui.chart(ui.vital(dashboard, label))
+        expect(chart).to_have_attribute("aria-label", f"{label} history. 1 recorded timestamps.")
+        expect(chart.locator(".recharts-area-dot")).to_have_count(count)
 
 
 def test_late_reading_joins_history_but_keeps_the_newest_value(

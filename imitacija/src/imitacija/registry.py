@@ -248,7 +248,7 @@ _CHANNELS = (
         "bpm",
         "s^-1",
         "Synthetic pulse",
-        "6s (10 measurements/minute), independent of activity",
+        "10s (6 measurements/minute), independent of activity",
         "hr",
         factor=1 / 60,
     ),
@@ -765,6 +765,11 @@ def dictionary(
                 "saliva_pcr": f"infection target specimens at {fault.saliva_pcr_event_times_s}",
             }
         )
+    if settings and settings.bp_demo_interval_s is not None:
+        overrides["bp"] = (
+            f"dashboard demo: paired synthetic trends every {settings.bp_demo_interval_s}s; "
+            "replaces cuff, scenario and stand-test timing"
+        )
     return Dictionary(
         environment=environment,
         acute_infection_scenario=(
@@ -800,7 +805,11 @@ def dictionary(
                 source_unit=c.source_unit,
                 unit=c.unit,
                 method=(
-                    c.method + "; stand-test burst uses synthetic continuous pressure, not "
+                    c.method + "; synthetic dashboard trend with bounded paired variation"
+                    if c.group == "bp"
+                    and settings is not None
+                    and settings.bp_demo_interval_s is not None
+                    else c.method + "; stand-test burst uses synthetic continuous pressure, not "
                     "10Hz cuff inflation"
                     if c.group == "bp"
                     and settings is not None
@@ -818,6 +827,11 @@ def dictionary(
                 else "number",
                 raw_acquisition_hz=FREQUENCIES[c.group].raw_hz,
                 frequency_matrix_rows=FREQUENCIES[c.group].rows,
+                frequency_basis=(
+                    "explicit dashboard demo override"
+                    if c.group == "bp" and settings and settings.bp_demo_interval_s is not None
+                    else "docs/frequency_table.md"
+                ),
                 enabled=settings is None or c.id in effective_channels(settings),
             )
             for c in CHANNELS.values()

@@ -47,7 +47,9 @@ def simulate(
 
 def test_independent_timing_and_original_timestamp() -> None:
     items = simulate(Settings(enabled_channels=("heart_rate", "spo2", "respiratory_rate")), 120)
-    assert [o.acquired_s for o in items if o.reading.channel == "heart_rate"] == [60, 120]
+    assert [o.acquired_s for o in items if o.reading.channel == "heart_rate"] == list(
+        range(10, 121, 10)
+    )
     assert [o.acquired_s for o in items if o.reading.channel == "spo2"] == pytest.approx(
         [0.2 + i for i in range(120)]
     )
@@ -227,7 +229,7 @@ def test_late_scheduler_coalesces_without_backdating() -> None:
 
     sink = Collector()
     asyncio.run(Scheduler(Settings(enabled_channels=("heart_rate",)), SlowClock(), sink).run(150))
-    assert [o.acquired_s for o in sink.items] == [0, 70, 130]
+    assert [o.acquired_s for o in sink.items] == [0, *range(20, 141, 20)]
 
 
 def test_two_day_stream_has_bounded_state_and_channel_coverage() -> None:
@@ -260,7 +262,7 @@ def test_matrix_minute_outputs_and_one_hz_environment() -> None:
     selected = ("heart_rate", "respiratory_rate", "ambient_integrated_dose", "ambient_dose_rate")
     items = simulate(Settings(enabled_channels=selected), 180)
     for name, expected in (
-        ("heart_rate", [60, 120, 180]),
+        ("heart_rate", list(range(10, 181, 10))),
         ("respiratory_rate", [77, 137]),
         ("ambient_integrated_dose", [60, 120, 180]),
         ("ambient_dose_rate", list(range(1, 181))),
