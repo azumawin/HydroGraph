@@ -1,1 +1,4 @@
 /e2e/tests/__pycache__
+
+# Local compose overrides; .env.example is the template that is tracked.
+.env
