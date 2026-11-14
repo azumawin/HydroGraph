@@ -22,6 +22,16 @@ class Frequency:
 
 
 FREQUENCIES: dict[str, Frequency] = {
+    "infection_context": Frequency(
+        "configured state heartbeat; no examination", interval_s=60, rows=(3,)
+    ),
+    "infection_gfet": Frequency(
+        "synthetic concentration mean; no electrical waveform",
+        interval_s=60,
+        window_s=60,
+        rows=(3,),
+    ),
+    "eva_sweat": Frequency("1s whole-body fixture during explicit EVA", 1, 1, 1, (2,)),
     "eeg_cfe": Frequency(
         "60s mean synthetic ratio fixture; no raw EEG", interval_s=60, window_s=60, rows=(5,)
     ),

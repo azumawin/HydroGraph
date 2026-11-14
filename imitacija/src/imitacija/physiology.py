@@ -12,8 +12,26 @@ import math
 import random
 from functools import lru_cache
 
-from .models import AstronautProfile, Environment, HypercapniaScenario, SansScenario
-from .scenarios import hypercapnia_cabin_mmhg, hypercapnia_references, sans_rmssd_reference
+from .models import (
+    AcuteInfectionScenario,
+    AstronautProfile,
+    Environment,
+    EvaDehydrationScenario,
+    HypercapniaScenario,
+    SansScenario,
+)
+from .scenarios import (
+    eva_balance,
+    eva_sweat_values,
+    eva_usg,
+    eva_weight,
+    hypercapnia_cabin_mmhg,
+    hypercapnia_references,
+    infection_context_values,
+    infection_references,
+    sans_rmssd_reference,
+    smoothstep,
+)
 from .units import MMHG_TO_PA
 
 DAY = 86400.0
@@ -62,8 +80,23 @@ def heart_rate(
     seed: int,
     *,
     hypercapnia: HypercapniaScenario | None = None,
+    dehydration: EvaDehydrationScenario | None = None,
+    infection: AcuteInfectionScenario | None = None,
 ) -> float:
     """Activity, circadian phase and low-amplitude pulse noise share a continuous context."""
+    if infection and infection.owner_id == profile.id:
+        jitter = 0.8 * noise(t, seed, profile.id, "heart_rate", 30)
+        w = smoothstep(t, infection.onset_s, infection.affected_at_s)
+        return (
+            (heart_rate(t, profile, seed) - jitter) * (1 - w)
+            + infection.affected_heart_rate_bpm * w
+            + jitter
+        )
+    if dehydration is not None and dehydration.owner_id == profile.id:
+        healthy = heart_rate(t, profile, seed)
+        jitter = 0.8 * noise(t, seed, profile.id, "heart_rate", 30)
+        w = eva_weight(t, profile, dehydration)
+        return (healthy - jitter) * (1 - w) + dehydration.affected_heart_rate_bpm * w + jitter
     return (
         (
             hypercapnia_references(t, profile, hypercapnia)["heart_rate"]
@@ -84,6 +117,8 @@ def rmssd(
     scenario: SansScenario | None = None,
     *,
     hypercapnia: HypercapniaScenario | None = None,
+    dehydration: EvaDehydrationScenario | None = None,
+    infection: AcuteInfectionScenario | None = None,
 ) -> float:
     """Compute RMSSD from a complete 60-second simulated NN-interval window.
 
@@ -99,7 +134,14 @@ def rmssd(
     squared = 0.0
     differences = 0
     while beat < t:
-        base = 60 / heart_rate(beat, profile, seed, hypercapnia=hypercapnia)
+        base = 60 / heart_rate(
+            beat,
+            profile,
+            seed,
+            hypercapnia=hypercapnia,
+            dehydration=dehydration,
+            infection=infection,
+        )
         target = sans_rmssd_reference(beat, profile, scenario) / 1000 * (1 - 0.5 * activity(beat))
         # Consecutive samples of a sine differ by 2*sin(pi*f*NN); normalize so
         # varying mean heart rate does not itself dictate the intended RMSSD.
@@ -131,10 +173,83 @@ def crew_values(
     scenario: SansScenario | None = None,
     *,
     hypercapnia: HypercapniaScenario | None = None,
-) -> dict[str, float | bool]:
+    dehydration: EvaDehydrationScenario | None = None,
+    infection: AcuteInfectionScenario | None = None,
+) -> dict[str, float | bool | str]:
     """Produce one physical acquisition group in conventional source units."""
+    if dehydration is not None and dehydration.owner_id != profile.id:
+        dehydration = None
+    if infection and infection.owner_id == profile.id:
+        refs = infection_references(t, profile, infection)
+        w = smoothstep(t, infection.onset_s, infection.affected_at_s)
+        if group == "infection_context":
+            return infection_context_values(t, infection)
+        if group == "infection_gfet":
+            if t < 60:
+                raise ValueError("GFET requires a completed minute")
+            return {
+                "il6_pg_mL": sum(
+                    infection_references(t - 60 + i + 0.5, profile, infection)["il6_pg_mL"]
+                    for i in range(60)
+                )
+                / 60
+            }
+        if group == "il6":
+            return {"il6_serum": refs["il6_pg_mL"]}
+        if group == "saliva_pcr":
+            return {
+                "viral_ebv_detected": t >= infection.reactivation_at_s
+                and infection.reactivated_virus == "EBV",
+                "viral_vzv_detected": t >= infection.reactivation_at_s
+                and infection.reactivated_virus == "VZV",
+            }
+        if group in {"temperature", "spo2", "bp", "respiration"}:
+            healthy = crew_values(group, t, profile, seed)
+            key = {
+                "temperature": "body_temperature",
+                "spo2": "spo2",
+                "bp": "bp_systolic",
+                "respiration": "respiratory_rate",
+            }[group]
+            if group == "respiration":
+                healthy[key] = (
+                    sum(
+                        infection_references(t - 60 + (i + 0.5) * 5, profile, infection)[key]
+                        + 0.35 * noise(t - 60 + (i + 0.5) * 5, seed, profile.id, group)
+                        for i in range(12)
+                    )
+                    / 12
+                )
+            else:
+                jitter = {"temperature": 0.025, "spo2": 0.25, "bp": 1.2}[group] * noise(
+                    t, seed, profile.id, group
+                )
+                base = {"temperature": 36.85, "spo2": 98.1, "bp": profile.sbp_mmhg}[group]
+                healthy[key] = refs[key] + (float(healthy[key]) - base - jitter) * (1 - w) + jitter
+
+            return healthy
     a = activity(t)
     h = hydration(t)
+    if dehydration is not None:
+        if group == "mass":
+            return {"body_mass": eva_balance(t, profile, dehydration)["mass_kg"]}
+        if group == "usg":
+            return {"urine_specific_gravity": eva_usg(t, profile, dehydration)}
+        if group in {"sweat", "sweat_summary", "eva_sweat"}:
+            if group == "sweat_summary" and t < dehydration.onset_s + 60:
+                return {}
+            return dict(eva_sweat_values(t, dehydration))
+        if group == "bp":
+            w = eva_weight(t, profile, dehydration)
+            n = noise(t, seed, profile.id, group)
+            return {
+                "bp_systolic": (profile.sbp_mmhg + 18 * a) * (1 - w)
+                + dehydration.affected_sbp_mmhg * w
+                + 1.2 * n,
+                "bp_diastolic": (profile.dbp_mmhg + 3 * a) * (1 - w)
+                + dehydration.affected_dbp_mmhg * w
+                + 0.8 * n,
+            }
     hour = t % DAY / 3600
     n = noise(t, seed, profile.id, group)
     match group:
@@ -143,14 +258,29 @@ def crew_values(
                 raise ValueError("HR needs a completed 60-second window")
             return {
                 "heart_rate": sum(
-                    heart_rate(t - 60 + (i + 0.5) * 5, profile, seed, hypercapnia=hypercapnia)
+                    heart_rate(
+                        t - 60 + (i + 0.5) * 5,
+                        profile,
+                        seed,
+                        hypercapnia=hypercapnia,
+                        dehydration=dehydration,
+                        infection=infection,
+                    )
                     for i in range(12)
                 )
                 / 12
             }
         case "hrv":
             return {
-                "hrv_rmssd": rmssd(t, profile, seed, scenario=scenario, hypercapnia=hypercapnia)
+                "hrv_rmssd": rmssd(
+                    t,
+                    profile,
+                    seed,
+                    scenario=scenario,
+                    hypercapnia=hypercapnia,
+                    dehydration=dehydration,
+                    infection=infection,
+                )
             }
         case "bp":
             return {
@@ -256,7 +386,9 @@ def crew_values(
                 "urinary_ntx": ntx,
                 "bone_ntx_pct_baseline": 100 * (ntx / profile.ntx_baseline - 1),
                 "urine_volume_24h": volume,
-                "urine_specific_gravity": 1.015 + 0.002 * h,
+                "urine_specific_gravity": eva_usg(t, profile, dehydration)
+                if dehydration
+                else 1.015 + 0.002 * h,
             }
         case "sweat":
             # Raw local flow and concentration at 1Hz only while active and wet.
@@ -292,7 +424,7 @@ def environment_values(
     seed: int,
     *,
     hypercapnia: HypercapniaScenario | None = None,
-) -> dict[str, float | bool]:
+) -> dict[str, float | bool | str]:
     """Compartment telemetry depends on compartment time and configuration, never crew count."""
     match group:
         case "co2":
@@ -320,7 +452,7 @@ def environment_values(
             raise ValueError(f"unknown environment acquisition group: {group}")
 
 
-def startup_crew_values(profile: AstronautProfile, seed: int) -> dict[str, float | bool]:
+def startup_crew_values(profile: AstronautProfile, seed: int) -> dict[str, float | bool | str]:
     """Supply a complete run-start profile without inventing pre-start collections.
 
     Point-like channels can use their latent value at time zero. Windowed/dry
@@ -328,7 +460,7 @@ def startup_crew_values(profile: AstronautProfile, seed: int) -> dict[str, float
     daily urine volume and local sweat reference conditions. These values must be
     transported as startup_baseline, not as completed in-flight sensor windows.
     """
-    values: dict[str, float | bool] = {}
+    values: dict[str, float | bool | str] = {}
     for group in (
         "bp",
         "spo2",

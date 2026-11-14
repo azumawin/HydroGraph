@@ -83,3 +83,21 @@ indicator targets are declared engineering assumptions in `config/badscenario1.t
 synthetic ratio fixture. It has no raw EEG acquisition or spectral processing.
 The full registry has 35 channels; healthy defaults enable 29, SANS defaults 34,
 and hypercapnia defaults 30. Explicit channel selection can narrow these sets.
+
+## Scenario 3 whole-body sweat
+
+`whole_body_sweat_rate` uses source L/h and wire `m^3/s` (factor 1/3,600,000).
+It is a separate synthetic whole-body fixture; `sweat_rate` retains local patch
+meaning. A configurable multiplier (default 1800) relates whole-body and patch
+flow. The registry now has 36 entries; EVA enables 30 by default (25 crew, five
+environment), healthy 29, SANS 34 and hypercapnia 30. The new channel requires
+explicit EVA settings and belongs only to the EVA target.
+
+## Scenario 4 infection channels
+
+New infection-only crew channels are `il6_pg_mL` (source pg/mL, wire kg/m³,
+factor 1e-9), `consciousness_level` (restricted ACVPU enum), `supplemental_o2`
+and `post_ared_exercise_window` (booleans). The full registry has 40 channels;
+infection enables 33 startup readings (28 crew and five environment), while
+other scenarios retain their established defaults. GFET and serum IL-6 remain
+separate specimen fixtures, without a claimed sensor calibration.

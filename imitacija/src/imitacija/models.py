@@ -20,9 +20,24 @@ class Reading(FrozenModel):
     """The exact four-field body; acquisition time survives delays and retries."""
 
     channel: str
-    value: float | bool
+    value: float | bool | str
     unit: str = Field(min_length=1)
     measured_at: datetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def strict_value(cls, data: object) -> object:
+        if isinstance(data, dict):
+            name, value = data.get("channel"), data.get("value")
+            if name == "consciousness_level":
+                if value not in ("ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE"):
+                    raise ValueError("invalid ACVPU state")
+            elif data.get("unit") == "boolean":
+                if not isinstance(value, bool):
+                    raise ValueError("boolean channel requires a boolean")
+            elif not isinstance(value, (float, int)) or isinstance(value, bool):
+                raise ValueError("numeric channel requires a number")
+        return data
 
     @field_validator("measured_at")
     @classmethod
@@ -143,6 +158,86 @@ class HypercapniaScenario(FrozenModel):
         return self
 
 
+class EvaDehydrationScenario(FrozenModel):
+    """Constant-rate EVA balance and explicitly synthetic clinical responses."""
+
+    id: Literal["FAULT_03_EVA_DEHYDRATION"] = "FAULT_03_EVA_DEHYDRATION"
+    owner_id: str = "crew-1"
+    onset_s: int = Field(default=600, ge=0)
+    eva_duration_s: int = Field(default=9000, gt=0)
+    baseline_whole_body_sweat_l_h: float = Field(default=0.045, gt=0)
+    active_whole_body_sweat_l_h: float = Field(default=0.820, ge=0.650, le=0.950)
+    drink_rate_l_h: float = Field(default=0.100, ge=0)
+    whole_body_to_patch_multiplier: float = Field(default=1800, gt=0)
+    baseline_sweat_sodium_mmol_l: float = Field(default=38, gt=0)
+    active_sweat_sodium_mmol_l: float = Field(default=74, ge=68, le=85)
+    response_loss_pct: float = Field(default=2.4, ge=2.1, le=3.2)
+    baseline_usg: float = Field(default=1.012, ge=1, le=1.020)
+    affected_usg: float = Field(default=1.026, ge=1.024, le=1.030)
+    affected_heart_rate_bpm: float = Field(default=122, ge=115, le=132)
+    affected_sbp_mmhg: float = Field(default=98, ge=96, le=102)
+    affected_dbp_mmhg: float = Field(default=74, gt=0)
+    usg_event_times_s: tuple[float, ...] = (600, 3600, 6000, 7800, 9600, 10200)
+
+    @model_validator(mode="after")
+    def coherent(self) -> EvaDehydrationScenario:
+        if self.eva_duration_s % 60:
+            raise ValueError("EVA duration must be a whole number of minutes")
+        if self.drink_rate_l_h >= self.active_whole_body_sweat_l_h:
+            raise ValueError("intake must be below active sweat loss")
+        if self.baseline_whole_body_sweat_l_h >= self.active_whole_body_sweat_l_h:
+            raise ValueError("sweat flow must rise")
+        if self.baseline_sweat_sodium_mmol_l >= self.active_sweat_sodium_mmol_l:
+            raise ValueError("sweat sodium must rise")
+        if self.affected_dbp_mmhg >= self.affected_sbp_mmhg:
+            raise ValueError("systolic pressure must exceed diastolic")
+        if any(not math.isfinite(t) or t <= 0 for t in self.usg_event_times_s):
+            raise ValueError("spot times must be finite and positive")
+        if tuple(sorted(set(self.usg_event_times_s))) != self.usg_event_times_s:
+            raise ValueError("spot times must be unique and sorted")
+        return self
+
+
+class AcuteInfectionScenario(FrozenModel):
+    """Synthetic infection trajectory and explicit context fixtures."""
+
+    id: Literal["FAULT_04_ACUTE_INFECTION"] = "FAULT_04_ACUTE_INFECTION"
+    owner_id: str = "crew-1"
+    onset_s: float = Field(default=600, ge=0)
+    affected_at_s: float = Field(default=1800, gt=0)
+    baseline_temp_c: float = Field(default=36.8, gt=36, le=38)
+    affected_temp_c: float = Field(default=38.7, ge=38.4, le=39.2)
+    baseline_respiratory_rate_br_min: float = Field(default=14, ge=12, le=20)
+    affected_respiratory_rate_br_min: float = Field(default=23, ge=22, le=25)
+    affected_heart_rate_bpm: float = Field(default=116, ge=108, le=125)
+    affected_sbp_mmhg: float = Field(default=96, ge=94, le=99)
+    baseline_spo2_pct: float = Field(default=97, ge=96, le=100)
+    affected_spo2_pct: float = Field(default=94, ge=91, le=95)
+    baseline_il6_pg_ml: float = Field(default=1.4, ge=0, le=3)
+    affected_il6_pg_ml: float = Field(default=8.4, ge=6.8, le=12)
+    reactivation_at_s: float = Field(default=1800, ge=0)
+    reactivated_virus: Literal["EBV", "VZV"] = "EBV"
+    serum_il6_event_times_s: tuple[float, ...] = (1860,)
+    saliva_pcr_event_times_s: tuple[float, ...] = (1860,)
+    affected_consciousness_level: Literal["ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE"] = (
+        "ALERT"
+    )
+    affected_supplemental_o2: bool = False
+    affected_post_ared_exercise_window: bool = False
+
+    @model_validator(mode="after")
+    def coherent(self) -> AcuteInfectionScenario:
+        if self.onset_s >= self.affected_at_s:
+            raise ValueError("infection ramp must have positive duration")
+        for times in (self.serum_il6_event_times_s, self.saliva_pcr_event_times_s):
+            if (
+                any(not math.isfinite(t) or t <= 0 for t in times)
+                or tuple(sorted(set(times))) != times
+            ):
+                raise ValueError("specimen times must be finite, positive, sorted and unique")
+        return self
+
+
 class Settings(FrozenModel):
     """All timing is simulation seconds except explicitly named wall-clock fields."""
 
@@ -151,6 +246,8 @@ class Settings(FrozenModel):
     duration_s: float | None = Field(default=None, gt=0)
     sans_scenario: SansScenario | None = None
     hypercapnia_scenario: HypercapniaScenario | None = None
+    eva_dehydration_scenario: EvaDehydrationScenario | None = None
+    acute_infection_scenario: AcuteInfectionScenario | None = None
     seed: int = 42
     crew: tuple[AstronautProfile, ...] = (AstronautProfile(),)
     environment: Environment = Environment()
@@ -201,6 +298,48 @@ class Settings(FrozenModel):
         """Prevent duplicate crew streams and route errors before any network activity."""
         if len({p.id for p in self.crew}) != len(self.crew):
             raise ValueError("crew IDs must be unique")
+        faults = (
+            self.sans_scenario,
+            self.hypercapnia_scenario,
+            self.eva_dehydration_scenario,
+            self.acute_infection_scenario,
+        )
+        if sum(f is not None for f in faults) > 1:
+            raise ValueError("combined faults are unsupported")
+        if self.acute_infection_scenario:
+            infection = self.acute_infection_scenario
+            profiles = {p.id: p for p in self.crew}
+            if infection.owner_id not in profiles:
+                raise ValueError("infection requires an existing owner")
+            profile = profiles[infection.owner_id]
+            if infection.affected_sbp_mmhg <= profile.dbp_mmhg:
+                raise ValueError("systolic target must exceed diastolic pressure")
+            if (
+                self.stand_test_start_s is not None
+                or self.bp_session_duration_s is not None
+                or self.il6_event_times_s != (0,)
+            ):
+                raise ValueError("infection target uses scenario BP and specimen schedules")
+        if self.eva_dehydration_scenario is not None:
+            eva = self.eva_dehydration_scenario
+            if self.sans_scenario or self.hypercapnia_scenario:
+                raise ValueError("combined faults are unsupported")
+            profiles = {p.id: p for p in self.crew}
+            if eva.owner_id not in profiles:
+                raise ValueError("EVA requires an existing crew owner")
+            profile = profiles[eva.owner_id]
+            loss = (
+                (eva.active_whole_body_sweat_l_h - eva.drink_rate_l_h) * eva.eva_duration_s / 3600
+            )
+            if loss >= profile.mass_kg:
+                raise ValueError("EVA loss must remain below initial mass")
+            if (
+                eva.affected_sbp_mmhg >= profile.sbp_mmhg
+                or eva.affected_dbp_mmhg > profile.dbp_mmhg
+            ):
+                raise ValueError("EVA pressure targets must not rise")
+            if self.stand_test_start_s is not None or self.bp_session_duration_s is not None:
+                raise ValueError("EVA target BP schedule conflicts with session overrides")
         if self.hypercapnia_scenario is not None:
             from .units import MMHG_TO_PA
 

@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from .models import AstronautProfile, HypercapniaScenario, SansScenario
+from .models import (
+    AcuteInfectionScenario,
+    AstronautProfile,
+    EvaDehydrationScenario,
+    HypercapniaScenario,
+    SansScenario,
+)
 
 SANS_CHANNELS = frozenset(
     {
@@ -53,7 +59,7 @@ def sans_rmssd_reference(
     return profile.rmssd_ms + (scenario.affected_rmssd_ms - profile.rmssd_ms) * w
 
 
-def sans_eye_screen_values(t: float, scenario: SansScenario) -> dict[str, float | bool]:
+def sans_eye_screen_values(t: float, scenario: SansScenario) -> dict[str, float | bool | str]:
     w = smoothstep(t, scenario.onset_s, scenario.warning_at_s)
     return {
         "visual_acuity_logmar": scenario.affected_logmar * w,
@@ -63,7 +69,7 @@ def sans_eye_screen_values(t: float, scenario: SansScenario) -> dict[str, float 
 
 def sans_values(
     group: str, t: float, scenario: SansScenario, *, startup: bool = False
-) -> dict[str, float | bool]:
+) -> dict[str, float | bool | str]:
     if group == "eye_screen":
         return sans_eye_screen_values(t, scenario)
     if group != "cephalic":
@@ -130,3 +136,90 @@ def hypercapnia_eeg_values(
         "eeg_cfe_ratio": scenario.baseline_cfe_ratio
         + (scenario.affected_cfe_ratio - scenario.baseline_cfe_ratio) * mean_progress
     }
+
+
+EVA_CHANNELS = frozenset({"whole_body_sweat_rate"})
+
+
+def eva_balance(
+    t: float, profile: AstronautProfile, scenario: EvaDehydrationScenario
+) -> dict[str, float]:
+    hours = min(max(t - scenario.onset_s, 0), scenario.eva_duration_s) / 3600
+    sweat = scenario.active_whole_body_sweat_l_h * hours
+    intake = scenario.drink_rate_l_h * hours
+    deficit = sweat - intake
+    return dict(
+        sweat_loss_l=sweat,
+        intake_l=intake,
+        deficit_l=deficit,
+        mass_kg=profile.mass_kg - deficit,
+        loss_pct=100 * deficit / profile.mass_kg,
+        sodium_loss_mmol=sweat * scenario.active_sweat_sodium_mmol_l,
+    )
+
+
+def eva_weight(t: float, profile: AstronautProfile, scenario: EvaDehydrationScenario) -> float:
+    p = min(1.0, eva_balance(t, profile, scenario)["loss_pct"] / scenario.response_loss_pct)
+    return p * p * (3 - 2 * p)
+
+
+def eva_usg(t: float, profile: AstronautProfile, scenario: EvaDehydrationScenario) -> float:
+    return scenario.baseline_usg + (scenario.affected_usg - scenario.baseline_usg) * eva_weight(
+        t, profile, scenario
+    )
+
+
+def eva_sweat_values(
+    t: float, scenario: EvaDehydrationScenario, *, startup: bool = False
+) -> dict[str, float]:
+    if not startup and not scenario.onset_s + 1 <= t <= scenario.onset_s + scenario.eva_duration_s:
+        return {}
+    flow = (
+        scenario.baseline_whole_body_sweat_l_h if startup else scenario.active_whole_body_sweat_l_h
+    )
+    sodium = (
+        scenario.baseline_sweat_sodium_mmol_l if startup else scenario.active_sweat_sodium_mmol_l
+    )
+    local = flow / scenario.whole_body_to_patch_multiplier
+    return dict(
+        whole_body_sweat_rate=flow,
+        sweat_rate=local,
+        sweat_sodium_concentration=sodium,
+        sweat_sodium_flux=local * sodium,
+    )
+
+
+INFECTION_CHANNELS = frozenset(
+    {"il6_pg_mL", "consciousness_level", "supplemental_o2", "post_ared_exercise_window"}
+)
+
+
+def infection_references(
+    t: float, profile: AstronautProfile, scenario: AcuteInfectionScenario
+) -> dict[str, float]:
+    w = smoothstep(t, scenario.onset_s, scenario.affected_at_s)
+    pairs = {
+        "body_temperature": (scenario.baseline_temp_c, scenario.affected_temp_c),
+        "heart_rate": (profile.resting_hr_bpm, scenario.affected_heart_rate_bpm),
+        "respiratory_rate": (
+            scenario.baseline_respiratory_rate_br_min,
+            scenario.affected_respiratory_rate_br_min,
+        ),
+        "bp_systolic": (profile.sbp_mmhg, scenario.affected_sbp_mmhg),
+        "spo2": (scenario.baseline_spo2_pct, scenario.affected_spo2_pct),
+        "il6_pg_mL": (scenario.baseline_il6_pg_ml, scenario.affected_il6_pg_ml),
+    }
+    return {k: a + (z - a) * w for k, (a, z) in pairs.items()}
+
+
+def infection_context_values(
+    t: float, scenario: AcuteInfectionScenario
+) -> dict[str, float | bool | str]:
+    affected = t >= scenario.affected_at_s
+    return dict(
+        consciousness_level=scenario.affected_consciousness_level if affected else "ALERT",
+        supplemental_o2=scenario.affected_supplemental_o2 if affected else False,
+        post_ared_exercise_window=scenario.affected_post_ared_exercise_window
+        if affected
+        else False,
+    )
