@@ -735,6 +735,7 @@ def radiation_exposure_3_2(
     cumulative_dose_msv: float,
     dose_rate_usv_h: float,
     spe_flag: bool,
+    baseline_dose_rate_usv_h: float,
 ) -> RadiationResult:
     r"""
     Finding 10: Radiation dose & solar particle events (radiation hazard).
@@ -747,20 +748,25 @@ def radiation_exposure_3_2(
         cumulative_dose_msv: Cumulative effective dose [mSv].
         dose_rate_usv_h: Live dose rate [µSv/h].
         spe_flag: Telemetry SPE flag (solar particle event in progress).
+        baseline_dose_rate_usv_h: The environment's nominal background dose
+            rate [µSv/h] (``ENVIRONMENTS``).
 
     Returns:
         ``cumulative_dose_msv``, ``dose_rate_usv_h``, ``triggers``,
         ``status``, ``action``.
         CRITICAL (the storm shelter alert) when an SPE is flagged; otherwise
-        WARNING when the dose rate is > 50 µSv/h (the plan's "warning") or the
-        cumulative dose exceeds the 600 mSv career limit. The plan gives the
-        finding one action card, the shelter, for every criterion.
+        WARNING when the dose rate is > 50 µSv/h above the environment's
+        baseline or the cumulative dose exceeds the 600 mSv career limit. The
+        plan's "> 50 µSv/h warning" is absolute; it is applied as a spike above
+        the baseline because the lunar (57.1) and Mars-transit (76.7) baselines
+        alone exceed it. The plan gives the finding one action card, the
+        shelter, for every criterion.
     """
     triggers: list[str] = []
     if cumulative_dose_msv > 600.0:
         triggers.append("cumulative dose > 600 mSv")
-    if dose_rate_usv_h > 50.0:
-        triggers.append("dose rate > 50 µSv/h")
+    if dose_rate_usv_h - baseline_dose_rate_usv_h > 50.0:
+        triggers.append("dose rate > 50 µSv/h above baseline")
     if spe_flag:
         triggers.append("solar particle event")
 

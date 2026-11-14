@@ -228,12 +228,19 @@ inputs.
 `channels.py` grades one reading of one channel, for the backend's per-reading
 `evaluation`. It follows the Classification rules above, with these differences:
 
+- `evaluate_reading` takes the environment in effect as a keyword argument; only
+  `ambient_dose_rate` uses it, graded as a spike above the environment's baseline
+  (the plan's absolute 50 µSv/h is below the lunar and Mars-transit backgrounds).
 - `evaluate_reading` returns a bare `Evaluation`, no result dict or action: the
   channel's `explanation` in `CHANNELS` carries the text.
 - Values arrive in SI wire units (the simulator's registry). Each `case`
   converts to the spec's unit first (`bpm = value * 60.0`), so cutoffs read
   exactly as in the document, and comments the document and band they come from.
 - Boolean channels take `True` / `False`.
+- `body_regions` use the frontend body model's region ids (`head`, `neck`,
+  `chest`, `abdomen`, `pelvis`, `left_thigh`, ...; see
+  `frontend/src/components/model/ModelConstants.ts`) or `heart`, so the 3D
+  figure can colour them; leave it empty when the value has no place on the body.
 - An unknown channel raises `ValueError`.
 
 ## Assessment

@@ -81,8 +81,11 @@ class Environment(FrozenModel):
     gravity_g: float = Field(default=0, ge=0, le=2)
     comm_delay_s: float = Field(default=0, ge=0, le=3600)
     pressure_pa: float = Field(default=101325, gt=0)
-    dose_rate_usv_h: float = Field(default=18, ge=0, le=35)
+    dose_rate_usv_h: float = Field(default=18, ge=0, le=200)
     initial_monitor_dose_msv: float = Field(default=0, ge=0)
+    # Set only by a mid-run environment switch, so the integrated monitor dose
+    # stays continuous when the dose rate changes; never configured.
+    dose_offset_msv: float = 0
 
 
 class SansScenario(FrozenModel):
@@ -250,6 +253,12 @@ class Settings(FrozenModel):
     environment: Environment = Environment()
     base_url: str = "http://127.0.0.1:8000"
     data_route: str = "/api/readings/"
+    # Follow the mission environment selected on the HydroGraph backend: its dose
+    # rate, gravity and comm delay replace [environment] while the run continues.
+    follow_backend_environment: bool = False
+    environment_route: str = "/api/environment/"
+    environments_route: str = "/api/environments/"
+    environment_poll_wall_s: float = Field(default=2, gt=0, le=60)
     enabled_channels: tuple[str, ...] | None = None
     lab_delay_s: float = Field(default=3600, ge=0, le=30 * 86400)
     bp_session_start_s: float = Field(default=8 * 3600, ge=0)

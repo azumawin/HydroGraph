@@ -8,14 +8,16 @@ from collections.abc import Iterable
 from datetime import timedelta
 from typing import cast
 
-from hydrograph_core import FINDINGS, FindingResult, evaluate_findings
+from hydrograph_core import FINDINGS, EnvironmentInfo, FindingResult, evaluate_findings
 
 from api.models import Reading
 
 WEEK = timedelta(days=7)
 
 
-def crew_findings(findings: Iterable[str] = FINDINGS) -> dict[str, FindingResult]:
+def crew_findings(
+    environment: EnvironmentInfo, findings: Iterable[str] = FINDINGS
+) -> dict[str, FindingResult]:
     """The given monitored findings (default: all), from the latest readings.
 
     Only those findings' input channels are read.
@@ -47,12 +49,15 @@ def crew_findings(findings: Iterable[str] = FINDINGS) -> dict[str, FindingResult
         latest,
         None if first is None else cast("float", first.value),
         None if week_before is None else cast("float", week_before.value),
+        environment,
     )
     return {f: r for f, r in results.items() if f in wanted}
 
 
-def affected_findings(channel: str) -> dict[str, FindingResult]:
+def affected_findings(
+    channel: str, environment: EnvironmentInfo
+) -> dict[str, FindingResult]:
     """Every finding that uses a new reading's channel."""
     return crew_findings(
-        f for f, info in FINDINGS.items() if channel in info["channels"]
+        environment, (f for f, info in FINDINGS.items() if channel in info["channels"])
     )

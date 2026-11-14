@@ -161,7 +161,14 @@ def test_backend_mapping(monkeypatch):
     from hydrograph_core.findings import dehydration_2_1
 
     assert "whole_body_sweat_rate" in CHANNELS
-    assert evaluate_reading("whole_body_sweat_rate", 0.820 / 3_600_000) == "unspecified"
+    from hydrograph_core.environments import ENVIRONMENTS
+
+    assert (
+        evaluate_reading(
+            "whole_body_sweat_rate", 0.820 / 3_600_000, environment=ENVIRONMENTS["iss_leo"]
+        )
+        == "unspecified"
+    )
     r = dehydration_2_1(73.2, 75, 1.026)
     assert r["status"] is True and r["fluid_deficit_ml"] == 1800
     assert r["body_mass_loss_pct"] == 2.4

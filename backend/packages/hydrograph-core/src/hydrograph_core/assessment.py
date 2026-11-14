@@ -25,6 +25,7 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Final, TypedDict
 
+from .environments import EnvironmentInfo
 from .findings import (
     BoneResult,
     DehydrationResult,
@@ -252,6 +253,7 @@ def evaluate_findings(
     latest: Mapping[str, float | bool | str],
     body_mass_first_kg: float | None,
     body_mass_week_before_kg: float | None,
+    environment: EnvironmentInfo,
 ) -> dict[str, FindingResult]:
     """Every monitored finding whose input channels all have a reading.
 
@@ -264,6 +266,8 @@ def evaluate_findings(
             before the latest one, for Finding 7's weekly loss; ``None`` in the
             first week, when the loss since the baseline is used instead (not
             extrapolated to a weekly rate).
+        environment: The mission environment in effect; Finding 10 grades the
+            dose rate above its baseline.
 
     Returns:
         Finding id (a key of :data:`FINDINGS`) to its result. Findings with a
@@ -386,6 +390,7 @@ def evaluate_findings(
             num("ambient_integrated_dose") * 1000.0,
             num("ambient_dose_rate") * 3.6e9,
             latest["spe_flag"] is True,
+            environment["baseline_dose_rate_usv_h"],
         )
 
     return results

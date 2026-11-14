@@ -10,7 +10,13 @@ from typing import Literal, Protocol
 from .clock import Clock, timestamp
 from .frequency import FREQUENCIES
 from .models import AstronautProfile, Observation, Reading, Settings
-from .physiology import DAY, crew_values, environment_values, startup_crew_values
+from .physiology import (
+    DAY,
+    crew_values,
+    environment_values,
+    monitor_dose_msv,
+    startup_crew_values,
+)
 from .registry import CHANNELS, Channel, effective_channels
 from .scenarios import (
     EVA_CHANNELS,
@@ -234,6 +240,28 @@ class Scheduler:
                 due = owner_rule.next_after(0)
                 if due is not None:
                     self._push(due, owner_rule, scope, owner)
+
+    def set_environment(
+        self, *, gravity_g: float, comm_delay_s: float, dose_rate_usv_h: float
+    ) -> None:
+        """Switch the shared compartment mid-run; later samples use the new values.
+
+        The integrated monitor dose is analytic from t = 0, so a dose-rate change
+        carries an offset that keeps it continuous at the switch instant.
+        """
+        now = self.clock.now()
+        old = self.settings.environment
+        switched = old.model_copy(
+            update={
+                "gravity_g": gravity_g,
+                "comm_delay_s": comm_delay_s,
+                "dose_rate_usv_h": dose_rate_usv_h,
+                "dose_offset_msv": 0.0,
+            }
+        )
+        offset = monitor_dose_msv(old, now) - monitor_dose_msv(switched, now)
+        switched = switched.model_copy(update={"dose_offset_msv": offset})
+        self.settings = self.settings.model_copy(update={"environment": switched})
 
     def _push(
         self, due: float, rule: Rule, scope: Literal["crew", "environment"], owner: str

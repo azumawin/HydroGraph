@@ -146,6 +146,8 @@ def test_post_rejects_number_for_boolean_channel(client: APIClient) -> None:
 
 @pytest.mark.django_db
 def test_eva_whole_body_channel_and_dehydration(client, monkeypatch):
+    from hydrograph_core.environments import ENVIRONMENTS
+
     from api.findings import crew_findings
     from api.models import Reading
 
@@ -166,7 +168,7 @@ def test_eva_whole_body_channel_and_dehydration(client, monkeypatch):
             HTTP_X_SIMULATION_SCOPE="crew",
         )
         assert response.status_code == 201
-    result = crew_findings()["dehydration_2_1"]
+    result = crew_findings(ENVIRONMENTS["iss_leo"])["dehydration_2_1"]
     assert result["status"] is True
     assert result["fluid_deficit_ml"] == 1800
     assert any("dehydration_2_1" in event for event in published)
@@ -174,6 +176,8 @@ def test_eva_whole_body_channel_and_dehydration(client, monkeypatch):
 
 @pytest.mark.django_db
 def test_infection_explicit_context_and_optional_assays(client, monkeypatch):
+    from hydrograph_core.environments import ENVIRONMENTS
+
     from api.findings import crew_findings
 
     published = []
@@ -202,7 +206,7 @@ def test_infection_explicit_context_and_optional_assays(client, monkeypatch):
             HTTP_X_SIMULATION_SCOPE="crew",
         )
         assert response.status_code == 201
-    result = crew_findings()["acute_infection_3_1"]
+    result = crew_findings(ENVIRONMENTS["iss_leo"])["acute_infection_3_1"]
     assert (
         result["status"] == "critical"
         and result["news2_score"] == 8
@@ -222,7 +226,10 @@ def test_infection_explicit_context_and_optional_assays(client, monkeypatch):
         HTTP_X_SIMULATION_SCOPE="crew",
     )
     assert response.status_code == 201
-    assert crew_findings()["acute_infection_3_1"]["qsofa_score"] == 3
+    assert (
+        crew_findings(ENVIRONMENTS["iss_leo"])["acute_infection_3_1"]["qsofa_score"]
+        == 3
+    )
     response = client.post(
         "/api/readings/",
         {

@@ -56,12 +56,18 @@ def test_full_demo(monkeypatch):
     core = Path(__file__).resolve().parents[2] / "backend/packages/hydrograph-core/src"
     monkeypatch.syspath_prepend(str(core))
     from hydrograph_core.assessment import evaluate_findings, news2, qsofa
+    from hydrograph_core.environments import ENVIRONMENTS
 
-    r = evaluate_findings(latest, None, None)["acute_infection_3_1"]
+    r = evaluate_findings(latest, None, None, ENVIRONMENTS["iss_leo"])["acute_infection_3_1"]
     assert r["news2_score"] == 8 and r["qsofa_score"] == 2 and r["status"] == "critical"
     assert r["il6_source_channel"] == "il6_pg_mL"
     before = {o.reading.channel: o.reading.value for o in items if o.available_s <= 1920}
-    assert evaluate_findings(before, None, None)["acute_infection_3_1"]["status"] == "critical"
+    assert (
+        evaluate_findings(before, None, None, ENVIRONMENTS["iss_leo"])["acute_infection_3_1"][
+            "status"
+        ]
+        == "critical"
+    )
     assert (
         news2(23, 94, 96, 116, 38.7, consciousness_level="CONFUSION", supplemental_o2=True)["score"]
         == 13

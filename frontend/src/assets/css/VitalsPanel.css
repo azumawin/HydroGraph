@@ -1,0 +1,177 @@
+.vitals-dashboard .vitals-dashboard-readings {
+  display: grid;
+  grid-template-rows: repeat(5, minmax(112px, 1fr));
+  flex: 1;
+  min-height: 0;
+  padding: 0 24px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.vitals-dashboard .vitals-dashboard-reading {
+  display: grid;
+  grid-template-columns: 172px minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  min-height: 112px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.vitals-dashboard .vitals-dashboard-reading:last-child {
+  border-bottom: 0;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+}
+
+.vitals-dashboard .vitals-dashboard-reading-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.75;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-measurement {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-value {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 36px;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-unit {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-status.is-nominal {
+  color: var(--color-status-nominal);
+}
+
+.vitals-dashboard .vitals-dashboard-reading-status.is-warning {
+  color: var(--color-status-warning);
+}
+
+.vitals-dashboard .vitals-dashboard-reading-status.is-critical {
+  color: var(--color-status-critical);
+}
+
+.vitals-dashboard .vitals-dashboard-status-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-history {
+  min-width: 0;
+}
+
+.vitals-dashboard .vitals-dashboard-chart,
+.vitals-dashboard .vitals-dashboard-chart-message {
+  height: 88px;
+  min-width: 0;
+}
+
+.vitals-dashboard .vitals-dashboard-chart-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 12px;
+  padding-left: 36px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-series {
+  display: flex;
+  gap: 12px;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-series-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.vitals-dashboard .vitals-dashboard-series-swatch {
+  width: 16px;
+  height: 4px;
+}
+
+.vitals-dashboard .vitals-dashboard-reading-timestamp {
+  display: flex;
+  flex-direction: column;
+  font-variant-numeric: tabular-nums;
+}
+
+.vitals-dashboard .vitals-dashboard-chart-tooltip {
+  min-width: 160px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-opaque);
+  box-shadow: 0 8px 24px var(--color-shadow);
+  font-size: 12px;
+}
+
+.vitals-dashboard .vitals-dashboard-chart-tooltip-time {
+  margin: 0 0 4px;
+  color: var(--color-text-secondary);
+}
+
+.vitals-dashboard .vitals-dashboard-chart-tooltip-reading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-variant-numeric: tabular-nums;
+}
