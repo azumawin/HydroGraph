@@ -3,11 +3,11 @@
 Run the receiver separately. All crew and environment measurements use one configured `data_route`:
 
 ```toml
-base_url = "http://localhost:9000"
-data_route = "/data"
+base_url = "http://127.0.0.1:8000"
+data_route = "/api/readings/"
 ```
 
-Both scopes send `POST http://localhost:9000/data`. `data_route` is a shared path, without owner/channel placeholders or per-channel overrides. It replaces the previous `crew_route`, `environment_route` and `channel_routes` settings; remove those keys from older configuration files.
+Both scopes send `POST http://127.0.0.1:8000/api/readings/`, the HydroGraph backend (`backend/`, run with `python manage.py runserver`). `data_route` is a shared path, without owner/channel placeholders or per-channel overrides. It replaces the previous `crew_route`, `environment_route` and `channel_routes` settings; remove those keys from older configuration files.
 
 Run normal delivery with `uv run imitacija --config config/healthy.toml` (without `--preview`). Set `IMITACIJA_TOKEN` if a Bearer token is required. The receiver distinguishes records using `X-Simulation-Scope` (`crew` / `environment`), `X-Owner-ID`, and the body’s `channel`. Multiple crew members produce independent records; each compartment sample is posted once. Add `[[crew]]` records with unique IDs to configure more crew.
 
@@ -42,7 +42,7 @@ Headers supply the context without changing nigelNote's body:
 | `X-Dictionary-Version` | Static registry schema/version, currently `1`. |
 | `Authorization` | Optional Bearer token from the `IMITACIJA_TOKEN` environment variable. |
 
-Return 2xx after accepting a reading. Permanent authentication/schema failures count as failed delivery; selected transient failures retry with the same body/key. Finite runs may discard delayed results at their bounded shutdown deadline. The ending counters report delivery, overflow, expiry, failure, retry and shutdown-drop totals. Reconcile accepted results with idempotency keys rather than expecting exactly-once network delivery.
+Return 2xx after accepting a reading. The HydroGraph backend answers `201` with the reading plus its `evaluation` and `scope` (`docs/json-shape.md`, section 2), and `400` with field errors for an unknown channel, wrong unit, wrong value type or mismatched `X-Simulation-Scope`; the simulator counts a 400 as a failed delivery. It monitors one astronaut and ignores `X-Owner-ID`, so configure a single `[[crew]]` member. Permanent authentication/schema failures count as failed delivery; selected transient failures retry with the same body/key. Finite runs may discard delayed results at their bounded shutdown deadline. The ending counters report delivery, overflow, expiry, failure, retry and shutdown-drop totals. Reconcile accepted results with idempotency keys rather than expecting exactly-once network delivery.
 
 Export static configuration-specific metadata before integration:
 
@@ -74,8 +74,9 @@ and their conversions are listed in `channel_catalog.md`. For Finding 9, map
 percentage argument by multiplying by 100. A value of 0.0155 becomes 1.55.
 Keep `startup_baseline` visual fixtures separate from completed scheduled screens.
 The existing finding function does not use HRV, ICP indicators or visual results
-as classification inputs. Its scheduling and HTTP receiver are separate backend
-integration work; the current Django API exposes no telemetry ingestion endpoint.
+as classification inputs. Readings arrive at `/api/readings/`; the HydroGraph
+backend grades `jugular_strain_pct` and `icp_risk_indicator_mmHg` and runs Finding 9
+from `jugular_strain_pct`, as above.
 
 ## Scenario 2 mapping and severity
 
@@ -87,8 +88,9 @@ scope, owner, run identity, sample kind and window provenance.
 
 The existing `hypoxia_co2_2_2()` returns WARNING at 4.8 mmHg / 92% SpO₂,
 whereas the source scenario asks for red. CRITICAL currently requires SpO₂ below
-90%. No severity-policy change or telemetry receiver is included in simulator
-support. RR trend and reported headache remain upstream inputs; missing symptom
-reports must not be inferred from the generated CFE or cabin signal. A receiver,
-five-second evaluation loop and resolved severity policy remain prerequisites
+90%. No severity-policy change is included in simulator support. RR trend and reported headache remain upstream inputs; missing symptom
+reports must not be inferred from the generated CFE or cabin signal. Registering
+the new CFE channel in the receiver, a five-second evaluation loop and a resolved
+severity policy remain prerequisites
 for the source's end-to-end Critical Red Alert. See `badscenario2.md`, section 7.
+

@@ -1,6 +1,6 @@
 # NASA-informed biomarker simulation plan
 
-> **Optional SANS fixture:** `config/badscenario1.toml` now enables Scenario 1 jugular strain, derived resistance, a synthetic ICP indicator, HRV progression and scheduled visual-screen fixtures. This explicitly extends the earlier exclusions for these channels. See [badscenario1.md](badscenario1.md) for assumptions and the separate backend receiver prerequisite.
+> **Optional SANS fixture:** `config/badscenario1.toml` now enables Scenario 1 jugular strain, derived resistance, a synthetic ICP indicator, HRV progression and scheduled visual-screen fixtures, alongside every other channel. This explicitly extends the earlier exclusions for these channels. See [badscenario1.md](badscenario1.md) for assumptions.
 
 > **Startup update:** Every enabled owner/channel now emits one labelled, immediately available synthetic baseline at run start, then follows its normal schedule. See [startup initialization](docs/backend_contract.md#startup-initialization). This overrides older statements requiring initial windows or research collection days before any value appears.
 

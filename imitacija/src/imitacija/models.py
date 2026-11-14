@@ -152,7 +152,7 @@ class Settings(FrozenModel):
     crew: tuple[AstronautProfile, ...] = (AstronautProfile(),)
     environment: Environment = Environment()
     base_url: str = "http://127.0.0.1:8000"
-    data_route: str = "/data"
+    data_route: str = "/api/readings/"
     enabled_channels: tuple[str, ...] | None = None
     lab_delay_s: float = Field(default=3600, ge=0, le=30 * 86400)
     bp_session_start_s: float = Field(default=8 * 3600, ge=0)
