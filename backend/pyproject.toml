@@ -10,6 +10,7 @@ dependencies = [
     "markdown>=3.11.3",
     "hydrograph-core",
     "drf-spectacular>=0.30.0",
+    "daphne>=4.2.3",
 ]
 
 # Virtual root: this directory is the Django project, not an installable package,
@@ -37,3 +38,7 @@ python_files = ["test_*.py", "tests.py"]
 
 [tool.ruff]
 extend-exclude = ["**/migrations/*"]
+
+[tool.basedpyright]
+# generated code, as for ruff; the rest are basedpyright's defaults
+exclude = ["**/migrations", "**/node_modules", "**/__pycache__", "**/.*"]

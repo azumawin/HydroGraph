@@ -2,7 +2,7 @@
 seed = 42
 speed = 10
 duration_s = 4200
-enabled_channels = ["jugular_strain_pct", "delta_R_over_R0", "icp_risk_indicator_mmHg", "hrv_rmssd", "visual_acuity_logmar", "amsler_grid_distortion"]
+# No enabled_channels: every channel reports from boot, with the SANS fault on top.
 base_url = "http://127.0.0.1:8000"
 data_route = "/api/readings/"
 

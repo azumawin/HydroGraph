@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>HydroGraph live demo</title>
+  <style>
+    body { font: 14px/1.4 system-ui, sans-serif; margin: 24px; background: #0f1115; color: #e6e6e6; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    h2 { font-size: 15px; margin: 24px 0 8px; }
+    #status { color: #9aa0a6; margin-bottom: 16px; }
+    table { border-collapse: collapse; width: 100%; max-width: 1000px; }
+    th, td { text-align: left; padding: 4px 10px; border-bottom: 1px solid #262a33; }
+    th { color: #9aa0a6; font-weight: 500; }
+    td.value { font-variant-numeric: tabular-nums; }
+    .nominal { color: #5fd38d; }
+    .warning { color: #f2c14e; }
+    .critical { color: #ff6b6b; font-weight: 600; }
+    .unspecified { color: #9aa0a6; }
+    tr.flash { background: #1c2330; }
+    td.action { max-width: 360px; }
+  </style>
+</head>
+<body>
+  <h1>HydroGraph live demo</h1>
+  <div id="status">Connecting to /api/stream/ …</div>
+  <h2>Findings</h2>
+  <table>
+    <thead><tr><th>Finding</th><th>Status</th><th>Triggers</th><th>Action</th></tr></thead>
+    <tbody id="findings"></tbody>
+  </table>
+  <div id="tables"></div>
+  <script src="demo.js"></script>
+</body>
+</html>

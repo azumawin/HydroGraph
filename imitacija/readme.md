@@ -5,8 +5,8 @@ Generate synthetic sensor telemetry and send it to a separate backend for analys
 simple:
 1) supply the .toml files in /config/, specifically the base_url
 base_url = "http://127.0.0.1:8000" <-change to your backend,
-route is also can be changed, by default it sends to:
-data_route = "/data"
+route is also can be changed, by default it sends to the HydroGraph backend:
+data_route = "/api/readings/"
 
 2)run
 
@@ -201,7 +201,11 @@ uv run imitacija --config config/badscenario1.toml --validate-config
 uv run imitacija --config config/badscenario1.toml --preview
 ```
 
-The default demo lasts 4200 simulation seconds (about seven minutes at speed 10).
+Every channel reports from boot (startup baselines), with the SANS fault on top. The
+default demo lasts 4200 simulation seconds (about seven minutes at speed 10); from the
+repo root, `make dev CONFIG=config/badscenario1.toml SPEED=60` runs it in about 70 s
+against the backend, the fastest the local backend keeps up with without dropping
+readings.
 The astronaut is healthy for 600 seconds, reaches the warning endpoint at 1800 s,
 and the critical endpoint at 3600 s. Set `escalate_to_critical = false` to hold the
 warning state. Times and fixture targets are configurable in `[sans_scenario]`.
@@ -221,7 +225,7 @@ The four-field transport body remains unchanged. Strain is a fraction on the wir
 0.0155 means 1.55%; a receiver must multiply by 100 before calling the backend's
 `sans_fluid_shift_1_3(jugular_distension_pct=...)` evaluator.
 
-For backend delivery, set `base_url` and `data_route` and remove `--preview`. The
-current repository backend does not yet expose a telemetry receiver; preview works
-independently, while HTTP alerts require separate receiver integration. See
-[the implementation plan](badscenario1.md) for signal formulas and assumptions.
+For backend delivery, remove `--preview`; the config already points at the HydroGraph
+backend (`/api/readings/`), which grades the SANS channels and pushes Finding 9 to its
+stream. See [the implementation plan](badscenario1.md) for signal formulas and
+assumptions.

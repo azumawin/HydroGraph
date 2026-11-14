@@ -36,7 +36,10 @@ def test_demo_windows_units_screens_and_thresholds():
     config = load_settings(Path("config/badscenario1.toml"), None, None)
     items = acquire(config, 4200)
     startup = [o for o in items if o.sample_kind == "startup_baseline"]
-    assert len(startup) == 6
+    # Every enabled channel (all of them, SANS included) reports at boot.
+    assert len(startup) == len(effective_channels(config))
+    assert {o.reading.channel for o in startup} == effective_channels(config)
+    assert SANS_CHANNELS <= effective_channels(config)
     assert all(o.window_s == 0 and o.acquired_s == 0 for o in startup)
     strain = [
         o
