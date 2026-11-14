@@ -5,6 +5,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from api.models import Reading
+from api.serializers import dictionary_payload
 
 TICK = "2026-11-14T08:00:00Z"
 CREW = {"X-Owner-ID": "crew-1", "X-Simulation-Scope": "crew"}
@@ -20,6 +21,28 @@ def test_health_is_public(client: APIClient) -> None:
     response = client.get(reverse("health"))
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_environments_lists_the_predefined_set(client: APIClient) -> None:
+    response = client.get(reverse("environments"))
+
+    assert response.status_code == 200
+    assert cast("dict[str, object]", response.json()) == {
+        "environments": [
+            {"id": "lunar_surface", "gravity_g": 0.166, "comm_delay_s": 2.6},
+            {"id": "mars_surface", "gravity_g": 0.377, "comm_delay_s": 600.0},
+        ]
+    }
+
+
+def test_environments_matches_the_stream_dictionary(client: APIClient) -> None:
+    payload = cast("dict[str, object]", client.get(reverse("environments")).json())
+
+    assert payload["environments"] == dictionary_payload()["environments"]
+
+
+def test_environments_is_get_only(client: APIClient) -> None:
+    assert client.post(reverse("environments")).status_code == 405
 
 
 def test_schema_is_served(client: APIClient) -> None:

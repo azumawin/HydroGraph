@@ -8,6 +8,7 @@ router = DefaultRouter()
 
 urlpatterns = [
     path("health/", views.health, name="health"),
+    path("environments/", views.environments, name="environments"),
     path("readings/", views.readings, name="readings"),
     path("stream/", views.stream, name="stream"),
     path("", include(router.urls)),

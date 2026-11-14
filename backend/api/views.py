@@ -19,6 +19,7 @@ from api.models import Reading
 from api.serializers import (
     ReadingIn,
     ReadingInSerializer,
+    environments_payload,
     finding_payload,
     reading_payload,
 )
@@ -41,6 +42,40 @@ from api.stream import events, sse_event
 def health(_request: Request) -> Response:
     """Liveness probe, also proves the core package is wired in."""
     return Response({"status": "ok", "core_version": hydrograph_core.__version__})
+
+
+@extend_schema(
+    summary="The predefined mission environments",
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "environments": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "enum": list(hydrograph_core.ENVIRONMENTS),
+                            },
+                            "gravity_g": {"type": "number"},
+                            "comm_delay_s": {"type": "number"},
+                        },
+                    },
+                }
+            },
+        }
+    },
+)
+@api_view(["GET"])
+def environments(_request: Request) -> Response:
+    """The environments the dashboard offers, for the environment switcher.
+
+    Static, so one fetch is enough; the stream dictionary carries the same list
+    for clients that only open the stream.
+    """
+    return Response({"environments": environments_payload()})
 
 
 @extend_schema(

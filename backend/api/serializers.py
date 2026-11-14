@@ -125,10 +125,19 @@ class DictionaryPayload(TypedDict):
     findings: dict[str, FindingEntry]
 
 
+def environments_payload() -> list[EnvironmentEntry]:
+    """Every mission environment, in core's order, with its key as ``id``.
+
+    Served on its own by ``GET /api/environments/`` and as part of the stream
+    dictionary, so the two always describe the same set.
+    """
+    return [{"id": k, **v} for k, v in ENVIRONMENTS.items()]
+
+
 def dictionary_payload() -> DictionaryPayload:
     """Environments and per-channel display text, all from core."""
     return {
-        "environments": [{"id": k, **v} for k, v in ENVIRONMENTS.items()],
+        "environments": environments_payload(),
         "channels": {
             k: {
                 "name": v["name"],

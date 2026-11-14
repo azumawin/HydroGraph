@@ -51,6 +51,7 @@ Useful URLs once `runserver` is up:
 | URL | What |
 | --- | --- |
 | http://localhost:8000/api/health/ | liveness probe |
+| http://localhost:8000/api/environments/ | the predefined mission environments |
 | http://localhost:8000/api/readings/ | `POST` sensor readings |
 | http://localhost:8000/api/stream/ | SSE stream for the frontend |
 | http://localhost:8000/static/demo/index.html | live demo of the stream |
@@ -61,6 +62,25 @@ There is no auth: every endpoint is public.
 
 `runserver` is daphne's (ASGI), so it can hold the SSE stream open. Under a WSGI server
 the stream never sends anything.
+
+## Environments endpoint
+
+`GET /api/environments/` returns the environments the dashboard's switcher offers,
+straight from core (`hydrograph_core.environments`):
+
+```json
+{
+  "environments": [
+    { "id": "lunar_surface", "gravity_g": 0.166, "comm_delay_s": 2.6 },
+    { "id": "mars_surface", "gravity_g": 0.377, "comm_delay_s": 600.0 }
+  ]
+}
+```
+
+Static, so one fetch is enough. The stream `dictionary` event carries the same list
+(both call `environments_payload()`), so a client that opens the stream needs neither
+this endpoint nor a second fetch. Nothing in the backend reads the selection yet: no
+finding takes an environment input, so switching changes only what the frontend shows.
 
 ## Readings endpoints
 
