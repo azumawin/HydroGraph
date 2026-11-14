@@ -11,15 +11,15 @@
   --color-text-secondary: #dedede;
   --color-accent: #e7e7e7;
   --color-body-neutral: #a6a6a6;
-  --color-status-unusual: #edb65b;
+  --color-status-warning: #edb65b;
   --color-status-critical: #ef6969;
-  --color-status-normal: #83d4ac;
+  --color-status-nominal: #83d4ac;
   --color-chart-heart-rate: #ef8585;
   --color-chart-systolic: #c6a4eb;
   --color-chart-diastolic: #88bce8;
   --color-chart-blood-sugar: #83d4ac;
   --color-chart-temperature: #edc576;
-  --color-chart-sleep: #9bb3ec;
+  --color-chart-oxygen: #9bb3ec;
   --color-chart-grid: color-mix(in srgb, var(--color-surface) 8%, transparent);
   --color-border: color-mix(in srgb, var(--color-surface) 28%, transparent);
   --color-divider: color-mix(in srgb, var(--color-surface) 16%, transparent);

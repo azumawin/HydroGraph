@@ -1,211 +1,153 @@
-import { VITALS_HISTORY } from "../Constants.ts";
+import { TELEMETRY } from "../Constants.ts";
 
-export type NumericVital = {
+export type Evaluation = "nominal" | "warning" | "critical" | "unspecified";
+
+export type FindingSeverity = "nominal" | "warning" | "critical";
+
+export type TelemetryReading = {
   channel: string;
-  value: number;
+  value: number | boolean;
   unit: string;
-  evaluation: "optimal" | "normal" | "unusual" | "critical";
+  evaluation: Evaluation;
   measured_at: string;
+  scope: "crew" | "environment";
+};
+
+export type TelemetryFinding = {
+  id: string;
+  status: boolean | FindingSeverity;
+  triggers: string[];
+  action: string;
+};
+
+export type ChannelInfo = {
   name: string;
   body_regions: string[];
   explanation: string;
 };
 
-export type HeartRate = NumericVital;
-
-export type BloodPressure = NumericVital;
-
-export type VitalsHistoryRequest = {
-  from: string;
-  to: string;
+export type FindingInfo = {
+  name: string;
+  channels: string[];
 };
 
-export type VitalsHistoryPoint = Pick<NumericVital, "channel" | "value" | "unit"> & {
-  timestamp: string;
+export type TelemetryDictionary = {
+  channels: Record<string, ChannelInfo>;
+  findings: Record<string, FindingInfo>;
 };
 
-export type Mood = {
-  id: string;
-  label: string;
-  value: string;
-  measure_at: string;
+export type TelemetryStreamHandlers = {
+  onDictionary: (dictionary: TelemetryDictionary) => void;
+  onReading: (reading: TelemetryReading) => void;
+  onFinding: (finding: TelemetryFinding) => void;
+  onError: (error: Error) => void;
 };
 
-export const postVitalsHistory = async (
-  request: VitalsHistoryRequest,
-): Promise<VitalsHistoryPoint[]> => {
-  const fromTimestamp = Date.parse(request.from);
-  const toTimestamp = Date.parse(request.to);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+const isFindingSeverity = (value: unknown): value is FindingSeverity =>
+  value === "nominal" || value === "warning" || value === "critical";
+
+const isEvaluation = (value: unknown): value is Evaluation =>
+  isFindingSeverity(value) || value === "unspecified";
+
+const isScope = (value: unknown): value is TelemetryReading["scope"] =>
+  value === "crew" || value === "environment";
+
+const isChannelInfo = (value: unknown): value is ChannelInfo =>
+  isRecord(value) &&
+  typeof value.name === "string" &&
+  isStringArray(value.body_regions) &&
+  typeof value.explanation === "string";
+
+const isFindingInfo = (value: unknown): value is FindingInfo =>
+  isRecord(value) && typeof value.name === "string" && isStringArray(value.channels);
+
+const malformed = () => new TypeError(TELEMETRY.MALFORMED_MESSAGE);
+
+const parseData = (event: MessageEvent<unknown>): Record<string, unknown> => {
+  if (typeof event.data !== "string") throw malformed();
+  const data: unknown = JSON.parse(event.data);
+  if (!isRecord(data)) throw malformed();
+  return data;
+};
+
+const parseReading = (data: Record<string, unknown>): TelemetryReading => {
+  const { channel, value, unit, evaluation, measured_at, scope } = data;
   if (
-    !Number.isFinite(fromTimestamp) ||
-    !Number.isFinite(toTimestamp) ||
-    fromTimestamp >= toTimestamp
+    typeof channel !== "string" ||
+    (typeof value !== "number" && typeof value !== "boolean") ||
+    typeof unit !== "string" ||
+    !isEvaluation(evaluation) ||
+    typeof measured_at !== "string" ||
+    !isScope(scope)
   ) {
-    throw new RangeError(VITALS_HISTORY.INVALID_RANGE_MESSAGE);
+    throw malformed();
   }
-
-  const mockSeries = [
-    {
-      channel: "heart_rate",
-      unit: "bpm",
-      values: [
-        68, 66, 65, 64, 63, 65, 69, 74, 78, 82, 76, 73, 71, 75, 79, 84, 80, 76, 73, 71, 74, 73, 70,
-        71, 72,
-      ],
-    },
-    {
-      channel: "bp_systolic",
-      unit: "mmHg",
-      values: [
-        162, 160, 158, 159, 157, 160, 164, 168, 172, 175, 171, 168, 170, 167, 173, 175, 172, 178,
-        176, 179, 177, 181, 178, 179, 180,
-      ],
-    },
-    {
-      channel: "bp_diastolic",
-      unit: "mmHg",
-      values: [
-        98, 96, 95, 96, 94, 97, 99, 101, 104, 106, 103, 100, 102, 101, 104, 103, 106, 105, 108, 107,
-        109, 108, 109, 108, 110,
-      ],
-    },
-    {
-      channel: "blood_sugar",
-      unit: "mg/dL",
-      values: [
-        94, 92, 90, 89, 88, 90, 95, 112, 106, 99, 94, 91, 94, 98, 115, 108, 101, 96, 93, 97, 110,
-        103, 99, 96, 95,
-      ],
-    },
-    {
-      channel: "body_temperature",
-      unit: "°C",
-      values: [
-        36.8, 36.7, 36.6, 36.6, 36.5, 36.6, 36.8, 36.9, 37, 37.1, 37, 37.1, 37.2, 37.1, 37.3, 37.5,
-        37.4, 37.7, 37.8, 37.7, 38, 38.1, 38, 38.1, 38.2,
-      ],
-    },
-    {
-      channel: "daily_sleep_hours",
-      unit: "hours",
-      values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
-    },
-  ];
-  const mockEndTimestamp =
-    Math.floor(Date.now() / VITALS_HISTORY.MOCK_INTERVAL_MS) * VITALS_HISTORY.MOCK_INTERVAL_MS;
-  const response: VitalsHistoryPoint[] = mockSeries.flatMap((series) =>
-    series.values.map((value, pointIndex) => ({
-      channel: series.channel,
-      value,
-      unit: series.unit,
-      timestamp: new Date(
-        mockEndTimestamp -
-          (series.values.length - 1 - pointIndex) * VITALS_HISTORY.MOCK_INTERVAL_MS,
-      ).toISOString(),
-    })),
-  );
-
-  return response
-    .filter((point) => {
-      const pointTimestamp = Date.parse(point.timestamp);
-      return pointTimestamp >= fromTimestamp && pointTimestamp < toTimestamp;
-    })
-    .sort(
-      (previousPoint, nextPoint) =>
-        Date.parse(previousPoint.timestamp) - Date.parse(nextPoint.timestamp),
-    );
+  return { channel, value, unit, evaluation, measured_at, scope };
 };
 
-export const getHeartRate = async (): Promise<HeartRate[]> => [
-  {
-    channel: "heart_rate",
-    value: 72,
-    unit: "bpm",
-    evaluation: "normal",
-    measured_at: "2026-11-14T00:00:00.000Z",
-    name: "Heart rate",
-    body_regions: ["heart"],
-    explanation: "Heart rate measures the number of heartbeats per minute.",
-  },
-];
+const parseFinding = (data: Record<string, unknown>): TelemetryFinding => {
+  const { id, status, triggers, action } = data;
+  if (
+    typeof id !== "string" ||
+    (typeof status !== "boolean" && !isFindingSeverity(status)) ||
+    !isStringArray(triggers) ||
+    typeof action !== "string"
+  ) {
+    throw malformed();
+  }
+  return { id, status, triggers, action };
+};
 
-export const getBloodPressure = async (): Promise<BloodPressure[]> => [
-  {
-    channel: "bp_systolic",
-    value: 180,
-    unit: "mmHg",
-    evaluation: "critical",
-    measured_at: "2026-11-08T07:12:00Z",
-    name: "Blood pressure (systolic)",
-    body_regions: ["heart", "chest"],
-    explanation: "Systolic blood pressure measures pressure when the heart contracts.",
-  },
-  {
-    channel: "bp_diastolic",
-    value: 110,
-    unit: "mmHg",
-    evaluation: "unusual",
-    measured_at: "2026-11-08T07:12:00Z",
-    name: "Blood pressure (diastolic)",
-    body_regions: ["heart", "chest"],
-    explanation: "Diastolic blood pressure measures pressure when the heart relaxes between beats.",
-  },
-];
+const parseDictionary = (data: Record<string, unknown>): TelemetryDictionary => {
+  const { channels, findings } = data;
+  if (!isRecord(channels) || !isRecord(findings)) throw malformed();
+  const channelEntries = Object.entries(channels);
+  const findingEntries = Object.entries(findings);
+  if (
+    !channelEntries.every(([, info]) => isChannelInfo(info)) ||
+    !findingEntries.every(([, info]) => isFindingInfo(info))
+  ) {
+    throw malformed();
+  }
+  return {
+    channels: Object.fromEntries(
+      channelEntries.flatMap(([channel, info]) => (isChannelInfo(info) ? [[channel, info]] : [])),
+    ),
+    findings: Object.fromEntries(
+      findingEntries.flatMap(([finding, info]) => (isFindingInfo(info) ? [[finding, info]] : [])),
+    ),
+  };
+};
 
-export const getBloodSugar = async (): Promise<NumericVital[]> => [
-  {
-    channel: "blood_sugar",
-    value: 95,
-    unit: "mg/dL",
-    evaluation: "normal",
-    measured_at: "2026-11-14T00:00:00.000Z",
-    name: "Blood sugar",
-    body_regions: [],
-    explanation: "Blood sugar measures the concentration of glucose in the blood.",
-  },
-];
+export const openTelemetryStream = (handlers: TelemetryStreamHandlers): EventSource => {
+  const stream = new EventSource(TELEMETRY.STREAM_URL);
 
-export const getBodyTemperature = async (): Promise<NumericVital[]> => [
-  {
-    channel: "body_temperature",
-    value: 38.2,
-    unit: "°C",
-    evaluation: "unusual",
-    measured_at: "2026-11-14T00:00:00.000Z",
-    name: "Body temperature",
-    body_regions: ["head", "neck"],
-    explanation: "Body temperature measures how warm the body is.",
-  },
-];
+  const listen = <T>(
+    eventName: string,
+    parse: (data: Record<string, unknown>) => T,
+    handle: (value: T) => void,
+  ) => {
+    stream.addEventListener(eventName, (event: MessageEvent<unknown>) => {
+      try {
+        handle(parse(parseData(event)));
+      } catch (error) {
+        handlers.onError(error instanceof Error ? error : new Error(String(error)));
+      }
+    });
+  };
 
-export const getDailySleepHours = async (): Promise<NumericVital[]> => [
-  {
-    channel: "daily_sleep_hours",
-    value: 8,
-    unit: "hours",
-    evaluation: "normal",
-    measured_at: "2026-11-14T00:00:00.000Z",
-    name: "Daily sleep",
-    body_regions: [],
-    explanation: "Daily sleep records the amount of time spent asleep.",
-  },
-];
+  listen(TELEMETRY.EVENTS.DICTIONARY, parseDictionary, handlers.onDictionary);
+  listen(TELEMETRY.EVENTS.READING, parseReading, handlers.onReading);
+  listen(TELEMETRY.EVENTS.FINDING, parseFinding, handlers.onFinding);
+  stream.addEventListener("error", () => {
+    handlers.onError(new Error(TELEMETRY.DISCONNECTED_MESSAGE));
+  });
 
-export const getMood = async (): Promise<Mood[]> => {
-  const response = [
-    {
-      metric_id: "mood",
-      metric_label: "Mood",
-      metric_value: "Good",
-      measure_at: "2026-11-14T00:00:00.000Z",
-    },
-  ];
-
-  return response.map((mood) => ({
-    id: mood.metric_id,
-    label: mood.metric_label,
-    value: mood.metric_value,
-    measure_at: mood.measure_at,
-  }));
+  return stream;
 };

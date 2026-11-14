@@ -62,7 +62,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "heart_rate": _crew(
             "Heart rate",
             "s^-1",
-            ("heart",),
+            ("heart", "chest"),
             (
                 "Resting heart rate above 90 bpm signals vascular stress, dehydration "
                 "or infection."
@@ -71,7 +71,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "hrv_rmssd": _crew(
             "Heart rate variability (RMSSD)",
             "s",
-            ("heart",),
+            ("heart", "chest"),
             (
                 "Beat-to-beat variation; falls with stress and fatigue. The specs give "
                 "no cutoff."
@@ -98,7 +98,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "spo2": _crew(
             "Blood oxygen saturation",
             "1",
-            ("lungs",),
+            ("chest",),
             (
                 "Below 94 % is low and below 90 % is critical hypoxemia; check the CO2 "
                 "scrubber and module ventilation."
@@ -107,7 +107,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "body_temperature": _crew(
             "Core body temperature",
             "K",
-            ("head", "torso"),
+            ("head", "neck"),
             (
                 "Above 38.0 °C or below 36.0 °C meets the SIRS fever or hypothermia "
                 "criterion for acute infection."
@@ -116,7 +116,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "respiratory_rate": _crew(
             "Respiratory rate",
             "s^-1",
-            ("lungs",),
+            ("chest",),
             (
                 "A rising rate is an early sign of hypoxia or CO2 exposure. The specs "
                 "give no cutoff."
@@ -125,7 +125,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "glucose": _crew(
             "Blood glucose",
             "mol/m^3",
-            ("blood",),
+            (),
             (
                 "Below 3.9 mmol/L is level 1 hypoglycemia and below 3.0 mmol/L level 2; "
                 "a sign of negative energy balance."
@@ -134,7 +134,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "cortisol_saliva": _crew(
             "Salivary cortisol",
             "mol/m^3",
-            ("head",),
+            (),
             (
                 "Stress hormone; the diurnal slope tracks behavioral health. The specs' "
                 "cutoffs are for time-normalized interstitial fluid, not saliva."
@@ -143,19 +143,25 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "troponin_i": _crew(
             "Cardiac troponin I",
             "kg/m^3",
-            ("heart",),
+            ("heart", "chest"),
             "Above 0.04 ng/mL indicates heart muscle injury; restrict EVA.",
         ),
         "lactate": _crew(
             "Blood lactate",
             "mol/m^3",
-            ("blood", "muscles"),
+            (),
             "Resting lactate above 4.0 mmol/L signals negative energy balance.",
         ),
         "urinary_ntx": _crew(
             "Urinary NTx",
             "mol BCE/mol creatinine",
-            ("bones", "kidneys"),
+            (
+                "pelvis",
+                "left_thigh",
+                "right_thigh",
+                "left_lower_leg",
+                "right_lower_leg",
+            ),
             (
                 "Bone breakdown marker; graded through its change from baseline "
                 "(NTx change from baseline)."
@@ -164,7 +170,13 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "bone_ntx_pct_baseline": _crew(
             "NTx change from baseline",
             "1",
-            ("bones",),
+            (
+                "pelvis",
+                "left_thigh",
+                "right_thigh",
+                "left_lower_leg",
+                "right_lower_leg",
+            ),
             (
                 "A rise of more than 25 % over the preflight baseline signals bone "
                 "demineralization."
@@ -173,13 +185,13 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "vitamin_d_25oh": _crew(
             "Vitamin D (25-OH)",
             "mol/m^3",
-            ("bones", "blood"),
+            (),
             "Supports bone health; the specs track its trend, with no cutoff.",
         ),
         "il6_serum": _crew(
             "Interleukin-6",
             "kg/m^3",
-            ("blood",),
+            (),
             (
                 "Inflammation marker; above 3.0 pg/mL outside the 2 h after exercise "
                 "suggests infection."
@@ -188,7 +200,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "sweat_sodium_concentration": _crew(
             "Sweat sodium",
             "mol/m^3",
-            ("skin",),
+            (),
             (
                 "Local electrolyte loss, tracked against the crew member's own "
                 "baseline. The specs give no cutoff."
@@ -197,7 +209,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "sweat_sodium_flux": _crew(
             "Sweat sodium loss rate",
             "mol/s",
-            ("skin",),
+            (),
             (
                 "Local electrolyte loss rate, tracked against the crew member's own "
                 "baseline. The specs give no cutoff."
@@ -206,7 +218,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "sweat_rate": _crew(
             "Sweat rate",
             "m^3/s",
-            ("skin",),
+            (),
             (
                 "Local sweat flow, tracked against the crew member's own baseline. The "
                 "specs give no cutoff."
@@ -215,25 +227,25 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "viral_ebv_detected": _crew(
             "EBV reactivation",
             "boolean",
-            ("blood",),
+            (),
             "Latent Epstein-Barr virus shedding signals immune dysregulation.",
         ),
         "viral_vzv_detected": _crew(
             "VZV reactivation",
             "boolean",
-            ("blood",),
+            (),
             "Latent varicella-zoster virus shedding signals immune dysregulation.",
         ),
         "viral_cmv_detected": _crew(
             "CMV reactivation",
             "boolean",
-            ("blood",),
+            (),
             "Latent cytomegalovirus shedding signals immune dysregulation.",
         ),
         "body_mass": _crew(
             "Body mass",
             "kg",
-            ("body",),
+            (),
             (
                 "Acute loss over 2 % of baseline signals dehydration; graded against "
                 "baseline, so not on its own."
@@ -242,7 +254,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "urine_specific_gravity": _crew(
             "Urine specific gravity",
             "1",
-            ("kidneys",),
+            ("abdomen",),
             (
                 "Above 1.020 signals dehydration; drink the fluid deficit within 30 "
                 "minutes."
@@ -251,7 +263,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "urine_volume_24h": _crew(
             "Urine volume (24 h)",
             "m^3",
-            ("kidneys",),
+            ("abdomen",),
             "Below 2.0 L/day raises kidney stone risk alongside bone loss.",
         ),
         "eeg_cfe_ratio": _crew(
@@ -266,7 +278,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "jugular_strain_pct": _crew(
             "Jugular strain",
             "1",
-            ("neck", "head"),
+            ("neck",),
             (
                 "Neck-patch strain from cephalic fluid shift; above 1.1 % signals "
                 "the SANS fluid shift, above 1.8 % optic nerve compression risk."
@@ -284,7 +296,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "icp_risk_indicator_mmHg": _crew(
             "Intracranial pressure indicator",
             "Pa",
-            ("head", "eyes"),
+            ("head",),
             (
                 "Estimated from neck strain; 12-18 mmHg is moderate and above "
                 "18 mmHg high SANS optic nerve compression risk."
@@ -293,7 +305,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "visual_acuity_logmar": _crew(
             "Visual acuity (LogMAR)",
             "1",
-            ("eyes",),
+            ("head",),
             (
                 "On-screen eye test result; higher is worse. The specs give no "
                 "cutoff."
@@ -302,7 +314,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "amsler_grid_distortion": _crew(
             "Amsler grid distortion",
             "boolean",
-            ("eyes",),
+            ("head",),
             (
                 "Distorted lines on the on-screen Amsler grid can signal retinal "
                 "changes from SANS. The specs give no grading."

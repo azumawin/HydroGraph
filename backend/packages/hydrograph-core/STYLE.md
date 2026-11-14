@@ -234,6 +234,10 @@ inputs.
   converts to the spec's unit first (`bpm = value * 60.0`), so cutoffs read
   exactly as in the document, and comments the document and band they come from.
 - Boolean channels take `True` / `False`.
+- `body_regions` use the frontend body model's region ids (`head`, `neck`,
+  `chest`, `abdomen`, `pelvis`, `left_thigh`, ...; see
+  `frontend/src/components/model/ModelConstants.ts`) or `heart`, so the 3D
+  figure can colour them; leave it empty when the value has no place on the body.
 - An unknown channel raises `ValueError`.
 
 ## Assessment

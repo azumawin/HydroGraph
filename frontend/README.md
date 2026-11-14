@@ -1,9 +1,24 @@
-# HydroGraph credits and acknowledgments
+# HydroGraph frontend
+
+The crew dashboard: vitals with history charts, the 3D biometric body scan and the
+health findings, all live from the backend's event stream (`/api/stream/`, shapes in
+`../docs/json-shape.md`).
+
+From the repo root: `make sync` once, then `make dev` (backend, this frontend on
+http://127.0.0.1:5173 and the simulator together). On its own: `make frontend`; the Vite
+dev server proxies `/api` to the backend on http://127.0.0.1:8000 (override with
+`HYDROGRAPH_BACKEND`).
+
+Readings arrive in SI units; `VITALS_DISPLAY_UNITS` in `src/Constants.ts` converts the
+displayed ones (bpm, mmHg, °C, mmol/L, %). Evaluations are the backend's
+`nominal`/`warning`/`critical`/`unspecified`.
+
+## Credits and acknowledgments
 
 Thank you to the creators and maintainers whose components, assets, libraries,
 documentation, and development tools support HydroGraph.
 
-## Borrowed components and assets
+### Borrowed components and assets
 
 - **[React Bits](https://reactbits.dev/), by David Haz** — the
   [Plasma background](https://reactbits.dev/backgrounds/plasma) supplied the basis
@@ -21,7 +36,7 @@ procedurally in [createBodyGeometry.ts](./src/components/model/createBodyGeometr
 using the project's own shape definitions in
 [ModelConstants.ts](./src/components/model/ModelConstants.ts).
 
-## MCP servers and component discovery
+### MCP servers and component discovery
 
 The project's MCP server configuration lives in [.mcp.json](./.mcp.json).
 
@@ -36,7 +51,7 @@ are [React Bits](https://reactbits.dev/), [Kokonut UI](https://kokonutui.com/), 
 [Magic UI](https://magicui.design/). The Plasma adaptation is the confirmed
 component reuse documented here.
 
-## Libraries and development tools
+### Libraries and development tools
 
 Thank you to these projects and their contributors for the foundations used in
 HydroGraph. Dependencies are recorded in [package.json](./package.json), with
@@ -57,7 +72,7 @@ resolved versions in [package-lock.json](./package-lock.json).
 | [Oxc](https://oxc.rs/) and [tsgolint](https://github.com/oxc-project/tsgolint)                                                                                                      | Oxlint, Oxfmt, and type-aware linting through `oxlint-tsgolint`.                 |
 | [DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped)                                                                                                               | Type declarations supplied by the project's `@types` development dependencies.   |
 
-## Design and documentation references
+### Design and documentation references
 
 The references recorded in [the design guide](./design.md) also deserve credit:
 
@@ -69,7 +84,7 @@ The references recorded in [the design guide](./design.md) also deserve credit:
   including the [backdrop-filter reference](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/backdrop-filter)
   cited in the design guide.
 
-## React Bits license
+### React Bits license
 
 <details>
 <summary>License for the adapted Plasma background</summary>

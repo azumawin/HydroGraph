@@ -3,11 +3,7 @@ import { ScanLine } from "lucide-react";
 import { Component, Suspense } from "react";
 import type { ReactNode } from "react";
 import { BODY_SCAN_VIEW } from "./model/ModelConstants.ts";
-import { useBloodPressureStore } from "../store/useBloodPressureStore.ts";
-import { useBloodSugarStore } from "../store/useBloodSugarStore.ts";
-import { useBodyTemperatureStore } from "../store/useBodyTemperatureStore.ts";
-import { useDailySleepHoursStore } from "../store/useDailySleepHoursStore.ts";
-import { useHeartRateStore } from "../store/useHeartRateStore.ts";
+import { useTelemetryStore } from "../store/useTelemetryStore.ts";
 import BodyModel from "./model/BodyModel.tsx";
 import BodyScanRegions from "./BodyScanRegions.tsx";
 import "../assets/css/BodyScan.css";
@@ -33,19 +29,9 @@ class BodyScanErrorBoundary extends Component<{ children: ReactNode }, { hasMode
 }
 
 const BodyScan = () => {
-  const heartRate = useHeartRateStore((state) => state.heartRate);
-  const bloodPressure = useBloodPressureStore((state) => state.bloodPressure);
-  const bloodSugar = useBloodSugarStore((state) => state.bloodSugar);
-  const bodyTemperature = useBodyTemperatureStore((state) => state.bodyTemperature);
-  const dailySleepHours = useDailySleepHoursStore((state) => state.dailySleepHours);
+  const readingsByChannel = useTelemetryStore((state) => state.readings);
 
-  const readings = [
-    ...heartRate,
-    ...bloodPressure,
-    ...bloodSugar,
-    ...bodyTemperature,
-    ...dailySleepHours,
-  ];
+  const readings = Object.values(readingsByChannel);
 
   return (
     <section className="vitals-dashboard-panel vitals-dashboard-body-scan">

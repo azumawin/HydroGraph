@@ -1,16 +1,31 @@
-export const VITALS_READING_LABELS = {
-  HEART_RATE: "heart rate",
-  BLOOD_PRESSURE: "blood pressure",
-  BLOOD_SUGAR: "blood sugar",
-  BODY_TEMPERATURE: "body temperature",
-  DAILY_SLEEP_HOURS: "daily sleep",
-  VITALS_HISTORY: "vitals history",
+import { Activity, Droplet, HeartPulse, Thermometer, Wind } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+export const TELEMETRY = {
+  STREAM_URL: "/api/stream/",
+  EVENTS: { DICTIONARY: "dictionary", READING: "reading", FINDING: "finding" },
+  CONNECTION_LABEL: "live telemetry",
+  MALFORMED_MESSAGE: "Received a telemetry message that does not match the backend contract.",
+  DISCONNECTED_MESSAGE: "Lost the connection to the telemetry stream.",
 };
 
 export const VITALS_HISTORY = {
-  DEFAULT_DURATION_MS: 24 * 60 * 60 * 1000,
-  MOCK_INTERVAL_MS: 60 * 60 * 1000,
-  INVALID_RANGE_MESSAGE: "Vitals history requires a valid start time before the end time.",
+  MAX_POINTS_PER_CHANNEL: 120,
+};
+
+export type VitalDisplayUnit = {
+  UNIT: string;
+  SCALE: number;
+  OFFSET: number;
+};
+
+export const VITALS_DISPLAY_UNITS: Record<string, VitalDisplayUnit> = {
+  heart_rate: { UNIT: "bpm", SCALE: 60, OFFSET: 0 },
+  bp_systolic: { UNIT: "mmHg", SCALE: 1 / 133.322, OFFSET: 0 },
+  bp_diastolic: { UNIT: "mmHg", SCALE: 1 / 133.322, OFFSET: 0 },
+  glucose: { UNIT: "mmol/L", SCALE: 1, OFFSET: 0 },
+  body_temperature: { UNIT: "°C", SCALE: 1, OFFSET: -273.15 },
+  spo2: { UNIT: "%", SCALE: 100, OFFSET: 0 },
 };
 
 export const VITALS_FORMAT = {
@@ -26,9 +41,17 @@ export const VITALS_FORMAT = {
 };
 
 export const VITALS_EVALUATION_LABELS = {
-  optimal: "Optimal",
-  normal: "Normal",
-  unusual: "Unusual",
+  nominal: "Nominal",
+  warning: "Warning",
+  critical: "Critical",
+  unspecified: "No threshold",
+};
+
+export const FINDING_STATUS_LABELS = {
+  PRESENT: "Present",
+  ABSENT: "None",
+  nominal: "Nominal",
+  warning: "Warning",
   critical: "Critical",
 };
 
@@ -40,18 +63,21 @@ export type VitalSeries = {
 
 export type VitalMetric = {
   LABEL: string;
+  ICON: LucideIcon;
   SERIES: readonly VitalSeries[];
 };
 
 export const VITALS_METRICS = {
   HEART_RATE: {
     LABEL: "Heart rate",
+    ICON: HeartPulse,
     SERIES: [
       { CHANNEL: "heart_rate", LABEL: "Heart rate", COLOR: "var(--color-chart-heart-rate)" },
     ],
   },
   BLOOD_PRESSURE: {
     LABEL: "Blood pressure",
+    ICON: Activity,
     SERIES: [
       { CHANNEL: "bp_systolic", LABEL: "Systolic", COLOR: "var(--color-chart-systolic)" },
       { CHANNEL: "bp_diastolic", LABEL: "Diastolic", COLOR: "var(--color-chart-diastolic)" },
@@ -59,12 +85,12 @@ export const VITALS_METRICS = {
   },
   BLOOD_SUGAR: {
     LABEL: "Blood sugar",
-    SERIES: [
-      { CHANNEL: "blood_sugar", LABEL: "Blood sugar", COLOR: "var(--color-chart-blood-sugar)" },
-    ],
+    ICON: Droplet,
+    SERIES: [{ CHANNEL: "glucose", LABEL: "Blood sugar", COLOR: "var(--color-chart-blood-sugar)" }],
   },
   BODY_TEMPERATURE: {
     LABEL: "Body temperature",
+    ICON: Thermometer,
     SERIES: [
       {
         CHANNEL: "body_temperature",
@@ -73,11 +99,10 @@ export const VITALS_METRICS = {
       },
     ],
   },
-  DAILY_SLEEP: {
-    LABEL: "Daily sleep",
-    SERIES: [
-      { CHANNEL: "daily_sleep_hours", LABEL: "Daily sleep", COLOR: "var(--color-chart-sleep)" },
-    ],
+  BLOOD_OXYGEN: {
+    LABEL: "Blood oxygen",
+    ICON: Wind,
+    SERIES: [{ CHANNEL: "spo2", LABEL: "SpO2", COLOR: "var(--color-chart-oxygen)" }],
   },
 } satisfies Record<string, VitalMetric>;
 
@@ -91,6 +116,7 @@ export const VITALS_CHART = {
   STROKE_WIDTH: 2,
   DOT_RADIUS: 3,
   FILL_OPACITY: 0.12,
+  TIME_DOMAIN: ["dataMin", "dataMax"] as const,
 };
 
 export const BODY_SCAN_REGION_GROUPS = [

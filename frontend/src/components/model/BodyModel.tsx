@@ -8,11 +8,11 @@ import {
   BODY_REGION_IDS,
   BODY_SCAN_VIEW,
 } from "./ModelConstants.ts";
-import type { NumericVital } from "../../api/Service.ts";
+import type { VitalReading } from "../../store/useTelemetryStore.ts";
 import { createBodyGeometry } from "./createBodyGeometry.ts";
 
 type BodyModelProps = {
-  readings: readonly NumericVital[];
+  readings: readonly VitalReading[];
 };
 
 const BodyModel = ({ readings }: BodyModelProps) => {
@@ -25,12 +25,12 @@ const BodyModel = ({ readings }: BodyModelProps) => {
   const theme = getComputedStyle(canvas);
   const neutralColor = theme.getPropertyValue(BODY_MODEL_THEME.NEUTRAL).trim();
   const evaluationColors = {
-    optimal: neutralColor,
-    normal: neutralColor,
-    unusual: theme.getPropertyValue(BODY_MODEL_THEME.UNUSUAL).trim(),
+    nominal: neutralColor,
+    unspecified: neutralColor,
+    warning: theme.getPropertyValue(BODY_MODEL_THEME.WARNING).trim(),
     critical: theme.getPropertyValue(BODY_MODEL_THEME.CRITICAL).trim(),
   };
-  const regionEvaluations: Partial<Record<string, NumericVital["evaluation"]>> = {};
+  const regionEvaluations: Partial<Record<string, VitalReading["evaluation"]>> = {};
 
   for (const reading of readings) {
     for (const region of reading.body_regions) {

@@ -1,9 +1,9 @@
-import type { NumericVital } from "../api/Service.ts";
 import { BODY_SCAN_REGION_GROUPS, VITALS_EVALUATION_LABELS } from "../Constants.ts";
+import type { VitalReading } from "../store/useTelemetryStore.ts";
 import { BODY_EVALUATION_PRIORITY } from "./model/ModelConstants.ts";
 
 type BodyScanRegionsProps = {
-  readings: NumericVital[];
+  readings: VitalReading[];
 };
 
 const BodyScanRegions = ({ readings }: BodyScanRegionsProps) => {

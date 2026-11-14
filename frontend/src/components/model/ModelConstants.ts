@@ -48,14 +48,14 @@ export const BODY_REGION_IDS = Object.values(BODY_REGIONS);
 
 export const BODY_MODEL_THEME = {
   NEUTRAL: "--color-body-neutral",
-  UNUSUAL: "--color-status-unusual",
+  WARNING: "--color-status-warning",
   CRITICAL: "--color-status-critical",
 };
 
 export const BODY_EVALUATION_PRIORITY = {
-  optimal: 0,
-  normal: 1,
-  unusual: 2,
+  nominal: 0,
+  unspecified: 1,
+  warning: 2,
   critical: 3,
 } as const;
 

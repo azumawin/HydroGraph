@@ -84,13 +84,12 @@
   line-height: 16px;
 }
 
-.vitals-dashboard .vitals-dashboard-reading-status.is-normal,
-.vitals-dashboard .vitals-dashboard-reading-status.is-optimal {
-  color: var(--color-status-normal);
+.vitals-dashboard .vitals-dashboard-reading-status.is-nominal {
+  color: var(--color-status-nominal);
 }
 
-.vitals-dashboard .vitals-dashboard-reading-status.is-unusual {
-  color: var(--color-status-unusual);
+.vitals-dashboard .vitals-dashboard-reading-status.is-warning {
+  color: var(--color-status-warning);
 }
 
 .vitals-dashboard .vitals-dashboard-reading-status.is-critical {

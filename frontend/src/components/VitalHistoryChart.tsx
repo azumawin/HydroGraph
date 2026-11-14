@@ -10,7 +10,7 @@ import {
 import type { TooltipContentProps } from "recharts";
 import { VITALS_CHART, VITALS_FORMAT } from "../Constants.ts";
 import type { VitalMetric } from "../Constants.ts";
-import { useVitalsHistoryStore } from "../store/useVitalsHistoryStore.ts";
+import { useTelemetryStore } from "../store/useTelemetryStore.ts";
 
 type VitalHistoryChartProps = {
   metric: VitalMetric;
@@ -38,36 +38,25 @@ const VitalHistoryTooltip = ({ active, payload, label }: TooltipContentProps) =>
 };
 
 const VitalHistoryChart = ({ metric }: VitalHistoryChartProps) => {
-  const vitalsHistory = useVitalsHistoryStore((state) => state.vitalsHistory);
-  const vitalsHistoryRange = useVitalsHistoryStore((state) => state.vitalsHistoryRange);
-  const isLoadingVitalsHistory = useVitalsHistoryStore((state) => state.isLoadingVitalsHistory);
-  const hasVitalsHistoryError = useVitalsHistoryStore((state) => state.hasVitalsHistoryError);
+  const history = useTelemetryStore((state) => state.history);
+  const isLoadingTelemetry = useTelemetryStore((state) => state.dictionary === null);
 
-  const seriesChannels = metric.SERIES.map((series) => series.CHANNEL);
-  const historyPoints = vitalsHistory.filter((point) => seriesChannels.includes(point.channel));
   const pointsByTimestamp = new Map<number, { timestamp: number; [channel: string]: number }>();
 
-  for (const point of historyPoints) {
-    const timestamp = Date.parse(point.timestamp);
-    const chartPoint = pointsByTimestamp.get(timestamp) ?? { timestamp };
-    chartPoint[point.channel] = point.value;
-    pointsByTimestamp.set(timestamp, chartPoint);
+  for (const series of metric.SERIES) {
+    for (const point of history[series.CHANNEL] ?? []) {
+      const chartPoint = pointsByTimestamp.get(point.timestamp) ?? { timestamp: point.timestamp };
+      chartPoint[series.CHANNEL] = point.value;
+      pointsByTimestamp.set(point.timestamp, chartPoint);
+    }
   }
 
   const chartData = Array.from(pointsByTimestamp.values()).sort(
     (first, second) => first.timestamp - second.timestamp,
   );
-  const chartDomain: [number, number] | undefined =
-    vitalsHistoryRange === null
-      ? undefined
-      : [Date.parse(vitalsHistoryRange.from), Date.parse(vitalsHistoryRange.to)];
-  const historyMessage = isLoadingVitalsHistory
-    ? "Loading history…"
-    : hasVitalsHistoryError
-      ? "History unavailable. Reload the page to retry."
-      : "No readings in this period.";
+  const historyMessage = isLoadingTelemetry ? "Loading history…" : "No readings yet.";
 
-  if (isLoadingVitalsHistory || hasVitalsHistoryError || chartData.length === 0) {
+  if (chartData.length === 0) {
     return (
       <div className="vitals-dashboard-chart-message" role="status">
         {historyMessage}
@@ -88,7 +77,7 @@ const VitalHistoryChart = ({ metric }: VitalHistoryChartProps) => {
             dataKey="timestamp"
             type="number"
             scale="time"
-            domain={chartDomain}
+            domain={VITALS_CHART.TIME_DOMAIN}
             tickFormatter={VITALS_FORMAT.TIME.format.bind(VITALS_FORMAT.TIME)}
             tick={VITALS_CHART.TICK}
             axisLine={false}
@@ -115,7 +104,7 @@ const VitalHistoryChart = ({ metric }: VitalHistoryChartProps) => {
               key={series.CHANNEL}
               dataKey={series.CHANNEL}
               name={series.LABEL}
-              unit={historyPoints.find((point) => point.channel === series.CHANNEL)?.unit}
+              unit={history[series.CHANNEL]?.at(-1)?.unit}
               type="linear"
               stroke={series.COLOR}
               strokeWidth={VITALS_CHART.STROKE_WIDTH}

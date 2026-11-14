@@ -134,8 +134,10 @@ join it to readings by `channel` and to findings by `id`.
   708.7 h on the Moon; 24 h in transit, where the crew sets its own schedule).
 - No finding takes an environment input, so the selection is display and simulation
   metadata: it changes nothing about how a reading is graded.
-- `body_regions` makes the clickable body figure data-driven instead of a
-  hardcoded SVG switch statement.
+- `body_regions` makes the 3D body figure data-driven: each id is a region of the
+  frontend's body model (`frontend/src/components/model/ModelConstants.ts`:
+  `head`, `neck`, `chest`, `abdomen`, `pelvis`, limbs) or `heart`; empty when a
+  value has no place on the body (blood markers, cabin readings).
 
 ## Not in scope for the demo
 

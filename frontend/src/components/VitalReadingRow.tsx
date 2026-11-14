@@ -1,22 +1,19 @@
 import { CircleAlert, Check, Minus } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import type { NumericVital } from "../api/Service.ts";
 import { VITALS_EVALUATION_LABELS, VITALS_FORMAT } from "../Constants.ts";
 import type { VitalMetric } from "../Constants.ts";
+import type { VitalReading } from "../store/useTelemetryStore.ts";
 import { BODY_EVALUATION_PRIORITY } from "./model/ModelConstants.ts";
 import VitalHistoryChart from "./VitalHistoryChart.tsx";
 
 type VitalReadingRowProps = {
   metric: VitalMetric;
-  icon: LucideIcon;
-  readings: NumericVital[];
+  readings: VitalReading[];
   isLoadingReading: boolean;
   hasReadingError: boolean;
 };
 
 const VitalReadingRow = ({
   metric,
-  icon: Icon,
   readings,
   isLoadingReading,
   hasReadingError,
@@ -33,8 +30,9 @@ const VitalReadingRow = ({
             BODY_EVALUATION_PRIORITY[first.evaluation],
         )[0]
       : undefined;
+  const Icon = metric.ICON;
   const evaluation = evaluatedReading?.evaluation;
-  const isFlagged = evaluation === "unusual" || evaluation === "critical";
+  const isFlagged = evaluation === "warning" || evaluation === "critical";
   const StatusIcon = evaluation === undefined ? Minus : isFlagged ? CircleAlert : Check;
   const statusLabel = isLoadingReading
     ? "Loading"
@@ -48,7 +46,11 @@ const VitalReadingRow = ({
       ? "—"
       : orderedReadings
           .map((reading) =>
-            reading === undefined ? "—" : VITALS_FORMAT.VALUE.format(reading.value),
+            reading === undefined
+              ? "—"
+              : typeof reading.value === "number"
+                ? VITALS_FORMAT.VALUE.format(reading.value)
+                : String(reading.value),
           )
           .join("/");
   const measurementTimes = [

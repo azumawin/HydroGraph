@@ -24,9 +24,10 @@ or just use Nix
 
 ## Getting started
 
-From the repo root, `make dev` migrates, starts the backend, opens the live demo and
-feeds it from the simulator; Ctrl+C stops both. `make` lists every target (`run`,
-`sim`, `test`, `lint`, `check`, ...).
+From the repo root, `make sync` installs everything once; then `make dev` migrates,
+starts the backend and the frontend (`frontend/`, http://127.0.0.1:5173), opens the
+frontend and feeds it from the simulator; Ctrl+C stops all three. `make` lists every
+target (`run`, `frontend`, `sim`, `test`, `lint`, `check`, ...).
 
 create `.env` with env vars described in [here](##Configuration)
 
@@ -54,7 +55,6 @@ Useful URLs once `runserver` is up:
 | http://localhost:8000/api/environments/ | the predefined mission environments |
 | http://localhost:8000/api/readings/ | `POST` sensor readings |
 | http://localhost:8000/api/stream/ | SSE stream for the frontend |
-| http://localhost:8000/static/demo/index.html | live demo of the stream |
 | http://localhost:8000/api/docs/ | Swagger UI |
 | http://localhost:8000/api/schema/ | raw OpenAPI 3 schema (YAML) |
 
