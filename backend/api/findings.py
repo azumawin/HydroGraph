@@ -24,7 +24,7 @@ def crew_findings(
     """
     wanted = set(findings)
     channels = {c for f in wanted for c in FINDINGS[f]["channels"]}
-    latest: dict[str, float | bool] = {}
+    latest: dict[str, float | bool | str] = {}
     for channel in channels:
         reading = (
             Reading.objects.filter(channel=channel)
@@ -32,7 +32,7 @@ def crew_findings(
             .first()
         )
         if reading is not None:
-            latest[channel] = cast("float | bool", reading.value)
+            latest[channel] = cast("float | bool | str", reading.value)
 
     first = week_before = None
     if "body_mass" in channels:
