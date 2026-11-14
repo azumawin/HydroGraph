@@ -39,6 +39,7 @@ const VitalHistoryTooltip = ({ active, payload, label }: TooltipContentProps) =>
 
 const VitalHistoryChart = ({ metric }: VitalHistoryChartProps) => {
   const history = useTelemetryStore((state) => state.history);
+  const channels = useTelemetryStore((state) => state.dictionary?.channels);
   const isLoadingTelemetry = useTelemetryStore((state) => state.dictionary === null);
 
   const pointsByTimestamp = new Map<number, { timestamp: number; [channel: string]: number }>();
@@ -104,7 +105,7 @@ const VitalHistoryChart = ({ metric }: VitalHistoryChartProps) => {
               key={series.CHANNEL}
               dataKey={series.CHANNEL}
               name={series.LABEL}
-              unit={history[series.CHANNEL]?.at(-1)?.unit}
+              unit={channels?.[series.CHANNEL]?.display.unit}
               type="linear"
               stroke={series.COLOR}
               strokeWidth={VITALS_CHART.STROKE_WIDTH}

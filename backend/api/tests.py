@@ -28,15 +28,14 @@ def test_environments_lists_the_predefined_set(client: APIClient) -> None:
 
     assert response.status_code == 200
     payload = cast("dict[str, object]", response.json())
-    environments = cast("list[dict[str, object]]", payload["environments"])
-    assert [e["id"] for e in environments] == [
+    environments = cast("dict[str, dict[str, object]]", payload["environments"])
+    assert list(environments) == [
         "iss_leo",
         "lunar_surface",
         "mars_transit",
         "mars_surface",
     ]
-    assert environments[1] == {
-        "id": "lunar_surface",
+    assert environments["lunar_surface"] == {
         "name": "Lunar surface",
         "gravity_g": 0.166,
         "comm_delay_rt_s": 2.6,
@@ -75,10 +74,8 @@ def test_post_reading_returns_doc_shape(client: APIClient) -> None:
     assert cast("dict[str, object]", response.json()) == {
         "channel": "spo2",
         "value": 0.89,
-        "unit": "1",
-        "evaluation": "critical",
         "measured_at": TICK,
-        "scope": "crew",
+        "evaluation": "critical",
     }
     assert Reading.objects.count() == 1
 
@@ -97,7 +94,6 @@ def test_post_accepts_boolean_environment_channel(client: APIClient) -> None:
     payload = cast("dict[str, object]", response.json())
     assert payload["value"] is True
     assert payload["evaluation"] == "critical"
-    assert payload["scope"] == "environment"
 
 
 @pytest.mark.django_db

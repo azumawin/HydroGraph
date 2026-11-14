@@ -26,9 +26,26 @@ Evaluation = Literal["nominal", "warning", "critical", "unspecified"]
 """Grade of one reading. ``unspecified``: the specs give no cutoff for it."""
 
 
+class Display(TypedDict):
+    """How to show a reading: ``value * scale + offset``, in ``unit``.
+
+    The spec's clinical unit (mmHg, bpm, °C, ...); ``""`` for booleans and
+    dimensionless ratios.
+    """
+
+    unit: str
+    scale: float
+    offset: float
+
+
+def _display(unit: str, scale: float = 1.0, offset: float = 0.0) -> Display:
+    return {"unit": unit, "scale": scale, "offset": offset}
+
+
 class ChannelInfo(TypedDict):
     name: str
     unit: str
+    display: Display
     value_type: Literal["number", "boolean"]
     scope: Literal["crew", "environment"]
     body_regions: tuple[str, ...]
@@ -36,11 +53,16 @@ class ChannelInfo(TypedDict):
 
 
 def _crew(
-    name: str, unit: str, body_regions: tuple[str, ...], explanation: str
+    name: str,
+    unit: str,
+    display: Display,
+    body_regions: tuple[str, ...],
+    explanation: str,
 ) -> ChannelInfo:
     return {
         "name": name,
         "unit": unit,
+        "display": display,
         "value_type": "boolean" if unit == "boolean" else "number",
         "scope": "crew",
         "body_regions": body_regions,
@@ -48,10 +70,13 @@ def _crew(
     }
 
 
-def _environment(name: str, unit: str, explanation: str) -> ChannelInfo:
+def _environment(
+    name: str, unit: str, display: Display, explanation: str
+) -> ChannelInfo:
     return {
         "name": name,
         "unit": unit,
+        "display": display,
         "value_type": "boolean" if unit == "boolean" else "number",
         "scope": "environment",
         "body_regions": (),
@@ -64,6 +89,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "heart_rate": _crew(
             "Heart rate",
             "s^-1",
+            _display("bpm", 60.0),
             ("heart", "chest"),
             (
                 "Resting heart rate above 90 bpm signals vascular stress, dehydration "
@@ -73,6 +99,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "hrv_rmssd": _crew(
             "Heart rate variability (RMSSD)",
             "s",
+            _display("ms", 1e3),
             ("heart", "chest"),
             (
                 "Beat-to-beat variation; falls with stress and fatigue. The specs give "
@@ -82,6 +109,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "bp_systolic": _crew(
             "Blood pressure (systolic)",
             "Pa",
+            _display("mmHg", 1 / 133.322),
             ("heart", "chest"),
             (
                 "A systolic drop of 20 mmHg or more on standing marks orthostatic "
@@ -91,6 +119,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "bp_diastolic": _crew(
             "Blood pressure (diastolic)",
             "Pa",
+            _display("mmHg", 1 / 133.322),
             ("heart", "chest"),
             (
                 "A diastolic drop of 10 mmHg or more on standing marks orthostatic "
@@ -100,6 +129,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "spo2": _crew(
             "Blood oxygen saturation",
             "1",
+            _display("%", 100.0),
             ("chest",),
             (
                 "Below 94 % is low and below 90 % is critical hypoxemia; check the CO2 "
@@ -109,6 +139,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "body_temperature": _crew(
             "Core body temperature",
             "K",
+            _display("°C", 1.0, -273.15),
             ("head", "neck"),
             (
                 "Above 38.0 °C or below 36.0 °C meets the SIRS fever or hypothermia "
@@ -118,6 +149,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "respiratory_rate": _crew(
             "Respiratory rate",
             "s^-1",
+            _display("/min", 60.0),
             ("chest",),
             (
                 "A rising rate is an early sign of hypoxia or CO2 exposure. The specs "
@@ -127,6 +159,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "glucose": _crew(
             "Blood glucose",
             "mol/m^3",
+            _display("mmol/L"),
             (),
             (
                 "Below 3.9 mmol/L is level 1 hypoglycemia and below 3.0 mmol/L level 2; "
@@ -136,6 +169,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "cortisol_saliva": _crew(
             "Salivary cortisol",
             "mol/m^3",
+            _display("nmol/L", 1e6),
             (),
             (
                 "Stress hormone; the diurnal slope tracks behavioral health. The specs' "
@@ -145,18 +179,21 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "troponin_i": _crew(
             "Cardiac troponin I",
             "kg/m^3",
+            _display("ng/mL", 1e6),
             ("heart", "chest"),
             "Above 0.04 ng/mL indicates heart muscle injury; restrict EVA.",
         ),
         "lactate": _crew(
             "Blood lactate",
             "mol/m^3",
+            _display("mmol/L"),
             (),
             "Resting lactate above 4.0 mmol/L signals negative energy balance.",
         ),
         "urinary_ntx": _crew(
             "Urinary NTx",
             "mol BCE/mol creatinine",
+            _display("nmol BCE/mmol creatinine", 1e6),
             (
                 "pelvis",
                 "left_thigh",
@@ -172,6 +209,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "bone_ntx_pct_baseline": _crew(
             "NTx change from baseline",
             "1",
+            _display("%", 100.0),
             (
                 "pelvis",
                 "left_thigh",
@@ -187,12 +225,14 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "vitamin_d_25oh": _crew(
             "Vitamin D (25-OH)",
             "mol/m^3",
+            _display("nmol/L", 1e6),
             (),
             "Supports bone health; the specs track its trend, with no cutoff.",
         ),
         "il6_serum": _crew(
             "Interleukin-6",
             "kg/m^3",
+            _display("pg/mL", 1e9),
             (),
             (
                 "Inflammation marker; above 3.0 pg/mL outside the 2 h after exercise "
@@ -202,6 +242,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "sweat_sodium_concentration": _crew(
             "Sweat sodium",
             "mol/m^3",
+            _display("mmol/L"),
             (),
             (
                 "Local electrolyte loss, tracked against the crew member's own "
@@ -211,6 +252,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "sweat_sodium_flux": _crew(
             "Sweat sodium loss rate",
             "mol/s",
+            _display("mmol/h", 3.6e6),
             (),
             (
                 "Local electrolyte loss rate, tracked against the crew member's own "
@@ -220,6 +262,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "sweat_rate": _crew(
             "Sweat rate",
             "m^3/s",
+            _display("L/h", 3.6e6),
             (),
             (
                 "Local sweat flow, tracked against the crew member's own baseline. The "
@@ -229,24 +272,28 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "viral_ebv_detected": _crew(
             "EBV reactivation",
             "boolean",
+            _display(""),
             (),
             "Latent Epstein-Barr virus shedding signals immune dysregulation.",
         ),
         "viral_vzv_detected": _crew(
             "VZV reactivation",
             "boolean",
+            _display(""),
             (),
             "Latent varicella-zoster virus shedding signals immune dysregulation.",
         ),
         "viral_cmv_detected": _crew(
             "CMV reactivation",
             "boolean",
+            _display(""),
             (),
             "Latent cytomegalovirus shedding signals immune dysregulation.",
         ),
         "body_mass": _crew(
             "Body mass",
             "kg",
+            _display("kg"),
             (),
             (
                 "Acute loss over 2 % of baseline signals dehydration; graded against "
@@ -256,6 +303,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "urine_specific_gravity": _crew(
             "Urine specific gravity",
             "1",
+            _display(""),
             ("abdomen",),
             (
                 "Above 1.020 signals dehydration; drink the fluid deficit within 30 "
@@ -265,12 +313,14 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "urine_volume_24h": _crew(
             "Urine volume (24 h)",
             "m^3",
+            _display("L", 1e3),
             ("abdomen",),
             "Below 2.0 L/day raises kidney stone risk alongside bone loss.",
         ),
         "eeg_cfe_ratio": _crew(
             "Cognitive fatigue (EEG theta/alpha)",
             "1",
+            _display(""),
             ("head",),
             (
                 "Prefrontal EEG theta/alpha power ratio; 0.70-1.20 is fatigued and "
@@ -280,6 +330,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "jugular_strain_pct": _crew(
             "Jugular strain",
             "1",
+            _display("%", 100.0),
             ("neck",),
             (
                 "Neck-patch strain from cephalic fluid shift; above 1.1 % signals "
@@ -289,6 +340,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "delta_R_over_R0": _crew(
             "Neck-patch resistance change",
             "1",
+            _display(""),
             ("neck",),
             (
                 "Raw hydrogel signal behind jugular strain (gauge factor times "
@@ -298,6 +350,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "icp_risk_indicator_mmHg": _crew(
             "Intracranial pressure indicator",
             "Pa",
+            _display("mmHg", 1 / 133.322),
             ("head",),
             (
                 "Estimated from neck strain; 12-18 mmHg is moderate and above "
@@ -307,6 +360,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "visual_acuity_logmar": _crew(
             "Visual acuity (LogMAR)",
             "1",
+            _display("logMAR"),
             ("head",),
             (
                 "On-screen eye test result; higher is worse. The specs give no "
@@ -316,6 +370,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "amsler_grid_distortion": _crew(
             "Amsler grid distortion",
             "boolean",
+            _display(""),
             ("head",),
             (
                 "Distorted lines on the on-screen Amsler grid can signal retinal "
@@ -325,6 +380,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "ambient_ppco2": _environment(
             "Cabin CO2 partial pressure",
             "Pa",
+            _display("mmHg", 1 / 133.322),
             (
                 "Above 3.0 mmHg (about 4,000 ppm) causes headaches and impairs "
                 "performance in closed habitats."
@@ -333,11 +389,13 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "ambient_light_lux": _environment(
             "Cabin light level",
             "lx",
+            _display("lx"),
             "Light exposure drives the circadian rhythm. The specs give no cutoff.",
         ),
         "ambient_dose_rate": _environment(
             "Radiation dose rate",
             "Sv/s",
+            _display("µSv/h", 3.6e9),
             (
                 "A spike above 50 µSv/h can mean a solar particle event; move to the "
                 "shielded storm shelter."
@@ -346,6 +404,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "ambient_integrated_dose": _environment(
             "Cumulative radiation dose",
             "Sv",
+            _display("mSv", 1e3),
             (
                 "Mission dose so far; above the 600 mSv career limit, review radiation "
                 "exposure."
@@ -354,6 +413,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
         "spe_flag": _environment(
             "Solar particle event",
             "boolean",
+            _display(""),
             (
                 "An active solar particle event; move to the shielded storm shelter "
                 "immediately."

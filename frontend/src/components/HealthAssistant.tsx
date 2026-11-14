@@ -1,20 +1,7 @@
 import { CircleAlert, Check, MessageSquare } from "lucide-react";
 import { FINDING_STATUS_LABELS } from "../Constants.ts";
-import type { TelemetryFinding } from "../api/Service.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
 import "../assets/css/HealthAssistant.css";
-
-const statusLevel = (status: TelemetryFinding["status"]) => {
-  if (status === true) return "warning";
-  if (status === false) return "nominal";
-  return status;
-};
-
-const statusLabel = (status: TelemetryFinding["status"]) => {
-  if (status === true) return FINDING_STATUS_LABELS.PRESENT;
-  if (status === false) return FINDING_STATUS_LABELS.ABSENT;
-  return FINDING_STATUS_LABELS[status];
-};
 
 const HealthAssistant = () => {
   const findingInfo = useTelemetryStore((state) => state.dictionary?.findings);
@@ -33,7 +20,7 @@ const HealthAssistant = () => {
         {!hasFindings && <p className="vitals-dashboard-findings-empty">No findings yet.</p>}
         <ul className="vitals-dashboard-findings">
           {findingList.map((finding) => {
-            const level = statusLevel(finding.status);
+            const level = finding.status;
             const isFlagged = level === "warning" || level === "critical";
             const StatusIcon = isFlagged ? CircleAlert : Check;
 
@@ -45,7 +32,7 @@ const HealthAssistant = () => {
                   </h3>
                   <span className={`vitals-dashboard-finding-status is-${level}`}>
                     <StatusIcon className="vitals-dashboard-status-icon" />
-                    {statusLabel(finding.status)}
+                    {FINDING_STATUS_LABELS[level]}
                   </span>
                 </div>
                 {isFlagged && (

@@ -7,9 +7,11 @@ import type {
   TelemetryFinding,
   TelemetryReading,
 } from "../api/Service.ts";
-import { TELEMETRY, VITALS_DISPLAY_UNITS, VITALS_HISTORY } from "../Constants.ts";
+import { TELEMETRY, VITALS_HISTORY } from "../Constants.ts";
 
-export type VitalReading = ChannelInfo & {
+// a reading in its channel's display unit; everything static about the channel
+// stays in the dictionary
+export type VitalReading = {
   channel: string;
   value: number | boolean;
   unit: string;
@@ -20,7 +22,6 @@ export type VitalReading = ChannelInfo & {
 export type VitalHistoryPoint = {
   timestamp: number;
   value: number;
-  unit: string;
 };
 
 type TelemetryStore = {
@@ -37,16 +38,12 @@ type TelemetryStore = {
 };
 
 const toVitalReading = (reading: TelemetryReading, info: ChannelInfo): VitalReading => {
-  const { channel, value, unit, evaluation, measured_at } = reading;
-  const display = VITALS_DISPLAY_UNITS[channel];
-  if (display === undefined || typeof value !== "number") {
-    return { ...info, channel, value, unit, evaluation, measured_at };
-  }
+  const { channel, value, evaluation, measured_at } = reading;
+  const { display } = info;
   return {
-    ...info,
     channel,
-    value: value * display.SCALE + display.OFFSET,
-    unit: display.UNIT,
+    value: typeof value === "number" ? value * display.scale + display.offset : value,
+    unit: display.unit,
     evaluation,
     measured_at,
   };
@@ -100,7 +97,6 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
           history[vital.channel] = withHistoryPoint(history[vital.channel] ?? [], {
             timestamp,
             value: vital.value,
-            unit: vital.unit,
           });
         }
       }

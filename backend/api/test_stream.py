@@ -43,8 +43,7 @@ def test_connect_sends_dictionary_then_latest_per_channel() -> None:
     assert dictionary.startswith("event: dictionary\ndata: ")
     payload = cast("DictionaryPayload", json.loads(dictionary.split("data: ", 1)[1]))
     assert payload == dictionary_payload()
-    assert payload["environments"][0] == {
-        "id": "iss_leo",
+    assert payload["environments"]["iss_leo"] == {
         "name": "ISS, low Earth orbit",
         "gravity_g": 0.0,
         "comm_delay_rt_s": 1.2,
@@ -54,6 +53,9 @@ def test_connect_sends_dictionary_then_latest_per_channel() -> None:
     }
     assert payload["channels"]["bp_systolic"] == {
         "name": "Blood pressure (systolic)",
+        "scope": "crew",
+        "unit": "Pa",
+        "display": {"unit": "mmHg", "scale": 1 / 133.322, "offset": 0.0},
         "body_regions": ["heart", "chest"],
         "explanation": CHANNELS["bp_systolic"]["explanation"],
     }

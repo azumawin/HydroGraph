@@ -38,21 +38,6 @@ export const VITALS_HISTORY = {
   MAX_POINTS_PER_CHANNEL: 120,
 };
 
-export type VitalDisplayUnit = {
-  UNIT: string;
-  SCALE: number;
-  OFFSET: number;
-};
-
-export const VITALS_DISPLAY_UNITS: Record<string, VitalDisplayUnit> = {
-  heart_rate: { UNIT: "bpm", SCALE: 60, OFFSET: 0 },
-  bp_systolic: { UNIT: "mmHg", SCALE: 1 / 133.322, OFFSET: 0 },
-  bp_diastolic: { UNIT: "mmHg", SCALE: 1 / 133.322, OFFSET: 0 },
-  glucose: { UNIT: "mmol/L", SCALE: 1, OFFSET: 0 },
-  body_temperature: { UNIT: "°C", SCALE: 1, OFFSET: -273.15 },
-  spo2: { UNIT: "%", SCALE: 100, OFFSET: 0 },
-};
-
 export const VITALS_FORMAT = {
   TIME: new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", hour12: false }),
   MEASURED_AT: new Intl.DateTimeFormat(undefined, {
@@ -73,8 +58,6 @@ export const VITALS_EVALUATION_LABELS = {
 };
 
 export const FINDING_STATUS_LABELS = {
-  PRESENT: "Present",
-  ABSENT: "None",
   nominal: "Nominal",
   warning: "Warning",
   critical: "Critical",

@@ -53,14 +53,11 @@ def health(_request: Request) -> Response:
             "type": "object",
             "properties": {
                 "environments": {
-                    "type": "array",
-                    "items": {
+                    "type": "object",
+                    "description": "Keyed by environment id, in dropdown order.",
+                    "additionalProperties": {
                         "type": "object",
                         "properties": {
-                            "id": {
-                                "type": "string",
-                                "enum": list(hydrograph_core.ENVIRONMENTS),
-                            },
                             "name": {"type": "string"},
                             "gravity_g": {"type": "number"},
                             "comm_delay_rt_s": {"type": "number"},
@@ -149,13 +146,11 @@ def environment(request: Request) -> Response:
             "properties": {
                 "channel": {"type": "string"},
                 "value": {"oneOf": [{"type": "number"}, {"type": "boolean"}]},
-                "unit": {"type": "string"},
+                "measured_at": {"type": "string", "format": "date-time"},
                 "evaluation": {
                     "type": "string",
                     "enum": list(get_args(hydrograph_core.Evaluation)),
                 },
-                "measured_at": {"type": "string", "format": "date-time"},
-                "scope": {"type": "string", "enum": ["crew", "environment"]},
             },
         }
     },

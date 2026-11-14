@@ -8,21 +8,29 @@ export type FindingSeverity = "nominal" | "warning" | "critical";
 export type TelemetryReading = {
   channel: string;
   value: number | boolean;
-  unit: string;
-  evaluation: Evaluation;
   measured_at: string;
-  scope: "crew" | "environment";
+  evaluation: Evaluation;
 };
 
 export type TelemetryFinding = {
   id: string;
-  status: boolean | FindingSeverity;
+  status: FindingSeverity;
   triggers: string[];
   action: string;
+  values: Record<string, unknown>;
+};
+
+export type ChannelDisplay = {
+  unit: string;
+  scale: number;
+  offset: number;
 };
 
 export type ChannelInfo = {
   name: string;
+  scope: "crew" | "environment";
+  unit: string;
+  display: ChannelDisplay;
   body_regions: string[];
   explanation: string;
 };
@@ -33,7 +41,6 @@ export type FindingInfo = {
 };
 
 export type MissionEnvironment = {
-  id: string;
   name: string;
   gravity_g: number;
   comm_delay_rt_s: number;
@@ -43,7 +50,7 @@ export type MissionEnvironment = {
 };
 
 export type TelemetryDictionary = {
-  environments: MissionEnvironment[];
+  environments: Record<string, MissionEnvironment>;
   channels: Record<string, ChannelInfo>;
   findings: Record<string, FindingInfo>;
 };
@@ -59,6 +66,11 @@ export type TelemetryStreamHandlers = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const isRecordOf = <T>(
+  value: unknown,
+  isEntry: (entry: unknown) => entry is T,
+): value is Record<string, T> => isRecord(value) && Object.values(value).every(isEntry);
+
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 
@@ -68,12 +80,21 @@ const isFindingSeverity = (value: unknown): value is FindingSeverity =>
 const isEvaluation = (value: unknown): value is Evaluation =>
   isFindingSeverity(value) || value === "unspecified";
 
-const isScope = (value: unknown): value is TelemetryReading["scope"] =>
+const isScope = (value: unknown): value is ChannelInfo["scope"] =>
   value === "crew" || value === "environment";
+
+const isChannelDisplay = (value: unknown): value is ChannelDisplay =>
+  isRecord(value) &&
+  typeof value.unit === "string" &&
+  typeof value.scale === "number" &&
+  typeof value.offset === "number";
 
 const isChannelInfo = (value: unknown): value is ChannelInfo =>
   isRecord(value) &&
   typeof value.name === "string" &&
+  isScope(value.scope) &&
+  typeof value.unit === "string" &&
+  isChannelDisplay(value.display) &&
   isStringArray(value.body_regions) &&
   typeof value.explanation === "string";
 
@@ -82,7 +103,6 @@ const isFindingInfo = (value: unknown): value is FindingInfo =>
 
 const isMissionEnvironment = (value: unknown): value is MissionEnvironment =>
   isRecord(value) &&
-  typeof value.id === "string" &&
   typeof value.name === "string" &&
   typeof value.gravity_g === "number" &&
   typeof value.comm_delay_rt_s === "number" &&
@@ -100,31 +120,30 @@ const parseData = (event: MessageEvent<unknown>): Record<string, unknown> => {
 };
 
 const parseReading = (data: Record<string, unknown>): TelemetryReading => {
-  const { channel, value, unit, evaluation, measured_at, scope } = data;
+  const { channel, value, measured_at, evaluation } = data;
   if (
     typeof channel !== "string" ||
     (typeof value !== "number" && typeof value !== "boolean") ||
-    typeof unit !== "string" ||
-    !isEvaluation(evaluation) ||
     typeof measured_at !== "string" ||
-    !isScope(scope)
+    !isEvaluation(evaluation)
   ) {
     throw malformed();
   }
-  return { channel, value, unit, evaluation, measured_at, scope };
+  return { channel, value, measured_at, evaluation };
 };
 
 const parseFinding = (data: Record<string, unknown>): TelemetryFinding => {
-  const { id, status, triggers, action } = data;
+  const { id, status, triggers, action, values } = data;
   if (
     typeof id !== "string" ||
-    (typeof status !== "boolean" && !isFindingSeverity(status)) ||
+    !isFindingSeverity(status) ||
     !isStringArray(triggers) ||
-    typeof action !== "string"
+    typeof action !== "string" ||
+    !isRecord(values)
   ) {
     throw malformed();
   }
-  return { id, status, triggers, action };
+  return { id, status, triggers, action, values };
 };
 
 const parseEnvironmentId = (data: Record<string, unknown>): string => {
@@ -136,30 +155,13 @@ const parseEnvironmentId = (data: Record<string, unknown>): string => {
 const parseDictionary = (data: Record<string, unknown>): TelemetryDictionary => {
   const { environments, channels, findings } = data;
   if (
-    !Array.isArray(environments) ||
-    !environments.every(isMissionEnvironment) ||
-    !isRecord(channels) ||
-    !isRecord(findings)
+    !isRecordOf(environments, isMissionEnvironment) ||
+    !isRecordOf(channels, isChannelInfo) ||
+    !isRecordOf(findings, isFindingInfo)
   ) {
     throw malformed();
   }
-  const channelEntries = Object.entries(channels);
-  const findingEntries = Object.entries(findings);
-  if (
-    !channelEntries.every(([, info]) => isChannelInfo(info)) ||
-    !findingEntries.every(([, info]) => isFindingInfo(info))
-  ) {
-    throw malformed();
-  }
-  return {
-    environments,
-    channels: Object.fromEntries(
-      channelEntries.flatMap(([channel, info]) => (isChannelInfo(info) ? [[channel, info]] : [])),
-    ),
-    findings: Object.fromEntries(
-      findingEntries.flatMap(([finding, info]) => (isFindingInfo(info) ? [[finding, info]] : [])),
-    ),
-  };
+  return { environments, channels, findings };
 };
 
 export const openTelemetryStream = (handlers: TelemetryStreamHandlers): EventSource => {

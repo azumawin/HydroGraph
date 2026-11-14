@@ -71,9 +71,8 @@ straight from core (`hydrograph_core.environments`):
 
 ```json
 {
-  "environments": [
-    {
-      "id": "lunar_surface",
+  "environments": {
+    "lunar_surface": {
       "name": "Lunar surface",
       "gravity_g": 0.166,
       "comm_delay_rt_s": 2.6,
@@ -81,11 +80,11 @@ straight from core (`hydrograph_core.environments`):
       "storm_shelter_available": true,
       "day_length_h": 708.7
     }
-  ]
+  }
 }
 ```
 
-Four environments, in dropdown order: `iss_leo`, `lunar_surface`, `mars_transit`,
+Keyed by id; four environments, in dropdown order: `iss_leo`, `lunar_surface`, `mars_transit`,
 `mars_surface`. They cover the two axes without redundancy — gravity at 0 / 0.166 /
 0.377 g, round-trip delay from 1.2 s to 26 min — with `mars_transit` as the worst
 case (0 g, full autonomy, unshielded GCR).
@@ -103,7 +102,7 @@ representative number for the demo. Dose rates are measured values, cited in
 (76.7) sit **above** Finding 10's fixed 50 µSv/h warning cutoff, so that finding warns
 at rest in those environments until the cutoff becomes baseline-relative.
 
-Static, so one fetch is enough. The stream `dictionary` event carries the same list
+Static, so one fetch is enough. The stream `dictionary` event carries the same object
 (both call `environments_payload()`), so a client that opens the stream needs neither
 this endpoint nor a second fetch.
 
@@ -133,8 +132,9 @@ curl -X POST localhost:8000/api/readings/ -H 'Content-Type: application/json' \
   -d '{"channel": "spo2", "value": 0.89, "unit": "1", "measured_at": "2026-11-14T08:00:00Z"}'
 ```
 
-`201` returns the reading with `evaluation` and `scope` added, and pushes the same
-object to every open stream. `400` returns field errors: an unknown `channel`, a
+`201` returns the reading's `channel`, `value` and `measured_at` with its
+`evaluation` added (unit and scope are per channel, in the dictionary), and pushes the
+same object to every open stream. `400` returns field errors: an unknown `channel`, a
 `unit` other than the channel's wire unit, a `value` of the wrong type, or an
 `X-Simulation-Scope` that doesn't match the channel. Other simulator headers
 (`X-Owner-ID`, `Idempotency-Key`, ...) are ignored.
@@ -148,8 +148,9 @@ To feed it from the simulator, set `base_url = "http://127.0.0.1:8000"` and
 
 `GET /api/stream/` is a `text/event-stream`:
 
-- one `dictionary` event: environments, each channel's `name`, `body_regions` and
-  `explanation`, and each finding's `name` and input `channels`;
+- one `dictionary` event: environments, each channel's `name`, `scope`, wire `unit`,
+  `display` conversion, `body_regions` and `explanation`, and each finding's `name`
+  and input `channels`;
 - one `environment` event with the environment in effect;
 - then the latest `reading` per channel, and the current `finding`s;
 - then, the moment a reading is POSTed, its `reading` event and a `finding` event

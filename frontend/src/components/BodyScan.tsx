@@ -2,7 +2,8 @@ import { Canvas } from "@react-three/fiber";
 import { ScanLine } from "lucide-react";
 import { Component, Suspense } from "react";
 import type { ReactNode } from "react";
-import { BODY_SCAN_VIEW } from "./model/ModelConstants.ts";
+import type { Evaluation } from "../api/Service.ts";
+import { BODY_SCAN_VIEW, worstEvaluation } from "./model/ModelConstants.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
 import BodyModel from "./model/BodyModel.tsx";
 import BodyScanRegions from "./BodyScanRegions.tsx";
@@ -29,9 +30,16 @@ class BodyScanErrorBoundary extends Component<{ children: ReactNode }, { hasMode
 }
 
 const BodyScan = () => {
-  const readingsByChannel = useTelemetryStore((state) => state.readings);
+  const readings = useTelemetryStore((state) => state.readings);
+  const channels = useTelemetryStore((state) => state.dictionary?.channels);
 
-  const readings = Object.values(readingsByChannel);
+  // worst evaluation of the readings placed on each body region
+  const regionEvaluations: Partial<Record<string, Evaluation>> = {};
+  for (const reading of Object.values(readings)) {
+    for (const region of channels?.[reading.channel]?.body_regions ?? []) {
+      regionEvaluations[region] = worstEvaluation([regionEvaluations[region], reading.evaluation]);
+    }
+  }
 
   return (
     <section className="vitals-dashboard-panel vitals-dashboard-body-scan">
@@ -76,12 +84,12 @@ const BodyScan = () => {
                   position={BODY_SCAN_VIEW.RIM_LIGHT_POSITION}
                   intensity={BODY_SCAN_VIEW.RIM_LIGHT_INTENSITY}
                 />
-                <BodyModel readings={readings} />
+                <BodyModel regionEvaluations={regionEvaluations} />
               </Canvas>
             </Suspense>
           </BodyScanErrorBoundary>
         </div>
-        <BodyScanRegions readings={readings} />
+        <BodyScanRegions regionEvaluations={regionEvaluations} />
       </div>
     </section>
   );

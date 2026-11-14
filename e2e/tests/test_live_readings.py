@@ -115,14 +115,14 @@ def test_body_scan_regions_show_the_worst_evaluation(dashboard: Page, backend: B
     expect(ui.region_status(ui.region(dashboard, "Arms"))).to_have_text("No reading")
 
 
-def test_present_or_absent_finding_shows_triggers_and_action(
+def test_single_severity_finding_shows_as_warning_with_triggers_and_action(
     dashboard: Page, backend: Backend
 ) -> None:
     backend.post("bone_ntx_pct_baseline", 0.30, "1")
     backend.post("urine_volume_24h", 1.5e-3, "m^3")
 
     bone = ui.finding(dashboard, "Bone demineralization & renal stone risk")
-    expect(ui.finding_status(bone)).to_have_text("Present")
+    expect(ui.finding_status(bone)).to_have_text("Warning")
     expect(bone.locator(".vitals-dashboard-finding-triggers")).to_have_text(
         "NTx > +25% from baseline · urine volume < 2.0 L/day"
     )

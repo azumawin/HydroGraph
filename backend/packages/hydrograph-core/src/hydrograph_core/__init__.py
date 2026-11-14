@@ -16,7 +16,7 @@ from .assessment import (
     evaluate_findings,
     news2,
 )
-from .channels import CHANNELS, ChannelInfo, Evaluation, evaluate_reading
+from .channels import CHANNELS, ChannelInfo, Display, Evaluation, evaluate_reading
 from .environments import DEFAULT_ENVIRONMENT, ENVIRONMENTS, EnvironmentInfo
 from .findings import (
     Severity,
@@ -38,6 +38,7 @@ __all__ = [
     "ENVIRONMENTS",
     "FINDINGS",
     "ChannelInfo",
+    "Display",
     "EnvironmentInfo",
     "Evaluation",
     "FindingInfo",
