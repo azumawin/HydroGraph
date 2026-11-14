@@ -1,7 +1,7 @@
 seed = 42
 speed = 10
 #duration_s = 600
-enabled_channels = ["ambient_ppco2", "heart_rate", "respiratory_rate", "spo2", "eeg_cfe_ratio"]
+# All available channels report once at startup, then follow their normal schedules.
 
 [environment]
 id = "iss_cabin"

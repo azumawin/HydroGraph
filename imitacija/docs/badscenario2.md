@@ -264,3 +264,8 @@ preview baselines and direct evaluation against the backend core when its checko
 is available. The backend still returns WARNING for the source's 4.8 mmHg / 92%
 example. HTTP ingestion, five-second backend evaluation and the red-alert policy
 remain the separate prerequisites described in section 7.
+
+The demo config now enables every available channel, matching healthy-scenario
+startup behavior: 30 startup readings (25 crew biometrics and 5 environment
+readings), each emitted once. This replaces the original five-channel demo
+restriction. After startup, all enabled channels follow their normal schedules.

@@ -53,10 +53,17 @@ def test_demo_windows_units_and_determinism():
     items = acquire(settings)
     assert items == acquire(settings)
     startup = [o for o in items if o.sample_kind == "startup_baseline"]
-    assert len(startup) == 5
+    assert len(startup) == 30
+    assert {o.reading.channel for o in startup} == effective_channels(settings)
+    assert len({(o.owner, o.reading.channel) for o in startup}) == len(startup)
+    assert sum(o.scope == "crew" for o in startup) == 25
+    assert sum(o.scope == "environment" for o in startup) == 5
     assert all(o.acquired_s == o.window_s == 0 for o in startup)
     baseline = {o.reading.channel: o.reading.value for o in startup}
-    assert baseline == pytest.approx(
+    assert {
+        key: baseline[key]
+        for key in ("ambient_ppco2", "heart_rate", "respiratory_rate", "spo2", "eeg_cfe_ratio")
+    } == pytest.approx(
         dict(
             ambient_ppco2=2.2 * MMHG_TO_PA,
             heart_rate=1.2,
@@ -222,6 +229,14 @@ def test_preview_references():
     settings = demo()
     state = PreviewState(settings)
     for item in acquire(settings, 0):
+        if item.reading.channel not in {
+            "ambient_ppco2",
+            "heart_rate",
+            "respiratory_rate",
+            "spo2",
+            "eeg_cfe_ratio",
+        }:
+            continue
         assert state.baseline(item) == pytest.approx(
             item.reading.value
             / (
