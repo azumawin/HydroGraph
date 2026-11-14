@@ -13,7 +13,7 @@ import { TELEMETRY, VITALS_HISTORY } from "../Constants.ts";
 // stays in the dictionary
 export type VitalReading = {
   channel: string;
-  value: number | boolean;
+  value: TelemetryReading["value"];
   unit: string;
   evaluation: Evaluation;
   measured_at: string;

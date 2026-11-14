@@ -5,9 +5,11 @@ export type Evaluation = "nominal" | "warning" | "critical" | "unspecified";
 
 export type FindingSeverity = "nominal" | "warning" | "critical";
 
+export type ConsciousnessLevel = "ALERT" | "CONFUSION" | "VOICE" | "PAIN" | "UNRESPONSIVE";
+
 export type TelemetryReading = {
   channel: string;
-  value: number | boolean;
+  value: number | boolean | ConsciousnessLevel;
   measured_at: string;
   evaluation: Evaluation;
 };
@@ -119,11 +121,17 @@ const parseData = (event: MessageEvent<unknown>): Record<string, unknown> => {
   return data;
 };
 
+const isConsciousness = (value: unknown): value is ConsciousnessLevel =>
+  typeof value === "string" &&
+  ["ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE"].includes(value);
+
 const parseReading = (data: Record<string, unknown>): TelemetryReading => {
   const { channel, value, measured_at, evaluation } = data;
   if (
     typeof channel !== "string" ||
-    (typeof value !== "number" && typeof value !== "boolean") ||
+    (typeof value !== "number" &&
+      typeof value !== "boolean" &&
+      !(channel === "consciousness_level" && isConsciousness(value))) ||
     typeof measured_at !== "string" ||
     !isEvaluation(evaluation)
   ) {
