@@ -116,7 +116,7 @@ def test_radiation_is_graded_against_the_selected_environment(
     radiation = ui.finding_message(dashboard, "Radiation dose & solar particle events")
 
     # 70 uSv/h is 55.4 above the ISS background but only 12.9 above the Moon's
-    expect(radiation).to_contain_text("Warning:")
+    expect(radiation).to_contain_text("Warning")
     expect(radiation).to_contain_text("dose rate > 50 µSv/h above baseline")
     assert finding_status(backend, RADIATION_FINDING) == "warning"
 

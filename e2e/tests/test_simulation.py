@@ -85,7 +85,7 @@ def test_hypercapnia_scenario_escalates_on_screen(
     run = simulate("badscenario2.toml", speed=30, duration=420)
 
     hypoxia = ui.finding_message(dashboard, "Hypoxia & CO2 exposure")
-    expect(hypoxia).to_contain_text("Warning:", timeout=30000)
+    expect(hypoxia).to_contain_text("Warning", timeout=30000)
     expect(hypoxia).to_contain_text("ppCO2 > 3.0 mmHg")
 
     oxygen = ui.vital(dashboard, "Blood oxygen")
@@ -103,11 +103,11 @@ def test_sans_scenario_reaches_critical(dashboard: Page, backend: Backend, simul
     run = simulate("badscenario1.toml", speed=120, duration=4200)
 
     sans_warning = ui.finding_messages_with_status(
-        dashboard, "SANS & cephalic fluid shift", "Warning:"
+        dashboard, "SANS & cephalic fluid shift", "Warning"
     )
     expect(sans_warning.first).to_be_visible(timeout=40000)
     sans_critical = ui.finding_messages_with_status(
-        dashboard, "SANS & cephalic fluid shift", "Critical:"
+        dashboard, "SANS & cephalic fluid shift", "Critical"
     )
     expect(sans_critical.first).to_be_visible(timeout=40000)
     expect(sans_critical.first).to_contain_text("jugular distension > 1.8%")

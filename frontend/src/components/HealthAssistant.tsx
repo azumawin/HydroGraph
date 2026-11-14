@@ -5,9 +5,11 @@ import { assistantErrorDetail, postAssistant } from "../api/Service.ts";
 import type { ChatMessage, TelemetryFinding } from "../api/Service.ts";
 import { ASSISTANT, FINDING_STATUS_LABELS } from "../Constants.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
+import ChatFindingMessage from "./ChatFindingMessage.tsx";
+import type { FindingAlert } from "./ChatFindingMessage.tsx";
 import "../assets/css/HealthAssistant.css";
 
-type TranscriptMessage = ChatMessage & { id: string };
+type TranscriptMessage = ChatMessage & { id: string; finding?: FindingAlert };
 
 const formatFindingMessage = (finding: TelemetryFinding, name: string): string => {
   const lines = [`${FINDING_STATUS_LABELS[finding.status]}: ${name}`];
@@ -46,6 +48,13 @@ const HealthAssistant = () => {
         id: `message-${messageIdRef.current++}`,
         role: "assistant",
         content: formatFindingMessage(finding, name),
+        finding: {
+          status: finding.status,
+          name,
+          triggers: finding.triggers,
+          action: finding.action,
+          announcedAt: Date.now(),
+        },
       });
     }
 
@@ -105,11 +114,15 @@ const HealthAssistant = () => {
         className="vitals-dashboard-panel-content min-h-0 flex-1 overflow-y-auto p-6"
       >
         <div className="vitals-dashboard-chat" aria-live="polite">
-          {messages.map((message) => (
-            <p className={`vitals-dashboard-chat-message is-${message.role}`} key={message.id}>
-              {message.content}
-            </p>
-          ))}
+          {messages.map((message) =>
+            message.finding === undefined ? (
+              <p className={`vitals-dashboard-chat-message is-${message.role}`} key={message.id}>
+                {message.content}
+              </p>
+            ) : (
+              <ChatFindingMessage key={message.id} finding={message.finding} />
+            ),
+          )}
           {isSending && (
             <p className="vitals-dashboard-chat-message is-assistant is-pending">
               {ASSISTANT.THINKING}
