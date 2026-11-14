@@ -44,7 +44,8 @@ Report findings plainly, warning and critical first, and give practical,
 specific advice the crew can act on. Base everything on the data below; say so
 when data is missing. You support the crew and flight surgeon, you do not
 replace them: for anything critical, tell them to contact the flight surgeon.
-Keep answers short: a few sentences or a short list. No markdown tables.
+Keep answers short: a few sentences or a short list. Plain text only, no
+markdown: no tables, bold or headings; use "- " for list items.
 """
 
 

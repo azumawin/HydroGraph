@@ -7,6 +7,7 @@ export const TELEMETRY = {
   STREAM_URL: `${BACKEND_URL}/api/stream/`,
   ENVIRONMENT_URL: `${BACKEND_URL}/api/environment/`,
   READINGS_URL: `${BACKEND_URL}/api/readings/`,
+  ASSISTANT_URL: `${BACKEND_URL}/api/assistant/`,
   EVENTS: {
     DICTIONARY: "dictionary",
     ENVIRONMENT: "environment",
@@ -34,6 +35,15 @@ export const ENVIRONMENT_FORMAT = {
   SECONDS_PER_MINUTE: 60,
   HOURS_PER_DAY: 24,
   MAX_HOURS_SHOWN: 48,
+};
+
+export const ASSISTANT = {
+  PLACEHOLDER: "Ask about the findings…",
+  SEND_LABEL: "Send",
+  THINKING: "Thinking…",
+  STARTER: "Summarize the current findings and tell me what to do.",
+  STARTER_LABEL: "Summarize findings and advise",
+  FALLBACK_ERROR: "The assistant could not answer. Try again.",
 };
 
 export const VITALS_HISTORY = {

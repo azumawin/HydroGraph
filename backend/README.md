@@ -197,6 +197,13 @@ Settings read from the environment with dev-friendly fallbacks:
 | `DJANGO_SECRET_KEY` | the insecure generated key | **must** be set outside local dev |
 | `DJANGO_DEBUG` | `1` | any value other than `1` disables debug |
 | `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | comma-separated |
+| `OLLAMA_API_KEY` | none | Ollama Cloud key for the health assistant; without it `POST /api/assistant/` answers 503 |
+| `OLLAMA_MODEL` | `gpt-oss:120b` | models from Chinese labs (DeepSeek, Qwen, Kimi, GLM, …) are refused |
+| `OLLAMA_URL` | `https://ollama.com/api/chat` | |
+| `OLLAMA_TIMEOUT_S` | `60` | |
+
+Put local secrets in `backend/.env` (gitignored), one `KEY=value` per line;
+real environment variables take precedence.
 
 The database is SQLite at `backend/db.sqlite3` (gitignored). Delete it and re-run
 `migrate` to start clean.

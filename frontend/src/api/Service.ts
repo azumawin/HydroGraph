@@ -210,3 +210,22 @@ export const putEnvironment = async (environmentId: string): Promise<string> => 
   if (!isRecord(response.data)) throw malformed();
   return parseEnvironmentId(response.data);
 };
+
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+// the assistant's next message; the backend briefs the model with the live state
+export const postAssistant = async (messages: ChatMessage[]): Promise<string> => {
+  const response = await axios.post<unknown>(TELEMETRY.ASSISTANT_URL, { messages });
+  if (!isRecord(response.data) || typeof response.data.reply !== "string") throw malformed();
+  return response.data.reply;
+};
+
+// the backend's reason when the assistant is unavailable, if it sent one
+export const assistantErrorDetail = (error: unknown): string | null => {
+  if (!axios.isAxiosError(error) || !isRecord(error.response?.data)) return null;
+  const { detail } = error.response.data;
+  return typeof detail === "string" ? detail : null;
+};
