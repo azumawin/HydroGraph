@@ -201,9 +201,15 @@ Settings read from the environment with dev-friendly fallbacks:
 | `OLLAMA_MODEL` | `gpt-oss:120b` | models from Chinese labs (DeepSeek, Qwen, Kimi, GLM, …) are refused |
 | `OLLAMA_URL` | `https://ollama.com/api/chat` | |
 | `OLLAMA_TIMEOUT_S` | `60` | |
+| `ASSISTANT_RATE` | `10/min` | assistant requests per client IP; over it, 429 |
+| `ASSISTANT_DAILY_RATE` | `200/day` | assistant daily cap per client IP |
 
 Put local secrets in `backend/.env` (gitignored), one `KEY=value` per line;
 real environment variables take precedence.
+
+The assistant's rate limits count in Django's default cache, a per-process
+LocMem cache: fine for `runserver`, but counts reset on restart and are not
+shared between worker processes.
 
 The database is SQLite at `backend/db.sqlite3` (gitignored). Delete it and re-run
 `migrate` to start clean.

@@ -62,6 +62,11 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Per client IP, for the health assistant only (api/throttles.py).
+    "DEFAULT_THROTTLE_RATES": {
+        "assistant": os.environ.get("ASSISTANT_RATE", "10/min"),
+        "assistant_daily": os.environ.get("ASSISTANT_DAILY_RATE", "200/day"),
+    },
 }
 
 SPECTACULAR_SETTINGS = {

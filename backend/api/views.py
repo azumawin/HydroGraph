@@ -9,7 +9,7 @@ from drf_spectacular.utils import (
     extend_schema,  # pyright: ignore[reportUnknownVariableType]  # stubs: Serializer[Unknown]
 )
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -31,6 +31,7 @@ from api.serializers import (
     reading_payload,
 )
 from api.stream import events, sse_event
+from api.throttles import AssistantBurstThrottle, AssistantDailyThrottle
 
 
 @extend_schema(
@@ -249,12 +250,17 @@ def reading_history(request: Request) -> Response:
     request=ChatSerializer,
     responses={
         200: {"type": "object", "properties": {"reply": {"type": "string"}}},
+        429: {"type": "object", "properties": {"detail": {"type": "string"}}},
         503: {"type": "object", "properties": {"detail": {"type": "string"}}},
     },
 )
 @api_view(["POST"])
+@throttle_classes([AssistantBurstThrottle, AssistantDailyThrottle])
 def assistant(request: Request) -> Response:
-    """The LLM's next message, briefed with the live findings and readings."""
+    """The LLM's next message, briefed with the live findings and readings.
+
+    Rate-limited per client IP (``ASSISTANT_RATE``, ``ASSISTANT_DAILY_RATE``).
+    """
     serializer = ChatSerializer(data=request.data)
     _ = serializer.is_valid(raise_exception=True)
     data = cast("dict[str, list[ChatMessage]]", serializer.validated_data)
