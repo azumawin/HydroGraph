@@ -3,6 +3,7 @@ import urllib.request
 from typing import Self, cast
 
 import pytest
+from django.core.cache import cache
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -11,6 +12,12 @@ from api.assistant import is_blocked_model
 from api.models import Reading
 
 QUESTION = {"messages": [{"role": "user", "content": "How is the crew member?"}]}
+
+
+@pytest.fixture(autouse=True)
+def fresh_throttle() -> None:
+    """The throttle counts live in the cache; each test starts with none."""
+    cache.clear()
 
 
 class FakeResponse:
@@ -82,3 +89,25 @@ def test_blocked_models() -> None:
 def test_empty_conversation_is_400() -> None:
     response = APIClient().post(reverse("assistant"), {"messages": []}, format="json")
     assert response.status_code == 400
+
+
+@pytest.mark.django_db
+@override_settings(OLLAMA_API_KEY="test-key", OLLAMA_MODEL="gpt-oss:120b")
+def test_eleventh_request_in_a_minute_is_429(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[urllib.request.Request] = []
+
+    def urlopen(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        assert timeout > 0
+        calls.append(request)
+        return FakeResponse({"message": {"role": "assistant", "content": "Rest."}})
+
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    client = APIClient()
+
+    statuses = [
+        client.post(reverse("assistant"), QUESTION, format="json").status_code
+        for _ in range(11)
+    ]
+
+    assert statuses == [200] * 10 + [429]
+    assert len(calls) == 10
