@@ -49,13 +49,51 @@ Useful URLs once `runserver` is up:
 | URL | What |
 | --- | --- |
 | http://localhost:8000/api/health/ | liveness probe, public |
+| http://localhost:8000/api/readings/ | `POST` sensor readings, public for now |
+| http://localhost:8000/api/stream/ | SSE stream for the frontend, public for now |
 | http://localhost:8000/api/docs/ | Swagger UI |
 | http://localhost:8000/api/schema/ | raw OpenAPI 3 schema (YAML) |
 | http://localhost:8000/admin/ | Django admin |
 | http://localhost:8000/api-auth/login/ | session login for the DRF browsable API |
 
-DRF defaults to `IsAuthenticated`, so every endpoint except `health` needs a logged-in
-session (or a token) — log in via `/api-auth/login/` to browse the API in your browser.
+DRF defaults to `IsAuthenticated`, so every endpoint except `health`, `readings` and
+`stream` needs a logged-in session (or a token) — log in via `/api-auth/login/` to
+browse the API in your browser.
+
+`runserver` is daphne's (ASGI), so it can hold the SSE stream open. Under a WSGI server
+the stream never sends anything.
+
+## Readings endpoints
+
+Channels, units and thresholds: `api/channels.py`. `evaluation` is a
+`hydrograph_core.Status` value (`nominal` / `warning` / `critical` / `unspecified`).
+
+`POST /api/readings/` takes a bare array and stores all items or none:
+
+```sh
+curl -X POST localhost:8000/api/readings/ -H 'Content-Type: application/json' \
+  -d '[{"channel": "spo2", "value": 89, "measured_at": "2026-11-08T07:12:00Z"}]'
+```
+
+`201` returns the same array enriched with `id`, `unit`, `evaluation`, `name`,
+`body_regions` and `explanation`. `400` returns errors keyed by item index, e.g.
+`{"1": {"channel": ["Unknown channel \"heartrate\"."]}}`.
+
+`GET /api/stream/?environment=lunar_surface` (default; or `mars_surface`) is a
+`text/event-stream`:
+
+- one `environment` event, then the latest `reading` per channel;
+- a `reading` event for every new reading, within about 1 s (the stream polls the DB);
+- `: keepalive` every 15 s when idle.
+
+Each `reading` carries `id:`, so a browser `EventSource` that reconnects sends
+`Last-Event-ID` and gets every reading it missed. Switch environment by reconnecting.
+
+```js
+const es = new EventSource("/api/stream/?environment=lunar_surface");
+es.addEventListener("environment", (e) => setEnvironment(JSON.parse(e.data)));
+es.addEventListener("reading", (e) => upsertReading(JSON.parse(e.data)));
+```
 
 ## Everyday commands
 

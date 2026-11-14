@@ -10,6 +10,7 @@ dependencies = [
     "markdown>=3.11.3",
     "hydrograph-core",
     "drf-spectacular>=0.30.0",
+    "daphne>=4.2.3",
 ]
 
 # Virtual root: this directory is the Django project, not an installable package,
