@@ -55,3 +55,21 @@ The original README also includes the following excluded or backend-owned output
 The remaining original inventory rows map to these channels: sweat sodium flux additionally exposes its underlying concentration; latent viral status splits into three specimen-specific PCR results; NTx exposes normalized measurement and baseline change. Ambient radiation identifiers were renamed to make monitor ownership explicit. No EEG, visual, questionnaire or sensor-electrical outputs are generated.
 
 Schedule and waveform precision are simulation choices. Public NASA cadence is unknown for some channels; see the evidence tables in [NASA_MONITORING_PLAN.md](../NASA_MONITORING_PLAN.md).
+
+## Optional SANS scenario channels
+
+These channels require `sans_scenario`; healthy runs leave them disabled. This
+implements synthetic jugular/visual fixtures previously listed as excluded above,
+not physical hydrogel sensor behavior or calibrated ICP measurement.
+
+| Channel | Source → wire | Collection |
+| --- | --- | --- |
+| `jugular_strain_pct` | % → fraction (`1`) | 60s mean on a 50Hz latent trend grid |
+| `delta_R_over_R0` | ratio → `1` | Same window; gauge factor times strain fraction |
+| `icp_risk_indicator_mmHg` | mmHg → Pa | Same window; uncalibrated synthetic indicator |
+| `visual_acuity_logmar` | logarithmic LogMAR → `1` | Configured completed screen events |
+| `amsler_grid_distortion` | boolean → boolean | Same screen events |
+
+Startup values are synthetic references with zero window, including visual values.
+Only subsequent scheduled screens represent completed tests. Scenario timing and
+indicator targets are declared engineering assumptions in `config/badscenario1.toml`.

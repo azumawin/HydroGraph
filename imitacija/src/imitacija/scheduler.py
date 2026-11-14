@@ -11,7 +11,8 @@ from .clock import Clock, timestamp
 from .frequency import FREQUENCIES
 from .models import AstronautProfile, Observation, Reading, Settings
 from .physiology import DAY, crew_values, environment_values, startup_crew_values
-from .registry import CHANNELS, Channel
+from .registry import CHANNELS, Channel, effective_channels
+from .scenarios import SANS_CHANNELS, sans_values
 from .units import convert
 
 
@@ -95,7 +96,16 @@ def rules(settings: Settings) -> tuple[Rule, ...]:
         if settings.bp_session_duration_s is None
         else settings.bp_session_start_s + settings.bp_session_duration_s
     )
+    scenario_rules = (
+        ()
+        if settings.sans_scenario is None
+        else (
+            Rule("cephalic", phase=60, interval=60),
+            Rule("eye_screen", points=settings.sans_scenario.eye_screen_times_s),
+        )
+    )
     return (
+        *scenario_rules,
         periodic("heart", 60),
         periodic("hrv", 61),
         periodic("respiration", 77),
@@ -147,11 +157,7 @@ class Scheduler:
     def __init__(self, settings: Settings, clock: Clock, sink: Sink) -> None:
         self.settings, self.clock, self.sink = settings, clock, sink
         self.profiles = {p.id: p for p in settings.crew}
-        self.enabled = set(settings.enabled_channels or CHANNELS)
-        if settings.enabled_channels == ():
-            self.enabled = set()
-        if unknown := self.enabled - CHANNELS.keys():
-            raise ValueError(f"unknown enabled channels: {sorted(unknown)}")
+        self.enabled = effective_channels(settings)
         self.events: list[Event] = []
         self.counter = 0
         self.sequences: dict[tuple[str, str], int] = {}
@@ -166,6 +172,12 @@ class Scheduler:
             scope = members[0].scope
             owners = tuple(self.profiles) if scope == "crew" else (settings.environment.id,)
             for owner in owners:
+                if (
+                    rule.group in {"cephalic", "eye_screen"}
+                    and settings.sans_scenario is not None
+                    and owner != settings.sans_scenario.owner_id
+                ):
+                    continue
                 due = rule.next_after(0)
                 if due is not None:
                     self._push(due, rule, scope, owner)
@@ -182,13 +194,23 @@ class Scheduler:
         profile: AstronautProfile | None = (
             self.profiles.get(event.owner) if event.scope == "crew" else None
         )
-        values = (
-            crew_values(event.rule.group, instant, profile, self.settings.seed)
-            if profile is not None
-            else environment_values(
-                event.rule.group, instant, self.settings.environment, self.settings.seed
+        scenario = self.settings.sans_scenario
+        if event.rule.group in {"cephalic", "eye_screen"} and scenario is not None:
+            values = sans_values(event.rule.group, instant, scenario)
+        else:
+            values = (
+                crew_values(
+                    event.rule.group,
+                    instant,
+                    profile,
+                    self.settings.seed,
+                    self.settings.sans_scenario,
+                )
+                if profile is not None
+                else environment_values(
+                    event.rule.group, instant, self.settings.environment, self.settings.seed
+                )
             )
-        )
         for name, value in values.items():
             if name not in self.enabled:
                 continue
@@ -252,7 +274,15 @@ class Scheduler:
         self.started = True
         for profile in self.settings.crew:
             values = startup_crew_values(profile, self.settings.seed)
+            scenario = self.settings.sans_scenario
+            if scenario and profile.id == scenario.owner_id:
+                values.update(sans_values("cephalic", 0, scenario, startup=True))
+                values.update(sans_values("eye_screen", 0, scenario, startup=True))
             for channel in CHANNELS.values():
+                if channel.id in SANS_CHANNELS and (
+                    not scenario or profile.id != scenario.owner_id
+                ):
+                    continue
                 if channel.scope == "crew" and channel.id in self.enabled:
                     self._publish(channel, values[channel.id], profile.id, "crew", 0, startup=True)
         environment = self.settings.environment
