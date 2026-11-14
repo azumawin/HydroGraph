@@ -1,4 +1,7 @@
-"""Server-sent events for the frontend: environment, then readings as they arrive."""
+"""Server-sent events for the frontend: environments, then readings as they arrive.
+
+Message data follows docs/json-shape.md.
+"""
 
 import json
 from collections.abc import AsyncGenerator, Mapping
@@ -15,14 +18,15 @@ def sse_event(event: str, data: Mapping[str, object]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-async def events(environment_id: str) -> AsyncGenerator[str]:
-    """Yield the environment, the latest reading per channel, then live readings.
+async def events() -> AsyncGenerator[str]:
+    """Yield the environments, the latest reading per channel, then live readings.
 
     Subscribes before reading the snapshot, so a reading posted in between is
     sent twice at worst, never lost. A reconnect gets a fresh snapshot.
     """
     yield sse_event(
-        "environment", {"id": environment_id, **ENVIRONMENTS[environment_id]}
+        "environments",
+        {"environments": [{"id": k, **v} for k, v in ENVIRONMENTS.items()]},
     )
     with broadcast.subscribe() as queue:
         for channel in CHANNELS:

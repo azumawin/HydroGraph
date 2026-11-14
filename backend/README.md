@@ -69,30 +69,32 @@ Channels, units and thresholds: `hydrograph_core.channels` (core); the backend o
 stores and ships readings. `evaluation` is a
 `hydrograph_core.Status` value (`nominal` / `warning` / `critical` / `unspecified`).
 
-`POST /api/readings/` takes a bare array and stores all items or none:
+Request and message shapes follow `docs/json-shape.md`.
+
+`POST /api/readings/` takes one reading:
 
 ```sh
 curl -X POST localhost:8000/api/readings/ -H 'Content-Type: application/json' \
-  -d '[{"channel": "spo2", "value": 89, "measured_at": "2026-11-08T07:12:00Z"}]'
+  -d '{"channel": "spo2", "value": 89, "measured_at": "2026-11-08T07:12:00Z"}'
 ```
 
-`201` returns the same array enriched with `id`, `unit`, `evaluation`, `name`,
-`body_regions` and `explanation`. `400` returns errors keyed by item index, e.g.
-`{"1": {"channel": ["Unknown channel \"heartrate\"."]}}`.
+`201` returns it enriched with `unit`, `evaluation`, `name`, `body_regions` and
+`explanation`, and pushes the same object to every open stream. `400` returns
+field errors, e.g. `{"channel": ["Unknown channel \"heartrate\"."]}`.
 
-`GET /api/stream/?environment=lunar_surface` (default; or `mars_surface`) is a
-`text/event-stream`:
+`GET /api/stream/` is a `text/event-stream`:
 
-- one `environment` event, then the latest `reading` per channel;
-- a `reading` event for every new reading, pushed the moment it is POSTed.
+- one `environments` event, `{"environments": [{"id", "gravity_g", "comm_delay_s"}, ...]}`;
+- then the latest `reading` per channel;
+- then a `reading` event for every new reading, pushed the moment it is POSTed.
 
 Delivery is an in-memory queue per open stream (`api/broadcast.py`), so it needs a
-single server process, which `runserver` is. A reconnect (switching environment, or
-`EventSource`'s automatic retry) gets a fresh snapshot.
+single server process, which `runserver` is. A reconnect (`EventSource`'s automatic
+retry) gets a fresh snapshot.
 
 ```js
-const es = new EventSource("/api/stream/?environment=lunar_surface");
-es.addEventListener("environment", (e) => setEnvironment(JSON.parse(e.data)));
+const es = new EventSource("/api/stream/");
+es.addEventListener("environments", (e) => setEnvironments(JSON.parse(e.data).environments));
 es.addEventListener("reading", (e) => upsertReading(JSON.parse(e.data)));
 ```
 

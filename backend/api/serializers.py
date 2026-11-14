@@ -13,7 +13,7 @@ from api.models import Reading
 
 
 class ReadingInSerializer(serializers.ModelSerializer[Reading]):
-    """What the device sends: one item of the POST array."""
+    """What the device sends (docs/json-shape.md, "backend receives this")."""
 
     class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]  # DRF stubs
         model = Reading
@@ -26,7 +26,7 @@ class ReadingInSerializer(serializers.ModelSerializer[Reading]):
 
 
 class ReadingOutSerializer(serializers.ModelSerializer[Reading]):
-    """What the frontend gets: the stored reading plus its channel metadata."""
+    """What the frontend gets (docs/json-shape.md, reading shape)."""
 
     unit = serializers.SerializerMethodField()
     evaluation = serializers.SerializerMethodField()
@@ -37,7 +37,6 @@ class ReadingOutSerializer(serializers.ModelSerializer[Reading]):
     class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]  # DRF stubs
         model = Reading
         fields = (
-            "id",
             "channel",
             "value",
             "unit",

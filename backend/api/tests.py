@@ -30,17 +30,13 @@ TICK = "2026-11-08T07:12:00Z"
 
 
 @pytest.mark.django_db
-def test_post_readings_returns_enriched_array(client: APIClient) -> None:
-    body = [
-        {"channel": "heart_rate", "value": 104, "measured_at": TICK},
-        {"channel": "spo2", "value": 89, "measured_at": TICK},
-    ]
+def test_post_reading_returns_doc_shape(client: APIClient) -> None:
+    body = {"channel": "heart_rate", "value": 104, "measured_at": TICK}
     response = client.post(reverse("readings"), body, format="json")
 
     assert response.status_code == 201
-    heart_rate, spo2 = response.json()
-    assert heart_rate == {
-        "id": heart_rate["id"],
+    reading = response.json()
+    assert reading == {
         "channel": "heart_rate",
         "value": 104.0,
         "unit": "bpm",
@@ -48,27 +44,19 @@ def test_post_readings_returns_enriched_array(client: APIClient) -> None:
         "measured_at": TICK,
         "name": "Heart rate",
         "body_regions": ["heart"],
-        "explanation": heart_rate["explanation"],
+        "explanation": reading["explanation"],
     }
-    assert isinstance(heart_rate["id"], int)
-    assert spo2["evaluation"] == "critical"
-    assert Reading.objects.count() == 2
+    assert Reading.objects.count() == 1
 
 
 @pytest.mark.django_db
-def test_post_readings_rejects_whole_batch_with_per_item_errors(
-    client: APIClient,
-) -> None:
-    body = [
-        {"channel": "heart_rate", "value": 72, "measured_at": TICK},
-        {"channel": "heartrate", "value": 72, "measured_at": TICK},
-        {"channel": "spo2", "value": 97},
-    ]
+def test_post_reading_rejects_unknown_channel(client: APIClient) -> None:
+    body = {"channel": "heartrate", "value": 72}
     response = client.post(reverse("readings"), body, format="json")
 
     assert response.status_code == 400
     assert response.json() == {
-        "1": {"channel": ['Unknown channel "heartrate".']},
-        "2": {"measured_at": ["This field is required."]},
+        "channel": ['Unknown channel "heartrate".'],
+        "measured_at": ["This field is required."],
     }
     assert Reading.objects.count() == 0
