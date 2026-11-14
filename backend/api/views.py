@@ -14,8 +14,14 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from api.broadcast import publish
+from api.findings import affected_findings
 from api.models import Reading
-from api.serializers import ReadingIn, ReadingInSerializer, reading_payload
+from api.serializers import (
+    ReadingIn,
+    ReadingInSerializer,
+    finding_payload,
+    reading_payload,
+)
 from api.stream import events, sse_event
 
 
@@ -40,7 +46,6 @@ def health(_request: Request) -> Response:
 @extend_schema(
     summary="Ingest one sensor reading",
     parameters=[
-        OpenApiParameter("X-Owner-ID", str, OpenApiParameter.HEADER, required=True),
         OpenApiParameter(
             "X-Simulation-Scope",
             str,
@@ -62,7 +67,6 @@ def health(_request: Request) -> Response:
                     "enum": list(get_args(hydrograph_core.Evaluation)),
                 },
                 "measured_at": {"type": "string", "format": "date-time"},
-                "owner_id": {"type": "string"},
                 "scope": {"type": "string", "enum": ["crew", "environment"]},
             },
         }
@@ -70,22 +74,20 @@ def health(_request: Request) -> Response:
 )
 @api_view(["POST"])
 def readings(request: Request) -> Response:
-    """Store the reading and push it to every open stream."""
-    owner_id = request.headers.get("X-Owner-ID", "")
+    """Store the reading and push it, and the findings it changes, to every stream."""
     scope = request.headers.get("X-Simulation-Scope", "")
-    serializer = ReadingInSerializer(
-        data=request.data, context={"owner_id": owner_id, "scope": scope}
-    )
+    serializer = ReadingInSerializer(data=request.data, context={"scope": scope})
     _ = serializer.is_valid(raise_exception=True)
     data = cast(ReadingIn, serializer.validated_data)
     reading = Reading.objects.create(
-        owner_id=owner_id,
         channel=data["channel"],
         value=data["value"],
         measured_at=data["measured_at"],
     )
     payload = reading_payload(reading)
     publish(sse_event("reading", payload))
+    for finding, result in affected_findings(reading.channel).items():
+        publish(sse_event("finding", finding_payload(finding, result)))
     return Response(payload, status=status.HTTP_201_CREATED)
 
 

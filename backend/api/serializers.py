@@ -8,7 +8,14 @@ import math
 from datetime import UTC, datetime
 from typing import Literal, TypedDict, cast, override
 
-from hydrograph_core import CHANNELS, ENVIRONMENTS, Evaluation, evaluate_reading
+from hydrograph_core import (
+    CHANNELS,
+    ENVIRONMENTS,
+    FINDINGS,
+    Evaluation,
+    FindingResult,
+    evaluate_reading,
+)
 from rest_framework import serializers
 
 from api.models import Reading
@@ -26,7 +33,7 @@ class ReadingIn(TypedDict):
 class ReadingInSerializer(serializers.Serializer[None]):
     """The device body (docs/json-shape.md, section 1).
 
-    Owner and scope arrive as headers; pass them as ``context``.
+    The ``X-Simulation-Scope`` header arrives as ``context["scope"]``.
     """
 
     channel: serializers.CharField = serializers.CharField()
@@ -58,8 +65,6 @@ class ReadingInSerializer(serializers.Serializer[None]):
             )
         if not valid:
             errors["value"] = [f"Expected a {info['value_type']} for {channel}."]
-        if not context["owner_id"]:
-            errors["X-Owner-ID"] = ["This header is required."]
         if context["scope"] != info["scope"]:
             errors["X-Simulation-Scope"] = [
                 f'Expected "{info["scope"]}" for {channel}.'
@@ -77,7 +82,6 @@ class ReadingPayload(TypedDict):
     unit: str
     evaluation: Evaluation
     measured_at: str
-    owner_id: str
     scope: Literal["crew", "environment"]
 
 
@@ -92,7 +96,6 @@ def reading_payload(reading: Reading) -> ReadingPayload:
         "unit": info["unit"],
         "evaluation": evaluate_reading(reading.channel, value),
         "measured_at": measured_at.replace("+00:00", "Z"),
-        "owner_id": reading.owner_id,
         "scope": info["scope"],
     }
 
@@ -109,11 +112,17 @@ class EnvironmentEntry(TypedDict):
     comm_delay_s: float
 
 
+class FindingEntry(TypedDict):
+    name: str
+    channels: list[str]
+
+
 class DictionaryPayload(TypedDict):
-    """The static dictionary for the frontend (docs/json-shape.md, section 3)."""
+    """The static dictionary for the frontend (docs/json-shape.md, section 4)."""
 
     environments: list[EnvironmentEntry]
     channels: dict[str, ChannelEntry]
+    findings: dict[str, FindingEntry]
 
 
 def dictionary_payload() -> DictionaryPayload:
@@ -128,4 +137,14 @@ def dictionary_payload() -> DictionaryPayload:
             }
             for k, v in CHANNELS.items()
         },
+        "findings": {
+            k: {"name": v["name"], "channels": list(v["channels"])}
+            for k, v in FINDINGS.items()
+        },
     }
+
+
+def finding_payload(finding: str, result: FindingResult) -> dict[str, object]:
+    """A finding for the frontend (docs/json-shape.md, section 3): core's result
+    plus which finding it is."""
+    return {"id": finding, **result}

@@ -24,7 +24,9 @@ A self-contained flat module in `src/hydrograph_core/` (Python >= 3.14, no
 runtime dependencies). `import hydrograph_core` exports the 10 finding
 functions, named `<finding>_D_S` (D = hazard domain, S = place in it;
 map to plan finding numbers in the `findings.py` docstring),
-`CHANNELS` + `evaluate_reading(channel, value)`, and `ENVIRONMENTS`. Conventions: `STYLE.md`.
+`CHANNELS` + `evaluate_reading(channel, value)`, `FINDINGS` +
+`evaluate_findings(latest, ...)` (findings from the latest readings), and
+`ENVIRONMENTS`. Conventions: `STYLE.md`.
 
 Each function returns only the values it can actually produce: a finding with
 one severity has `status: bool` (`True` = present); one with several has
@@ -41,27 +43,24 @@ finding["status"], finding["triggers"]  # "warning", ["jugular distension >= 1.1
 
 ## Using it from the Django backend
 
-The package is a stateless library. The backend owns all state: sessions,
-reading history, sensor processing. Every function takes plain numbers and
-returns a plain `dict` of numbers, strings, booleans and lists that `json.dumps`
-accepts as-is, so results can go straight into a JSON column (e.g. Django
-`JSONField`) or a response.
+The package is a stateless library. The backend owns all state: reading history
+and who is subscribed. Every function takes plain values and returns a plain
+`dict` of numbers, strings, booleans and lists that `json.dumps` accepts as-is.
 
-1. It is already a workspace dependency of `backend/pyproject.toml`, so `uv sync`
-   installs it editable. Import it from `api/` views.
-2. Call a finding with values the backend has collected or computed upstream
-   (e.g. supine and standing BP; `None` for an hs-cTnI assay that was not run):
+It is already a workspace dependency of `backend/pyproject.toml`, so `uv sync`
+installs it editable. The backend (`backend/api/`) uses it in two places:
+
+1. Each reading: `evaluate_reading(channel, value)` gives its `evaluation`.
+2. Findings: `evaluate_findings(latest, body_mass_first_kg, body_mass_week_before_kg)`
+   takes one crew member's latest reading per channel (plus the latest cabin
+   readings) in SI wire units, and the body-mass history the baselines need:
 
    ```python
-   from hydrograph_core import orthostatic_intolerance_1_1
+   from hydrograph_core import evaluate_findings
 
-   finding = orthostatic_intolerance_1_1(120, 95, 80, 72, 70, 105, None)
+   results = evaluate_findings({"spo2": 0.89, "ambient_ppco2": 260.0}, None, None)
+   results["hypoxia_co2_2_2"]["status"]  # "critical"
    ```
 
-   Store whatever history a finding needs; the library keeps none.
-
-The backend also has to:
-
-- Turn raw sensor readings into the physical values findings take (the Tier 2
-  parameters of `NSA_hydrograph.md`); this package no longer does that.
-- Attach timestamps. Functions take no time argument.
+   Findings whose inputs are missing are left out. The finding functions
+   themselves take spec units (mmHg, °C, ...) and can be called directly.

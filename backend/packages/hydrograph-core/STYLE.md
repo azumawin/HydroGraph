@@ -24,6 +24,8 @@ hydrograph_core/
   channels.py         sensor channels: display info (CHANNELS) and the grade of
                       one reading on its own (evaluate_reading)
   environments.py     mission environments (ENVIRONMENTS)
+  assessment.py       findings from the latest SI channel readings
+                      (evaluate_findings), the FINDINGS catalog, NEWS2
 ```
 
 Tier 1 combines vitals and Tier 2 values (sensor readings turned into
@@ -233,3 +235,10 @@ inputs.
   exactly as in the document, and comments the document and band they come from.
 - Boolean channels take `True` / `False`.
 - An unknown channel raises `ValueError`.
+
+## Assessment
+
+`assessment.py` connects channels to findings: it converts SI readings to each
+finding's spec units and calls it. It holds no thresholds of its own (NEWS2 is a
+published chart, not a cutoff choice). Context no channel carries is a fixed,
+documented assumption in its module docstring, never a silent default.

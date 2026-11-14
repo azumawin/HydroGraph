@@ -14,20 +14,20 @@ from api.models import Reading
 from api.serializers import DictionaryPayload, dictionary_payload, reading_payload
 
 AT = datetime(2026, 11, 14, 8, 0, tzinfo=UTC)
-CREW = {"X-Owner-ID": "crew-1", "X-Simulation-Scope": "crew"}
+CREW = {"X-Simulation-Scope": "crew"}
 
 
 @pytest.mark.django_db(transaction=True)
-def test_connect_sends_dictionary_then_latest_per_owner_and_channel() -> None:
-    def create(owner_id: str, channel: str, value: float, minute: int) -> None:
+def test_connect_sends_dictionary_then_latest_per_channel() -> None:
+    def create(channel: str, value: float, minute: int) -> None:
         measured_at = AT.replace(minute=minute)
         _ = Reading.objects.create(
-            owner_id=owner_id, channel=channel, value=value, measured_at=measured_at
+            channel=channel, value=value, measured_at=measured_at
         )
 
-    create("crew-1", "heart_rate", 1.2, minute=13)
-    create("crew-1", "heart_rate", 1.7, minute=12)  # older, arrived later
-    create("crew-2", "heart_rate", 1.1, minute=12)
+    create("heart_rate", 1.2, minute=13)
+    create("heart_rate", 1.7, minute=12)  # older, arrived later
+    create("spo2", 0.97, minute=12)
     messages = stream.events()
 
     async def run() -> list[str]:
@@ -54,7 +54,7 @@ def test_connect_sends_dictionary_then_latest_per_owner_and_channel() -> None:
     assert sorted(latest) == sorted(
         [
             stream.sse_event("reading", reading_payload(reading))
-            for reading in Reading.objects.filter(value__in=[1.2, 1.1])
+            for reading in Reading.objects.filter(value__in=[1.2, 0.97])
         ]
     )
 
