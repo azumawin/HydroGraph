@@ -7,7 +7,7 @@ from typing import Literal
 
 from .frequency import FREQUENCIES
 from .models import Environment, FrozenModel, Settings
-from .scenarios import HYPERCAPNIA_CHANNELS, SANS_CHANNELS
+from .scenarios import EVA_CHANNELS, HYPERCAPNIA_CHANNELS, SANS_CHANNELS
 from .units import MMHG_TO_PA
 
 NASA = "https://www.nasa.gov/wp-content/uploads/2024/09/ochmo-std-100-1a-rev-a-signed.pdf"
@@ -103,6 +103,19 @@ def channel(
 
 
 _CHANNELS = (
+    channel(
+        "whole_body_sweat_rate",
+        "Whole-body sweat fixture",
+        "eva_sweat",
+        "hydration",
+        "whole body",
+        "L/h",
+        "m^3/s",
+        "Synthetic whole-body flow; patch scale is an assumption",
+        "1s during EVA",
+        "docs/badscenario3.md",
+        factor=1 / 3_600_000,
+    ),
     channel(
         "eeg_cfe_ratio",
         "Synthetic theta/alpha ratio",
@@ -590,6 +603,10 @@ def effective_channels(settings: Settings) -> set[str]:
         enabled -= HYPERCAPNIA_CHANNELS
     if settings.hypercapnia_scenario is None and enabled & HYPERCAPNIA_CHANNELS:
         raise ValueError("CFE channel requires hypercapnia_scenario configuration")
+    if settings.enabled_channels is None and settings.eva_dehydration_scenario is None:
+        enabled -= EVA_CHANNELS
+    if settings.eva_dehydration_scenario is None and enabled & EVA_CHANNELS:
+        raise ValueError("whole-body sweat requires eva_dehydration_scenario")
     if unknown := enabled - CHANNELS.keys():
         raise ValueError(f"unknown enabled channels: {sorted(unknown)}")
     if settings.sans_scenario is None and enabled & SANS_CHANNELS:
@@ -643,6 +660,7 @@ class Dictionary(FrozenModel):
     excluded: tuple[str, ...] = EXCLUDED
     sans_scenario: dict[str, object] | None = None
     hypercapnia_scenario: dict[str, object] | None = None
+    eva_dehydration_scenario: dict[str, object] | None = None
     startup_behavior: str = (
         "One immediately available synthetic startup_baseline per enabled owner/channel, "
         "then the listed schedule. Startup has no completed collection window or lab delay; "
@@ -671,8 +689,26 @@ def dictionary(
         }
     if settings and settings.sans_scenario:
         overrides["eye_screen"] = f"screen events at {settings.sans_scenario.eye_screen_times_s}"
+    if settings and settings.eva_dehydration_scenario:
+        overrides.update(
+            {
+                "mass": "EVA target: synthetic 60s points; other crew retain daily schedule",
+                "bp": "EVA target: synthetic paired 60s estimates",
+                "usg": (
+                    "EVA target synthetic spots: "
+                    f"{settings.eva_dehydration_scenario.usg_event_times_s}"
+                ),
+                "sweat": "EVA target: complete 1s windows during EVA; other crew: active/wet",
+                "sweat_summary": "EVA target: complete active 60s means; other crew: active/wet",
+            }
+        )
     return Dictionary(
         environment=environment,
+        eva_dehydration_scenario=(
+            settings.eva_dehydration_scenario.model_dump(mode="json")
+            if settings and settings.eva_dehydration_scenario
+            else None
+        ),
         hypercapnia_scenario=(
             settings.hypercapnia_scenario.model_dump(mode="json")
             if settings and settings.hypercapnia_scenario

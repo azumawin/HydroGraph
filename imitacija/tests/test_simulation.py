@@ -185,7 +185,7 @@ def test_radiation_integral_and_ppm_pressure() -> None:
 
 def test_registry_dictionary_and_invalid_inputs() -> None:
     d = dictionary(Environment(), 3600)
-    assert len(CHANNELS) == len(d.channels) == 35
+    assert len(CHANNELS) == len(d.channels) == 36
     assert all(c.unit and c.method and c.citations for c in d.channels)
     assert all(c.body_regions == () for c in d.channels if c.scope == "environment")
     assert all("evaluation_basis" not in c.model_dump() for c in d.channels)

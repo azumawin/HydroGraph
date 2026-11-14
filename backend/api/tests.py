@@ -2,6 +2,7 @@ from typing import cast
 
 import pytest
 from django.urls import reverse
+from hydrograph_core.findings import DehydrationResult
 from rest_framework.test import APIClient
 
 from api.findings import crew_findings
@@ -237,3 +238,30 @@ def test_health_conditions_matches_the_stream_finding_events(
 
 def test_health_conditions_is_get_only(client: APIClient) -> None:
     assert client.post(reverse("health-conditions")).status_code == 405
+
+
+@pytest.mark.django_db
+def test_eva_whole_body_channel_and_dehydration(
+    client: APIClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _ = Reading.objects.all().delete()  # Isolated pytest database only.
+    published: list[str] = []
+    monkeypatch.setattr("api.views.publish", published.append)
+    for channel, value, unit, time in [
+        ("body_mass", 75.0, "kg", "2026-11-14T00:00:00Z"),
+        ("urine_specific_gravity", 1.012, "1", "2026-11-14T00:00:00Z"),
+        ("whole_body_sweat_rate", 0.820 / 3_600_000, "m^3/s", "2026-11-14T00:10:01Z"),
+        ("body_mass", 73.2, "kg", "2026-11-14T02:40:00Z"),
+        ("urine_specific_gravity", 1.026, "1", "2026-11-14T02:40:00Z"),
+    ]:
+        response = client.post(
+            "/api/readings/",
+            {"channel": channel, "value": value, "unit": unit, "measured_at": time},
+            format="json",
+            HTTP_X_SIMULATION_SCOPE="crew",
+        )
+        assert response.status_code == 201
+    result = cast("DehydrationResult", crew_findings()["dehydration_2_1"])
+    assert result["status"] is True
+    assert result["fluid_deficit_ml"] == 1800
+    assert any("dehydration_2_1" in event for event in published)

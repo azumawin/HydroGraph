@@ -22,6 +22,7 @@ class Frequency:
 
 
 FREQUENCIES: dict[str, Frequency] = {
+    "eva_sweat": Frequency("1s whole-body fixture during explicit EVA", 1, 1, 1, (2,)),
     "eeg_cfe": Frequency(
         "60s mean synthetic ratio fixture; no raw EEG", interval_s=60, window_s=60, rows=(5,)
     ),

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .models import AstronautProfile, HypercapniaScenario, SansScenario
+from .models import AstronautProfile, EvaDehydrationScenario, HypercapniaScenario, SansScenario
 
 SANS_CHANNELS = frozenset(
     {
@@ -130,3 +130,54 @@ def hypercapnia_eeg_values(
         "eeg_cfe_ratio": scenario.baseline_cfe_ratio
         + (scenario.affected_cfe_ratio - scenario.baseline_cfe_ratio) * mean_progress
     }
+
+
+EVA_CHANNELS = frozenset({"whole_body_sweat_rate"})
+
+
+def eva_balance(
+    t: float, profile: AstronautProfile, scenario: EvaDehydrationScenario
+) -> dict[str, float]:
+    hours = min(max(t - scenario.onset_s, 0), scenario.eva_duration_s) / 3600
+    sweat = scenario.active_whole_body_sweat_l_h * hours
+    intake = scenario.drink_rate_l_h * hours
+    deficit = sweat - intake
+    return dict(
+        sweat_loss_l=sweat,
+        intake_l=intake,
+        deficit_l=deficit,
+        mass_kg=profile.mass_kg - deficit,
+        loss_pct=100 * deficit / profile.mass_kg,
+        sodium_loss_mmol=sweat * scenario.active_sweat_sodium_mmol_l,
+    )
+
+
+def eva_weight(t: float, profile: AstronautProfile, scenario: EvaDehydrationScenario) -> float:
+    p = min(1.0, eva_balance(t, profile, scenario)["loss_pct"] / scenario.response_loss_pct)
+    return p * p * (3 - 2 * p)
+
+
+def eva_usg(t: float, profile: AstronautProfile, scenario: EvaDehydrationScenario) -> float:
+    return scenario.baseline_usg + (scenario.affected_usg - scenario.baseline_usg) * eva_weight(
+        t, profile, scenario
+    )
+
+
+def eva_sweat_values(
+    t: float, scenario: EvaDehydrationScenario, *, startup: bool = False
+) -> dict[str, float]:
+    if not startup and not scenario.onset_s + 1 <= t <= scenario.onset_s + scenario.eva_duration_s:
+        return {}
+    flow = (
+        scenario.baseline_whole_body_sweat_l_h if startup else scenario.active_whole_body_sweat_l_h
+    )
+    sodium = (
+        scenario.baseline_sweat_sodium_mmol_l if startup else scenario.active_sweat_sodium_mmol_l
+    )
+    local = flow / scenario.whole_body_to_patch_multiplier
+    return dict(
+        whole_body_sweat_rate=flow,
+        sweat_rate=local,
+        sweat_sodium_concentration=sodium,
+        sweat_sodium_flux=local * sodium,
+    )

@@ -203,6 +203,12 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
                 "baseline. The specs give no cutoff."
             ),
         ),
+        "whole_body_sweat_rate": _crew(
+            "Whole-body sweat fixture",
+            "m^3/s",
+            ("skin",),
+            "Synthetic whole-body flow; not a local patch measurement or graded threshold.",
+        ),
         "sweat_rate": _crew(
             "Sweat rate",
             "m^3/s",
@@ -253,6 +259,15 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
             "m^3",
             ("kidneys",),
             "Below 2.0 L/day raises kidney stone risk alongside bone loss.",
+        ),
+        "eeg_cfe_ratio": _crew(
+            "Cognitive fatigue (EEG theta/alpha)",
+            "1",
+            ("head",),
+            (
+                "Prefrontal EEG theta/alpha power ratio; 0.70-1.20 is fatigued and "
+                "above 1.20 severely fatigued."
+            ),
         ),
         "jugular_strain_pct": _crew(
             "Jugular strain",
@@ -420,6 +435,14 @@ def evaluate_reading(channel: str, value: float | bool) -> Evaluation:
             # Master plan Finding 8: urine volume < 2.0 L/day. 1 m^3 = 1000 L.
             litres = value * 1000.0
             return "warning" if litres < 2.0 else "nominal"
+        case "eeg_cfe_ratio":
+            # Master plan Finding 5 (and NSA 4.2): CFE 0.70-1.20 warning,
+            # > 1.20 critical.
+            if value > 1.20:
+                return "critical"
+            if value >= 0.70:
+                return "warning"
+            return "nominal"
         case "jugular_strain_pct":
             # Master plan Finding 9: 1.1-1.8 % warning, > 1.8 % critical. The
             # wire value is a fraction (0.0155 = 1.55 %). Rounded so float noise
@@ -465,6 +488,7 @@ def evaluate_reading(channel: str, value: float | bool) -> Evaluation:
             | "sweat_sodium_concentration"
             | "sweat_sodium_flux"
             | "sweat_rate"
+            | "whole_body_sweat_rate"
             | "body_mass"
             | "ambient_light_lux"
             | "delta_R_over_R0"
