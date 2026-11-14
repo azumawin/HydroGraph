@@ -12,6 +12,7 @@ from .frequency import FREQUENCIES
 from .models import AstronautProfile, Observation, Reading, Settings
 from .physiology import (
     DAY,
+    blood_pressure_demo_scale,
     crew_values,
     environment_values,
     monitor_dose_msv,
@@ -125,7 +126,7 @@ def rules(settings: Settings) -> tuple[Rule, ...]:
     return (
         *scenario_rules,
         *((Rule("eeg_cfe", phase=60, interval=60),) if settings.hypercapnia_scenario else ()),
-        periodic("heart", 60),
+        periodic("heart", FREQUENCIES["heart"].window_s),
         periodic("hrv", 61),
         periodic("respiration", 77),
         periodic("spo2", 0.2),
@@ -237,6 +238,10 @@ class Scheduler:
                         owner_rule = Rule("il6", points=infection.serum_il6_event_times_s)
                     elif rule.group == "saliva_pcr":
                         owner_rule = Rule("saliva_pcr", points=infection.saliva_pcr_event_times_s)
+                if rule.group == "bp" and settings.bp_demo_interval_s is not None:
+                    # One paired stream replaces the cuff/scenario/stand-test
+                    # schedule only when the dashboard demo is explicitly enabled.
+                    owner_rule = Rule("bp", interval=settings.bp_demo_interval_s)
                 due = owner_rule.next_after(0)
                 if due is not None:
                     self._push(due, owner_rule, scope, owner)
@@ -326,6 +331,9 @@ class Scheduler:
         key = (owner, channel.id)
         sequence = self.sequences.get(key, 0) + 1
         self.sequences[key] = sequence
+        if channel.group == "bp" and self.settings.bp_demo_interval_s is not None:
+            assert isinstance(value, (float, int)) and not isinstance(value, bool)
+            value *= blood_pressure_demo_scale(instant, self.settings.seed, owner)
         wire_value = (
             value
             if isinstance(value, (bool, str))

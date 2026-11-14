@@ -263,6 +263,8 @@ class Settings(FrozenModel):
     lab_delay_s: float = Field(default=3600, ge=0, le=30 * 86400)
     bp_session_start_s: float = Field(default=8 * 3600, ge=0)
     bp_session_duration_s: float | None = Field(default=None, gt=0)
+    # Explicit dashboard demo override; None retains the protocol's cuff schedule.
+    bp_demo_interval_s: float | None = Field(default=None, ge=0.1, le=60)
     exercise_test_days: tuple[int, ...] = (0,)
     queue_capacity: int = Field(default=512, ge=1, le=100000)
     max_age_s: float = Field(default=86400 * 7, gt=0)

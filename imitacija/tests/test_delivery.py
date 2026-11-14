@@ -156,3 +156,39 @@ def test_sampling_continues_during_outage_with_bounded_queue() -> None:
             assert not fresh.pending and fresh.run_id != d.run_id
 
     asyncio.run(scenario())
+
+
+def test_overflow_keeps_sparse_vitals_among_fast_channel_updates() -> None:
+    async def scenario() -> None:
+        received: list[str] = []
+
+        def receiver(request: httpx.Request) -> httpx.Response:
+            received.append(json.loads(request.content)["channel"])
+            return httpx.Response(201)
+
+        async with httpx.AsyncClient(
+            base_url="http://receiver", transport=httpx.MockTransport(receiver)
+        ) as client:
+            clock = ManualClock()
+            delivery = Delivery(Settings(queue_capacity=8), clock, HttpTransport(client))
+            for channel in ("bp_systolic", "bp_diastolic", "glucose"):
+                delivery.submit(observation(channel))
+            for sequence in range(100):
+                delivery.submit(
+                    observation("spo2", acquired=sequence, available=sequence, sequence=sequence)
+                )
+                delivery.submit(
+                    observation(
+                        "body_temperature", acquired=sequence, available=sequence, sequence=sequence
+                    )
+                )
+            assert len(delivery.pending) == 8
+            assert delivery.counters.overflow == 195
+            clock.instant = 100
+            task = asyncio.create_task(delivery.run())
+            await delivery.finish(task)
+
+        assert {"bp_systolic", "bp_diastolic", "glucose"} <= set(received)
+        assert delivery.counters.failed == 0
+
+    asyncio.run(scenario())

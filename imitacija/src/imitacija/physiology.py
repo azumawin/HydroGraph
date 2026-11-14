@@ -12,6 +12,7 @@ import math
 import random
 from functools import lru_cache
 
+from .frequency import FREQUENCIES
 from .models import (
     AcuteInfectionScenario,
     AstronautProfile,
@@ -67,6 +68,21 @@ def activity(t: float) -> float:
     hour = t % DAY / 3600
     width = 0.40 if hour <= 17.5 else 0.65
     return math.exp(-(((hour - 17.5) / width) ** 2))
+
+
+def blood_pressure_demo_scale(t: float, seed: int, owner: str) -> float:
+    """Small paired-pressure demo variation around the scenario trajectory.
+
+    Both components share a bounded +/-3% scale, preserving their ordering.
+    Evaluated from acquisition time so retries never generate different values.
+    This is a synthetic trend, not a raw arterial pulse waveform.
+    """
+    p = phase(seed, owner, "blood_pressure_demo")
+    return (
+        1
+        + 0.02 * math.sin(2 * math.pi * t / 90 + p)
+        + 0.01 * math.sin(2 * math.pi * t / 23 + 2 * p)
+    )
 
 
 def hydration(t: float) -> float:
@@ -254,21 +270,23 @@ def crew_values(
     n = noise(t, seed, profile.id, group)
     match group:
         case "heart":
-            if t < 60:
-                raise ValueError("HR needs a completed 60-second window")
+            window = FREQUENCIES["heart"].window_s
+            if t < window:
+                raise ValueError("HR needs a completed measurement window")
+            samples = int(window / 5)
             return {
                 "heart_rate": sum(
                     heart_rate(
-                        t - 60 + (i + 0.5) * 5,
+                        t - window + (i + 0.5) * 5,
                         profile,
                         seed,
                         hypercapnia=hypercapnia,
                         dehydration=dehydration,
                         infection=infection,
                     )
-                    for i in range(12)
+                    for i in range(samples)
                 )
-                / 12
+                / samples
             }
         case "hrv":
             return {

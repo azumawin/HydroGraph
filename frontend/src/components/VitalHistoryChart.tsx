@@ -111,6 +111,7 @@ const VitalHistoryChart = ({ metric }: VitalHistoryChartProps) => {
               strokeWidth={VITALS_CHART.STROKE_WIDTH}
               fill={series.COLOR}
               fillOpacity={VITALS_CHART.FILL_OPACITY}
+              connectNulls
               dot={
                 chartData.length === 1 ? { r: VITALS_CHART.DOT_RADIUS, fill: series.COLOR } : false
               }

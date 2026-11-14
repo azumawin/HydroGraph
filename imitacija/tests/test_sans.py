@@ -34,7 +34,8 @@ def acquire(settings, end):
 
 def test_demo_windows_units_screens_and_thresholds():
     config = load_settings(Path("config/badscenario1.toml"), None, None)
-    items = acquire(config, 4200)
+    assert config.speed == 1
+    items = acquire(config, 180)
     startup = [o for o in items if o.sample_kind == "startup_baseline"]
     # Every enabled channel (all of them, SANS included) reports at boot.
     assert len(startup) == len(effective_channels(config))
@@ -47,8 +48,8 @@ def test_demo_windows_units_screens_and_thresholds():
         if o.reading.channel == "jugular_strain_pct" and o.sample_kind == "scheduled"
     ]
     assert strain[0].acquired_s == 60
-    assert next(o.acquired_s for o in strain if o.reading.value * 100 >= 1.1) == 1260
-    assert next(o.acquired_s for o in strain if o.reading.value * 100 > 1.8) == 3060
+    assert next(o.acquired_s for o in strain if o.reading.value * 100 >= 1.1) == 60
+    assert next(o.acquired_s for o in strain if o.reading.value * 100 > 1.8) == 120
     for o in strain:
         ratio = next(
             r
@@ -57,20 +58,21 @@ def test_demo_windows_units_screens_and_thresholds():
         )
         assert ratio.reading.value == pytest.approx(15.5 * o.reading.value)
         assert o.window_s == 60
-    for t, expected in [(600, 0.0065), (2400, 0.0155), (4200, 0.0205)]:
+    # Completed-minute means still use the real 60s observation window.
+    for t, expected in [(60, 0.011375), (120, 0.01925), (180, 0.0205)]:
         assert next(o.reading.value for o in strain if o.acquired_s == t) == pytest.approx(expected)
     indicator = next(
-        o for o in items if o.acquired_s == 2400 and o.reading.channel == "icp_risk_indicator_mmHg"
+        o for o in items if o.acquired_s == 120 and o.reading.channel == "icp_risk_indicator_mmHg"
     )
-    assert indicator.reading.value == pytest.approx(16.2 * MMHG_TO_PA)
+    assert indicator.reading.value == pytest.approx(18.3 * MMHG_TO_PA)
     assert indicator.reading.unit == "Pa"
     for channel, value in [("visual_acuity_logmar", 0.2), ("amsler_grid_distortion", True)]:
         results = [
             o for o in items if o.reading.channel == channel and o.sample_kind == "scheduled"
         ]
-        assert [o.acquired_s for o in results] == [1860, 3660]
+        assert [o.acquired_s for o in results] == [60, 120]
         assert all(o.reading.value == value and o.window_s == 0 for o in results)
-    assert [o.model_dump() for o in items] == [o.model_dump() for o in acquire(config, 4200)]
+    assert [o.model_dump() for o in items] == [o.model_dump() for o in acquire(config, 180)]
 
 
 def test_hrv_signal_and_owner_isolation():

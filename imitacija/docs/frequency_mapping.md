@@ -2,6 +2,12 @@
 
 [frequency_table.md](frequency_table.md) now takes precedence over the earlier six-second override and the original NASA-inspired simulator intervals. The executable mapping is `src/imitacija/frequency.py`. These are project timing requirements; adopting them does not establish that NASA operates these exact sensors or intervals.
 
+**Current heart-rate override:** publish six results per simulation minute
+(every 10 seconds), using a completed 10-second estimate, first at second 10.
+This user-requested cadence supersedes the table's minute-based HR publication
+and the older six-second setting. HRV/RMSSD retains its 60-second window and
+minute-based cadence. All scenarios, including scenario 1, share this HR rule.
+
 ## Startup override
 
 The user-requested run-start initialization supersedes waiting for a channel's first scheduled session: every enabled owner/channel emits one immediately available `startup_baseline` at time zero, then follows the normal schedule below. This includes assays with empty event lists, unless the channel itself is disabled. Startup replaces any event already at time zero; later event times and periodic/calendar phases are not shifted. Startup values have no completed collection window and bypass laboratory processing delay; communication delay still applies. See [backend_contract.md](backend_contract.md#startup-initialization) for provenance and aggregate-window interpretation.
@@ -14,7 +20,7 @@ The current service publishes its implemented scalar channels as follows. All du
 
 | Implemented channel(s) | Raw model input / acquisition | Published acquisition schedule |
 | --- | --- | --- |
-| `heart_rate` | 100 Hz PPG timing tier | Once per minute, complete 60-second estimate; first at second 60. |
+| `heart_rate` | 100 Hz PPG timing tier | Six per minute, complete 10-second estimate; first at second 10. |
 | `hrv_rmssd` | Synthetic beat peaks localized on a 100 Hz / 10 ms grid | Once per minute from a complete 60-second NN window; first at second 61. |
 | `bp_systolic`, `bp_diastolic` | Paired cuff fixture normally; synthetic continuous pressure during explicit stand test | Hourly from configured session start, unlimited session by default. Optional 10 Hz, exactly 180-second burst. |
 | `spo2` | 1 Hz scalar pulse-oximetry fixture | Every second, phase 0.2 s. Five-second acute alarm checks belong to the receiving analysis backend. |
@@ -44,6 +50,23 @@ PPG is represented by procedural beat timing with 10 ms peak localization, not a
 
 ## Optional tests and gated collections
 
+### Dashboard pressure demo override
+
+`--bp-demo-interval 5` (or `bp_demo_interval_s = 5` in a config) replaces the
+pressure schedule with paired synthetic trends every five simulation seconds,
+starting after the startup pair. It applies to every scenario and replaces the
+cuff, scenario-minute and optional stand-test schedules for pressure only. Each
+pair shares its acquisition time and a smooth, seed-dependent scale bounded to
+±3% around the existing scenario trajectory. This is a synthetic trend, not
+repeated cuff inflation or a raw arterial waveform. Dictionary metadata names
+the override explicitly. Other channels and thresholds retain their behavior.
+
+`make dev` and `make sim` enable this mode with `BP_DEMO_INTERVAL=5` by default;
+use `BP_DEMO_INTERVAL=0` to run the original protocol. The standalone simulator
+CLI and existing scenario configs retain the original timing unless opted in.
+
+### Protocol schedules
+
 The default BP session begins at 08:00 and repeats hourly indefinitely. `bp_session_duration_s` can still restrict it to an explicit finite session. Set `stand_test_start_s = 600` to request a 10 Hz paired-pressure burst over `[600, 780)` seconds. This is synthetic continuous pressure, **not ten cuff inflations per second**; it does not introduce illness or a POTS diagnosis. No burst runs by default.
 
 `il6_event_times_s = [0, 43200]` schedules a baseline and one explicitly requested IL-6 collection. An empty list disables later scheduled assays; the mandatory startup baseline is still emitted. `troponin_event_times_s` follows the same convention. Configured event lists are the gates; no clinical rule or mandatory two-hour exercise exclusion is inferred from the word “gated.” Result availability remains delayed by `lab_delay_s`, which is separate from sampling frequency.
@@ -64,8 +87,9 @@ The dictionary exposes `raw_acquisition_hz`, `frequency_matrix_rows`, `frequency
 then every 60 seconds, with a 60-second completed window. Its synthetic ratio
 reference is averaged on a one-second midpoint grid. Raw acquisition frequency
 is unspecified (`null`); this does not implement row 5's 250 Hz EEG/FFT pipeline.
-Cabin CO₂ and SpO₂ retain 1 Hz publication; HR and respiratory estimates retain
-their minute windows and phases. Five-second acute evaluation remains backend-owned.
+Cabin CO₂ and SpO₂ retain 1 Hz publication. HR uses the current 10-second
+estimate and cadence; respiratory estimates retain their minute window and
+phase. Five-second acute evaluation remains backend-owned.
 
 ## Scenario 3 EVA overrides
 
