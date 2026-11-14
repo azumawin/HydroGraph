@@ -125,3 +125,11 @@ The `members = ["packages/*"]` glob already covers the new directory.
 2. `ModelSerializer` in `api/serializers.py`.
 3. `ModelViewSet` in `api/views.py`, delegating real work to a `packages/*` module.
 4. Register it on the router in `api/urls.py` (there's a commented example).
+
+## HydroGFN domain logic
+
+`packages/hydrogfn/` holds the HydroGFN health-monitor logic: sensor formulas,
+the 10 health findings, the adaptive polling table and the JSON telemetry
+payload. It is stateless; the backend keeps sessions, user state and history.
+How `api/` should call it: `packages/hydrogfn/README.md`, "Using it from the
+Django backend".
