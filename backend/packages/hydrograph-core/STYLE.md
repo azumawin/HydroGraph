@@ -228,6 +228,9 @@ inputs.
 `channels.py` grades one reading of one channel, for the backend's per-reading
 `evaluation`. It follows the Classification rules above, with these differences:
 
+- `evaluate_reading` takes the environment in effect as a keyword argument; only
+  `ambient_dose_rate` uses it, graded as a spike above the environment's baseline
+  (the plan's absolute 50 µSv/h is below the lunar and Mars-transit backgrounds).
 - `evaluate_reading` returns a bare `Evaluation`, no result dict or action: the
   channel's `explanation` in `CHANNELS` carries the text.
 - Values arrive in SI wire units (the simulator's registry). Each `case`

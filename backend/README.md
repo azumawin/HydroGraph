@@ -53,6 +53,7 @@ Useful URLs once `runserver` is up:
 | --- | --- |
 | http://localhost:8000/api/health/ | liveness probe |
 | http://localhost:8000/api/environments/ | the predefined mission environments |
+| http://localhost:8000/api/environment/ | the environment in effect; `PUT` switches it |
 | http://localhost:8000/api/readings/ | `POST` sensor readings |
 | http://localhost:8000/api/stream/ | SSE stream for the frontend |
 | http://localhost:8000/api/docs/ | Swagger UI |
@@ -104,9 +105,16 @@ at rest in those environments until the cutoff becomes baseline-relative.
 
 Static, so one fetch is enough. The stream `dictionary` event carries the same list
 (both call `environments_payload()`), so a client that opens the stream needs neither
-this endpoint nor a second fetch. Nothing in the backend reads the selection yet: no
-finding takes an environment input, so switching changes only what the frontend shows
-and what a simulator generates.
+this endpoint nor a second fetch.
+
+`GET /api/environment/` returns the environment in effect (`{"id": "iss_leo"}` until one
+is chosen); `PUT` with `{"id": ...}` switches it (`api/environment.py`, stored as
+`EnvironmentSelection` rows so it survives restarts). A switch is pushed to every
+stream as an `environment` event, and a simulator with `follow_backend_environment`
+picks it up within `environment_poll_wall_s`. The dose rate is graded above the
+selected environment's baseline, so a switch also re-sends the latest dose-rate reading
+and the radiation finding. The API answers any origin (`django-cors-headers`), since the
+frontend dev server runs on another port.
 
 ## Readings endpoints
 
@@ -142,9 +150,10 @@ To feed it from the simulator, set `base_url = "http://127.0.0.1:8000"` and
 
 - one `dictionary` event: environments, each channel's `name`, `body_regions` and
   `explanation`, and each finding's `name` and input `channels`;
+- one `environment` event with the environment in effect;
 - then the latest `reading` per channel, and the current `finding`s;
 - then, the moment a reading is POSTed, its `reading` event and a `finding` event
-  for each finding that uses its channel.
+  for each finding that uses its channel; an `environment` event on every switch.
 
 Findings come from core (`hydrograph_core.assessment`): seven of the master plan's ten
 are monitored, from the latest crew and cabin readings (`api/findings.py`). The other

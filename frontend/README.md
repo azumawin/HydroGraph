@@ -9,6 +9,10 @@ http://127.0.0.1:5173 and the simulator together). On its own: `make frontend`. 
 browser connects straight to the backend's stream on http://127.0.0.1:8000 (override
 with `VITE_BACKEND_URL`); a Vite proxy would buffer the stream.
 
+The header's mission environment dropdown switches the environment for every open
+dashboard and for a running simulator (`PUT /api/environment/`); the background palette
+follows it (`is-environment-<id>` on the dashboard root).
+
 Readings arrive in SI units; `VITALS_DISPLAY_UNITS` in `src/Constants.ts` converts the
 displayed ones (bpm, mmHg, °C, mmol/L, %). Evaluations are the backend's
 `nominal`/`warning`/`critical`/`unspecified`.

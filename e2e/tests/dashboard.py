@@ -54,3 +54,15 @@ def region(page: Page, name: str) -> Locator:
 
 def region_status(item: Locator) -> Locator:
     return item.locator(".vitals-dashboard-body-region-status")
+
+
+def environment_select(page: Page) -> Locator:
+    return page.locator(".vitals-dashboard-environment-select")
+
+
+def environment_facts(page: Page) -> Locator:
+    return page.locator(".vitals-dashboard-environment-facts")
+
+
+def root(page: Page) -> Locator:
+    return page.locator(".vitals-dashboard")
