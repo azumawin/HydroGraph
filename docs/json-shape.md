@@ -54,7 +54,7 @@ then every new one. Late readings are sent too; keep whichever has the newer
 `measured_at`.
 
 `evaluation` is one of `"nominal" | "warning" | "critical" | "unspecified"`
-(`hydrograph_core.Status`). `unspecified` means the specs give no threshold for
+(`hydrograph_core.Evaluation`). `unspecified` means the specs give no threshold for
 this value; it is not "normal".
 
 ## 3. Backend → frontend: dictionary

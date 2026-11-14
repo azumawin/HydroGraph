@@ -30,9 +30,10 @@ D     Domain              Function                                 Plan finding
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TypedDict
+from typing import Literal, TypedDict
 
-from .shared import Status
+Severity = Literal["nominal", "warning", "critical"]
+"""``status`` of a finding with several severities."""
 
 
 class OrthostaticResult(TypedDict):
@@ -43,7 +44,7 @@ class OrthostaticResult(TypedDict):
     shock_index: float
     ctni_ng_ml: float | None
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
@@ -53,7 +54,7 @@ class DehydrationResult(TypedDict):
     fluid_deficit_ml: float
     urine_specific_gravity: float
     triggers: list[str]
-    status: Status
+    status: bool
     action: str
 
 
@@ -63,7 +64,7 @@ class InfectionResult(TypedDict):
     core_temp_c: float
     il6_pg_ml: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
@@ -72,7 +73,7 @@ class HypoxiaResult(TypedDict):
     spo2_pct: float
     ppco2_mmhg: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
@@ -82,7 +83,7 @@ class SleepResult(TypedDict):
     pvt_lapses: int
     cfe_ratio: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
@@ -94,7 +95,7 @@ class BehavioralResult(TypedDict):
     sleep_debt_hours: float
     cortisol_nm: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
@@ -104,7 +105,7 @@ class EnergyBalanceResult(TypedDict):
     glucose_mg_dl: float
     resting_lactate_mm: float
     triggers: list[str]
-    status: Status
+    status: bool
     action: str
 
 
@@ -113,7 +114,7 @@ class BoneResult(TypedDict):
     ntx_change_pct: float
     urine_volume_l_day: float
     triggers: list[str]
-    status: Status
+    status: bool
     action: str
 
 
@@ -121,7 +122,7 @@ class SansResult(TypedDict):
     finding: str
     jugular_distension_pct: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
@@ -130,7 +131,7 @@ class RadiationResult(TypedDict):
     cumulative_dose_msv: float
     dose_rate_usv_h: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
@@ -204,11 +205,11 @@ def orthostatic_intolerance_1_1(
 
     action = "Execute 3-min stand test; ingest 600 mL fluid + 1 salt tablet; restrict EVA if hs-cTnI elevated"
     if troponin_high:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
         "finding": "1",
@@ -256,7 +257,7 @@ def dehydration_2_1(
     Returns:
         ``finding``, ``body_mass_loss_pct``, ``fluid_deficit_ml``,
         ``urine_specific_gravity``, ``triggers``, ``status``, ``action``.
-        WARNING when mass loss > 2 % or USG > 1.020. ``fluid_deficit_ml`` is
+        ``status`` is True when mass loss > 2 % or USG > 1.020. ``fluid_deficit_ml`` is
         the action card's "calculated fluid deficit", 0 when mass has not
         dropped. The plan tracks sweat rate and Na+ flux only as
         baseline-relative trends with no cutoff, so they are not used.
@@ -270,13 +271,12 @@ def dehydration_2_1(
     if urine_specific_gravity > 1.020:
         triggers.append("urine specific gravity > 1.020")
 
-    if triggers:
-        status, action = (
-            Status.WARNING,
-            "Drink calculated fluid deficit (e.g., 600 mL electrolyte solution) within 30 minutes",
-        )
-    else:
-        status, action = Status.NOMINAL, "No finding"
+    status = bool(triggers)
+    action = (
+        "Drink calculated fluid deficit (e.g., 600 mL electrolyte solution) within 30 minutes"
+        if status
+        else "No finding"
+    )
 
     return {
         "finding": "2",
@@ -350,11 +350,11 @@ def acute_infection_3_1(
         "Initiate medical-kit protocol; reduce physical workload; isolate if febrile"
     )
     if news2_score >= 7:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
         "finding": "3",
@@ -410,11 +410,11 @@ def hypoxia_co2_2_2(
         "Inspect CO2 scrubber, increase module ventilation, or relocate immediately"
     )
     if spo2_pct < 90.0:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
         "finding": "4",
@@ -479,11 +479,11 @@ def sleep_deficiency_4_1(
         "Begin 45-min 480 nm blue-enriched light protocol; schedule 30-min recovery nap"
     )
     if cfe_ratio > 1.20:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
         "finding": "5",
@@ -560,11 +560,11 @@ def behavioral_health_decline_4_2(
 
     action = "Defer non-essential tasks; initiate guided breathing/biofeedback and crew comms break"
     if cortisol_nm > 30.0:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
         "finding": "6",
@@ -610,9 +610,10 @@ def negative_energy_balance_2_3(
     Returns:
         ``finding``, ``body_mass_loss_pct_week``, ``glucose_mg_dl``,
         ``resting_lactate_mm``, ``triggers``, ``status``, ``action``.
-        WARNING when mass loss > 1.0 %/week, glucose < 70 mg/dL (Level 1;
-        the trigger names Level 2 below 54 mg/dL) or resting lactate > 4.0
-        mM. The plan does not mark Level 2 urgent, so it is also WARNING.
+        ``status`` is True when mass loss > 1.0 %/week, glucose < 70 mg/dL
+        (Level 1; the trigger names Level 2 below 54 mg/dL) or resting lactate
+        > 4.0 mM. The plan gives one action card and marks neither level
+        urgent, so the finding has no severity.
     """
     glucose_mg_dl = glucose_mmol_l * 18.0
 
@@ -626,13 +627,12 @@ def negative_energy_balance_2_3(
     if resting_lactate_mm > 4.0:
         triggers.append("resting lactate > 4.0 mM")
 
-    if triggers:
-        status, action = (
-            Status.WARNING,
-            "Consume 400 kcal nutritional ration + Vitamin D3 supplement; re-check glucose in 15 min",
-        )
-    else:
-        status, action = Status.NOMINAL, "No finding"
+    status = bool(triggers)
+    action = (
+        "Consume 400 kcal nutritional ration + Vitamin D3 supplement; re-check glucose in 15 min"
+        if status
+        else "No finding"
+    )
 
     return {
         "finding": "7",
@@ -668,7 +668,7 @@ def bone_demineralization_1_2(
     Returns:
         ``finding``, ``ntx_change_pct``, ``urine_volume_l_day``, ``triggers``,
         ``status``, ``action``.
-        WARNING when NTx is > +25 % or urine volume < 2.0 L/day. The plan's
+        ``status`` is True when NTx is > +25 % or urine volume < 2.0 L/day. The plan's
         BMD loss of 1.0-1.5 %/month is context, not a criterion.
     """
     triggers: list[str] = []
@@ -677,13 +677,12 @@ def bone_demineralization_1_2(
     if urine_volume_l_day < 2.0:
         triggers.append("urine volume < 2.0 L/day")
 
-    if triggers:
-        status, action = (
-            Status.WARNING,
-            "Increase ARED resistive exercise load +10%; raise daily water target to >= 2.5 L/day",
-        )
-    else:
-        status, action = Status.NOMINAL, "No finding"
+    status = bool(triggers)
+    action = (
+        "Increase ARED resistive exercise load +10%; raise daily water target to >= 2.5 L/day"
+        if status
+        else "No finding"
+    )
 
     return {
         "finding": "8",
@@ -731,11 +730,11 @@ def sans_fluid_shift_1_3(jugular_distension_pct: float) -> SansResult:
 
     action = "Run on-screen LogMAR/Amsler eye test; engage 20-min LBNP at -35 mmHg"
     if jugular_distension_pct > 1.8:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
         "finding": "9",
@@ -781,11 +780,11 @@ def radiation_exposure_3_2(
 
     action = "Move to shielded storm shelter zone immediately and confirm hatch closure"
     if spe_flag:
-        status = Status.CRITICAL
+        status = "critical"
     elif triggers:
-        status = Status.WARNING
+        status = "warning"
     else:
-        status, action = Status.NOMINAL, "No finding"
+        status, action = "nominal", "No finding"
 
     return {
         "finding": "10",

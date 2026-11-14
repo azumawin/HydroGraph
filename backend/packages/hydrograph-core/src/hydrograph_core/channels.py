@@ -8,7 +8,7 @@ send ``True`` / ``False``.
 :func:`evaluate_reading` grades one value. Thresholds come from the master
 plan's Tier 1 cutoffs where it gives one for that channel, otherwise from
 ``NSA_hydrograph.md``, converted from the spec's unit in each ``case``. A
-channel or side neither document addresses is ``Status.UNSPECIFIED``.
+channel or side neither document addresses is ``"unspecified"``.
 
 The 10 findings in :mod:`hydrograph_core.findings` combine several channels;
 this module grades each channel alone.
@@ -20,7 +20,8 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Final, Literal, TypedDict
 
-from .shared import Status
+Evaluation = Literal["nominal", "warning", "critical", "unspecified"]
+"""Grade of one reading. ``unspecified``: the specs give no cutoff for it."""
 
 
 class ChannelInfo(TypedDict):
@@ -294,7 +295,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
 )
 
 
-def evaluate_reading(channel: str, value: float | bool) -> Status:
+def evaluate_reading(channel: str, value: float | bool) -> Evaluation:
     """Grade one reading of one channel on its own.
 
     Args:
@@ -303,7 +304,7 @@ def evaluate_reading(channel: str, value: float | bool) -> Status:
             ``False`` for boolean channels.
 
     Returns:
-        The reading's status. Sources, unit conversions and boundary choices
+        The reading's grade. Sources, unit conversions and boundary choices
         are commented per channel.
 
     Raises:
@@ -315,81 +316,81 @@ def evaluate_reading(channel: str, value: float | bool) -> Status:
             # take the nearest defined band (warning). Below 50 not addressed.
             bpm = value * 60.0
             if bpm < 50.0:
-                return Status.UNSPECIFIED
+                return "unspecified"
             if bpm <= 90.0:
-                return Status.NOMINAL
-            return Status.WARNING
+                return "nominal"
+            return "warning"
         case "spo2":
             # Master plan Finding 4: < 94 % warning, < 90 % critical hypoxemia.
             pct = value * 100.0
             if pct < 90.0:
-                return Status.CRITICAL
+                return "critical"
             if pct < 94.0:
-                return Status.WARNING
-            return Status.NOMINAL
+                return "warning"
+            return "nominal"
         case "body_temperature":
             # Master plan Finding 3 (SIRS): > 38.0 or < 36.0 degC. It wins over
             # NSA 2.2's narrower 36.5-37.5 nominal band, so 36.0-38.0 is nominal.
             celsius = value - 273.15
             if celsius > 38.0 or celsius < 36.0:
-                return Status.WARNING
-            return Status.NOMINAL
+                return "warning"
+            return "nominal"
         case "glucose":
             # Master plan Finding 7: Level 1 < 3.9 mM (70 mg/dL), Level 2
             # < 3.0 mM (54 mg/dL), critical as NSA 2.1 grades its lowest band.
             # NSA 2.1 nominal tops out at 7.0 mM; hyperglycemia not addressed.
             # mol/m^3 equals mmol/L.
             if value < 3.0:
-                return Status.CRITICAL
+                return "critical"
             if value < 3.9:
-                return Status.WARNING
+                return "warning"
             if value <= 7.0:
-                return Status.NOMINAL
-            return Status.UNSPECIFIED
+                return "nominal"
+            return "unspecified"
         case "troponin_i":
             # Master plan Finding 1: event-triggered hs-cTnI > 0.04 ng/mL
             # critical. 1 kg/m^3 = 1e6 ng/mL.
             ng_ml = value * 1e6
-            return Status.CRITICAL if ng_ml > 0.04 else Status.NOMINAL
+            return "critical" if ng_ml > 0.04 else "nominal"
         case "lactate":
             # Master plan Finding 7: resting lactate > 4.0 mM. mol/m^3 = mmol/L.
-            return Status.WARNING if value > 4.0 else Status.NOMINAL
+            return "warning" if value > 4.0 else "nominal"
         case "bone_ntx_pct_baseline":
             # Master plan Finding 8: NTx > +25 % over preflight baseline. The
             # wire value is the fractional change (0.25 = +25 %).
-            return Status.WARNING if value > 0.25 else Status.NOMINAL
+            return "warning" if value > 0.25 else "nominal"
         case "il6_serum":
             # Master plan Finding 3: IL-6 > 3.0 pg/mL. The 2 h post-ARED gate
             # needs exercise context a single reading lacks; the finding applies
             # it. 1 kg/m^3 = 1e9 pg/mL.
             pg_ml = value * 1e9
-            return Status.WARNING if pg_ml > 3.0 else Status.NOMINAL
+            return "warning" if pg_ml > 3.0 else "nominal"
         case "viral_ebv_detected" | "viral_vzv_detected" | "viral_cmv_detected":
             # Master plan Finding 3: latent herpesvirus reactivation.
-            return Status.WARNING if value else Status.NOMINAL
+            return "warning" if value else "nominal"
         case "urine_specific_gravity":
             # Master plan Finding 2: USG > 1.020.
-            return Status.WARNING if value > 1.020 else Status.NOMINAL
+            return "warning" if value > 1.020 else "nominal"
         case "urine_volume_24h":
             # Master plan Finding 8: urine volume < 2.0 L/day. 1 m^3 = 1000 L.
             litres = value * 1000.0
-            return Status.WARNING if litres < 2.0 else Status.NOMINAL
+            return "warning" if litres < 2.0 else "nominal"
         case "ambient_ppco2":
             # Master plan Finding 4: ppCO2 > 3.0 mmHg. 1 mmHg = 133.322 Pa.
             mmhg = value / 133.322
-            return Status.WARNING if mmhg > 3.0 else Status.NOMINAL
+            return "warning" if mmhg > 3.0 else "nominal"
         case "ambient_dose_rate":
             # Master plan Finding 10: dose-rate spike > 50 uSv/h warning.
             # 1 Sv/s = 3.6e9 uSv/h.
             usv_h = value * 3.6e9
-            return Status.WARNING if usv_h > 50.0 else Status.NOMINAL
+            return "warning" if usv_h > 50.0 else "nominal"
         case "ambient_integrated_dose":
             # Master plan Finding 10: cumulative dose > 600 mSv career limit.
             msv = value * 1000.0
-            return Status.WARNING if msv > 600.0 else Status.NOMINAL
+            return "warning" if msv > 600.0 else "nominal"
         case "spe_flag":
             # Master plan Finding 10: an SPE is an immediate shelter alert.
-            return Status.CRITICAL if value else Status.NOMINAL
+            return "critical" if value else "nominal"
         case (
             "hrv_rmssd"
             | "bp_systolic"
@@ -408,6 +409,6 @@ def evaluate_reading(channel: str, value: float | bool) -> Status:
             # baseline or trend (body mass, sweat, NTx, vitamin D), only inside
             # a finding (BP, respiratory rate), for another specimen (cortisol
             # cutoffs are for normalized ISF), or not at all (HRV, light).
-            return Status.UNSPECIFIED
+            return "unspecified"
         case _:
             raise ValueError(f'Unknown channel "{channel}".')

@@ -1,4 +1,4 @@
-from typing import cast
+from typing import cast, get_args
 
 import hydrograph_core
 from django.http import HttpRequest, StreamingHttpResponse
@@ -65,7 +65,7 @@ def health(_request: Request) -> Response:
                 "unit": {"type": "string"},
                 "evaluation": {
                     "type": "string",
-                    "enum": [s.value for s in hydrograph_core.Status],
+                    "enum": list(get_args(hydrograph_core.Evaluation)),
                 },
                 "measured_at": {"type": "string", "format": "date-time"},
                 "owner_id": {"type": "string"},

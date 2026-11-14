@@ -7,9 +7,10 @@ the mapping to plan finding numbers is in :mod:`hydrograph_core.findings`.
 :mod:`hydrograph_core.environments` lists the mission environments.
 """
 
-from .channels import CHANNELS, ChannelInfo, evaluate_reading
+from .channels import CHANNELS, ChannelInfo, Evaluation, evaluate_reading
 from .environments import ENVIRONMENTS, EnvironmentInfo
 from .findings import (
+    Severity,
     acute_infection_3_1,
     behavioral_health_decline_4_2,
     bone_demineralization_1_2,
@@ -21,14 +22,14 @@ from .findings import (
     sans_fluid_shift_1_3,
     sleep_deficiency_4_1,
 )
-from .shared import Status
 
 __all__ = [
     "CHANNELS",
     "ENVIRONMENTS",
     "ChannelInfo",
     "EnvironmentInfo",
-    "Status",
+    "Evaluation",
+    "Severity",
     "__version__",
     "acute_infection_3_1",
     "behavioral_health_decline_4_2",

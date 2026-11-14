@@ -66,7 +66,7 @@ the stream never sends anything.
 ## Readings endpoints
 
 Channels, units and thresholds live in core (`hydrograph_core.channels`); the backend
-only stores and ships readings. `evaluation` is a `hydrograph_core.Status` value
+only stores and ships readings. `evaluation` is a `hydrograph_core.Evaluation` value
 (`nominal` / `warning` / `critical` / `unspecified`).
 
 Request and message shapes follow `docs/json-shape.md`.

@@ -18,9 +18,8 @@ directory, standard library only. Its docs stay in this package directory.
 
 ```
 hydrograph_core/
-  __init__.py         public API: the 10 finding functions, Status, the
-                      channel and environment catalogs
-  shared.py           code shared across files (the Status enum)
+  __init__.py         public API: the 10 finding functions, the channel and
+                      environment catalogs, and their status types
   findings.py         Tier 1: main-window health findings 1-10
   channels.py         sensor channels: display info (CHANNELS) and the grade of
                       one reading on its own (evaluate_reading)
@@ -61,7 +60,7 @@ basedpyright packages/hydrograph-core       # must report 0 errors, 0 warnings
 pytest packages/hydrograph-core             # tests
 ```
 
-Inside the module, always import relatively (`from .shared import Status`)
+Inside the module, always import relatively (`from .findings import Severity`)
 so it works under any directory name.
 
 ## Module shape
@@ -71,16 +70,16 @@ so it works under any directory name.
 
 from __future__ import annotations
 import math
-from typing import TypedDict
+from typing import Literal, TypedDict
 
-from .shared import Status
+Severity = Literal["nominal", "warning", "critical"]
 
 
 class SansResult(TypedDict):
     finding: str
     jugular_distension_pct: float
     triggers: list[str]
-    status: Status
+    status: Severity
     action: str
 
 
@@ -168,15 +167,23 @@ return {
 
 ## Classification
 
-Use `Status` from `shared.py`, assigned as a pair:
+`status` has the narrowest type that holds every value the function can
+actually return; no enum shared across functions:
+
+- Two outcomes (the finding is present or not): `bool`, `True` = present.
+- Several severities: a `Literal` of exactly those strings, e.g.
+  `Severity = Literal["nominal", "warning", "critical"]`.
+- `"unspecified"` only where it can occur (`Evaluation` in `channels.py`).
+
+Assign status and action as a pair:
 
 ```python
 if value > hi:
-    status, action = Status.CRITICAL, "..."
+    status, action = "critical", "..."
 elif value >= lo:
-    status, action = Status.WARNING, "..."
+    status, action = "warning", "..."
 else:
-    status, action = Status.NOMINAL, "..."
+    status, action = "nominal", "..."
 ```
 
 - **Actions** are the spec's own wording, shortened, imperative, no trailing
@@ -190,11 +197,11 @@ else:
   most severe band defined on that side, takes the nearest more severe defined
   status and its action.
 - **Undefined sides.** A value on a side the spec never addresses
-  (hyperglycemia, hypothermia, low MAP) is `Status.UNSPECIFIED` with action
+  (hyperglycemia, hypothermia, low MAP) is `"unspecified"` with action
   `"No protocol defined in spec"`. Never attach an action to a reading it was
   not written for (e.g. "consume a gel packet" for high glucose).
 - **Several metrics.** Status is the worst across metrics in the order
-  CRITICAL > WARNING > UNSPECIFIED > NOMINAL; the action is the one belonging
+  critical > warning > unspecified > nominal; the action is the one belonging
   to that status. Nominal requires every metric to be nominal.
 
 ## Validation
@@ -206,9 +213,10 @@ inputs.
 
 - One function per finding (see Names), all in `findings.py`.
 - The action is the master plan's action card verbatim, minus the quotes and
-  trailing period. No finding: `Status.NOMINAL`, `"No finding"`.
-- Any criterion fired is `WARNING`, unless the plan marks it urgent or an
-  immediate shelter alert (`CRITICAL`).
+  trailing period. No finding: `False` or `"nominal"`, with `"No finding"`.
+- A finding whose plan entry has one action card and no urgency has
+  `status: bool`. Otherwise any criterion fired is `"warning"`, unless the plan
+  marks it urgent or an immediate shelter alert (`"critical"`).
 - Criteria with a numeric cutoff in the master plan (or else the parameter
   spec) are hard-coded. A **numeric** criterion with no cutoff in either
   document is a required keyword-only argument (`*, max_ppco2_mmhg`); a
@@ -218,9 +226,9 @@ inputs.
 ## Channels
 
 `channels.py` grades one reading of one channel, for the backend's per-reading
-`evaluation`. It follows the Classification rules above, with three differences:
+`evaluation`. It follows the Classification rules above, with these differences:
 
-- `evaluate_reading` returns a bare `Status`, no result dict or action: the
+- `evaluate_reading` returns a bare `Evaluation`, no result dict or action: the
   channel's `explanation` in `CHANNELS` carries the text.
 - Values arrive in SI wire units (the simulator's registry). Each `case`
   converts to the spec's unit first (`bpm = value * 60.0`), so cutoffs read

@@ -8,7 +8,7 @@ import math
 from datetime import UTC, datetime
 from typing import Literal, TypedDict, cast, override
 
-from hydrograph_core import CHANNELS, ENVIRONMENTS, evaluate_reading
+from hydrograph_core import CHANNELS, ENVIRONMENTS, Evaluation, evaluate_reading
 from rest_framework import serializers
 
 from api.models import Reading
@@ -75,7 +75,7 @@ class ReadingPayload(TypedDict):
     channel: str
     value: float | bool
     unit: str
-    evaluation: str
+    evaluation: Evaluation
     measured_at: str
     owner_id: str
     scope: Literal["crew", "environment"]
@@ -90,7 +90,7 @@ def reading_payload(reading: Reading) -> ReadingPayload:
         "channel": reading.channel,
         "value": value,
         "unit": info["unit"],
-        "evaluation": evaluate_reading(reading.channel, value).value,
+        "evaluation": evaluate_reading(reading.channel, value),
         "measured_at": measured_at.replace("+00:00", "Z"),
         "owner_id": reading.owner_id,
         "scope": info["scope"],
