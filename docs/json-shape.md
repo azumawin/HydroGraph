@@ -7,7 +7,7 @@ in the dictionary, so readings stay small.
 
 Endpoints: the device sends `POST /api/readings/`; the frontend opens
 `GET /api/stream/` (server-sent events), which sends the dictionary first, then
-readings. Details: `backend/README.md`.
+readings and findings. Details: `backend/README.md`.
 
 ## 1. Device → backend: reading body
 
@@ -57,10 +57,39 @@ then every new one. Late readings are sent too; keep whichever has the newer
 (`hydrograph_core.Evaluation`). `unspecified` means the specs give no threshold for
 this value; it is not "normal".
 
-## 3. Backend → frontend: dictionary
+## 3. Backend → frontend: finding
+
+`event: finding` on the stream: one of the master plan's 10 Tier 1 health
+findings for one crew member. Sent for every crew member on connect, then
+again whenever a reading arrives on one of the finding's input channels (a
+cabin reading updates every crew member).
+
+```json
+{
+  "id": "radiation_exposure_3_2",
+  "owner_id": "crew-1",
+  "cumulative_dose_msv": 2.8,
+  "dose_rate_usv_h": 19.4,
+  "triggers": ["solar particle event"],
+  "status": "critical",
+  "action": "Move to shielded storm shelter zone immediately and confirm hatch closure"
+}
+```
+
+- `id` is the finding (a key of the dictionary's `findings`); the keys between
+  `owner_id` and `triggers` are that finding's evaluated values.
+- `triggers` names each criterion that fired; empty when none did.
+- `status` is `true` / `false` (finding present or not) for findings with one
+  severity (dehydration, energy balance, bone), otherwise
+  `"nominal" | "warning" | "critical"`.
+- `action` is the plan's action card, or `"No finding"`.
+- Six findings are monitored; the other four need inputs the simulator does
+  not send and are never sent (their dictionary `channels` is empty).
+
+## 4. Backend → frontend: dictionary
 
 `event: dictionary`, the first message on every stream connection. Static;
-join it to readings by `channel`.
+join it to readings by `channel` and to findings by `id`.
 
 ```json
 {
@@ -74,11 +103,19 @@ join it to readings by `channel`.
       "body_regions": ["heart", "chest"],
       "explanation": "Why this is measured, what it means…"
     }
+  },
+  "findings": {
+    "radiation_exposure_3_2": {
+      "name": "Radiation dose & solar particle events",
+      "channels": ["ambient_integrated_dose", "ambient_dose_rate", "spe_flag"]
+    }
   }
 }
 ```
 
 - `channels` has one entry per channel the backend accepts (the simulator's 29).
+- `findings` has all 10 findings; `channels` lists each one's inputs, empty for
+  the four that are not monitored.
 - `comm_delay_s` is really a range; simplified to one number for the demo.
 - `body_regions` makes the clickable body figure data-driven instead of a
   hardcoded SVG switch statement.

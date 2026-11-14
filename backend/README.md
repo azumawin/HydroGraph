@@ -86,10 +86,17 @@ To feed it from the simulator, set `base_url = "http://127.0.0.1:8000"` and
 
 `GET /api/stream/` is a `text/event-stream`:
 
-- one `dictionary` event: environments and each channel's `name`, `body_regions`
-  and `explanation`;
-- then the latest `reading` per owner and channel;
-- then a `reading` event for every new reading, pushed the moment it is POSTed.
+- one `dictionary` event: environments, each channel's `name`, `body_regions` and
+  `explanation`, and each finding's `name` and input `channels`;
+- then the latest `reading` per owner and channel, and every crew member's current
+  `finding`s;
+- then, the moment a reading is POSTed, its `reading` event and a `finding` event
+  for each finding that uses its channel (for every crew member, if it is a cabin
+  reading).
+
+Findings come from core (`hydrograph_core.assessment`): six of the master plan's ten
+are monitored, from each crew member's latest readings plus the latest cabin readings
+(`api/findings.py`). The other four need inputs the simulator does not send.
 
 Delivery is an in-memory queue per open stream (`api/broadcast.py`), so it needs a
 single server process, which `runserver` is. A reconnect (`EventSource`'s automatic
@@ -99,6 +106,7 @@ retry) gets a fresh snapshot.
 const es = new EventSource("/api/stream/");
 es.addEventListener("dictionary", (e) => setDictionary(JSON.parse(e.data)));
 es.addEventListener("reading", (e) => upsertReading(JSON.parse(e.data)));
+es.addEventListener("finding", (e) => upsertFinding(JSON.parse(e.data)));
 ```
 
 ## Everyday commands
