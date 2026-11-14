@@ -192,8 +192,7 @@ export const VITALS_BACKGROUND = {
   SOFTNESS: 0.65,
   SHINE: 0.35,
   BRIGHTNESS: 0.7,
-  // capped so the plasma core stays dark enough behind the panel material
-  OPACITY: 0.4,
+  OPACITY: 0.55,
   QUALITY: 0.5,
   MAX_PIXEL_RATIO: 1.5,
   MAX_VOLUME_PIXELS: 900000,
