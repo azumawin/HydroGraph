@@ -132,6 +132,68 @@ def environment(request: Request) -> Response:
 
 
 @extend_schema(
+    summary="The health conditions the crew member may have",
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "findings": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "enum": list(hydrograph_core.FINDINGS),
+                            },
+                            "triggers": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "status": {
+                                "oneOf": [
+                                    {"type": "boolean"},
+                                    {
+                                        "type": "string",
+                                        "enum": list(
+                                            get_args(hydrograph_core.Severity)
+                                        ),
+                                    },
+                                ]
+                            },
+                            "action": {"type": "string"},
+                        },
+                        # plus that finding's own evaluated values
+                        "additionalProperties": True,
+                    },
+                }
+            },
+        }
+    },
+)
+@api_view(["GET"])
+def health_conditions(_request: Request) -> Response:
+    """Every finding the latest readings support, for a client without the stream.
+
+    Takes the latest reading of each channel, converts it and runs the Tier 1
+    findings over it (`api/findings.py`, `hydrograph_core.assessment`). Entries
+    are exactly the stream's `finding` events, so the dashboard can fetch the
+    conditions once instead of opening the stream, or re-sync after a drop.
+
+    Graded against the environment in effect (`GET /api/environment/`), which
+    sets the radiation baseline, so the same readings can give a different
+    finding after a switch.
+
+    A finding whose input channels have no reading yet is left out rather than
+    reported absent, so an empty array means "nothing evaluated", not "all
+    clear". Three of the ten are never present: the simulator does not send
+    postural BP, sleep or EEG/PVT channels at all.
+    """
+    results = crew_findings(current_environment())
+    return Response({"findings": [finding_payload(f, r) for f, r in results.items()]})
+
+
+@extend_schema(
     summary="Ingest one sensor reading",
     parameters=[
         OpenApiParameter(
