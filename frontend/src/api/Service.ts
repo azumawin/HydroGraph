@@ -5,9 +5,11 @@ export type Evaluation = "nominal" | "warning" | "critical" | "unspecified";
 
 export type FindingSeverity = "nominal" | "warning" | "critical";
 
+export type ConsciousnessLevel = "ALERT" | "CONFUSION" | "VOICE" | "PAIN" | "UNRESPONSIVE";
+
 export type TelemetryReading = {
   channel: string;
-  value: number | boolean;
+  value: number | boolean | ConsciousnessLevel;
   unit: string;
   evaluation: Evaluation;
   measured_at: string;
@@ -19,6 +21,9 @@ export type TelemetryFinding = {
   status: boolean | FindingSeverity;
   triggers: string[];
   action: string;
+  news2_score?: number;
+  qsofa_score?: number;
+  il6_source_channel?: string;
 };
 
 export type ChannelInfo = {
@@ -99,11 +104,17 @@ const parseData = (event: MessageEvent<unknown>): Record<string, unknown> => {
   return data;
 };
 
+const isConsciousness = (value: unknown): value is ConsciousnessLevel =>
+  typeof value === "string" &&
+  ["ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE"].includes(value);
+
 const parseReading = (data: Record<string, unknown>): TelemetryReading => {
   const { channel, value, unit, evaluation, measured_at, scope } = data;
   if (
     typeof channel !== "string" ||
-    (typeof value !== "number" && typeof value !== "boolean") ||
+    (typeof value !== "number" &&
+      typeof value !== "boolean" &&
+      !(channel === "consciousness_level" && isConsciousness(value))) ||
     typeof unit !== "string" ||
     !isEvaluation(evaluation) ||
     typeof measured_at !== "string" ||
@@ -124,7 +135,17 @@ const parseFinding = (data: Record<string, unknown>): TelemetryFinding => {
   ) {
     throw malformed();
   }
-  return { id, status, triggers, action };
+  return {
+    id,
+    status,
+    triggers,
+    action,
+    ...(typeof data.news2_score === "number" ? { news2_score: data.news2_score } : {}),
+    ...(typeof data.qsofa_score === "number" ? { qsofa_score: data.qsofa_score } : {}),
+    ...(typeof data.il6_source_channel === "string"
+      ? { il6_source_channel: data.il6_source_channel }
+      : {}),
+  };
 };
 
 const parseEnvironmentId = (data: Record<string, unknown>): string => {

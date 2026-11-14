@@ -162,7 +162,7 @@ def test_preview_serves_json_without_backend_posts(
                     for entry in entries
                 )
                 metadata = (await client.get(states[0].url + "/dictionary")).json()
-                assert len(metadata["channels"]) == 36
+                assert len(metadata["channels"]) == 40
                 assert (await client.get(states[0].url + "/missing")).status_code == 404
             await worker
         finally:

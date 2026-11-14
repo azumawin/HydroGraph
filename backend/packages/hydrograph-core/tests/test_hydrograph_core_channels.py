@@ -76,7 +76,11 @@ class TestEvaluateReading(unittest.TestCase):
 
     def test_every_channel_is_graded(self) -> None:
         for channel, info in CHANNELS.items():
-            value: float | bool = True if info["value_type"] == "boolean" else 1.0
+            value: float | bool | str = (
+                "ALERT"
+                if info["value_type"] == "enum"
+                else True if info["value_type"] == "boolean" else 1.0
+            )
             with self.subTest(channel=channel):
                 self.assertIn(
                     evaluate_reading(channel, value, environment=ISS),

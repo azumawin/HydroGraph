@@ -11,7 +11,7 @@ import { TELEMETRY, VITALS_DISPLAY_UNITS, VITALS_HISTORY } from "../Constants.ts
 
 export type VitalReading = ChannelInfo & {
   channel: string;
-  value: number | boolean;
+  value: TelemetryReading["value"];
   unit: string;
   evaluation: Evaluation;
   measured_at: string;

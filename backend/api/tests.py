@@ -146,6 +146,8 @@ def test_post_rejects_number_for_boolean_channel(client: APIClient) -> None:
 
 @pytest.mark.django_db
 def test_eva_whole_body_channel_and_dehydration(client, monkeypatch):
+    from hydrograph_core.environments import ENVIRONMENTS
+
     from api.findings import crew_findings
     from api.models import Reading
 
@@ -166,7 +168,77 @@ def test_eva_whole_body_channel_and_dehydration(client, monkeypatch):
             HTTP_X_SIMULATION_SCOPE="crew",
         )
         assert response.status_code == 201
-    result = crew_findings()["dehydration_2_1"]
+    result = crew_findings(ENVIRONMENTS["iss_leo"])["dehydration_2_1"]
     assert result["status"] is True
     assert result["fluid_deficit_ml"] == 1800
     assert any("dehydration_2_1" in event for event in published)
+
+
+@pytest.mark.django_db
+def test_infection_explicit_context_and_optional_assays(client, monkeypatch):
+    from hydrograph_core.environments import ENVIRONMENTS
+
+    from api.findings import crew_findings
+
+    published = []
+    monkeypatch.setattr("api.views.publish", published.append)
+    rows = [
+        ("heart_rate", 116 / 60, "s^-1"),
+        ("respiratory_rate", 23 / 60, "s^-1"),
+        ("spo2", 0.94, "1"),
+        ("bp_systolic", 96 * 133.322, "Pa"),
+        ("body_temperature", 311.85, "K"),
+        ("consciousness_level", "ALERT", "ACVPU"),
+        ("supplemental_o2", False, "boolean"),
+        ("post_ared_exercise_window", False, "boolean"),
+        ("il6_pg_mL", 8.4e-9, "kg/m^3"),
+    ]
+    for channel, value, unit in rows:
+        response = client.post(
+            "/api/readings/",
+            {
+                "channel": channel,
+                "value": value,
+                "unit": unit,
+                "measured_at": "2026-11-14T00:32:00Z",
+            },
+            format="json",
+            HTTP_X_SIMULATION_SCOPE="crew",
+        )
+        assert response.status_code == 201
+    result = crew_findings(ENVIRONMENTS["iss_leo"])["acute_infection_3_1"]
+    assert (
+        result["status"] == "critical"
+        and result["news2_score"] == 8
+        and result["qsofa_score"] == 2
+    )
+    assert result["il6_source_channel"] == "il6_pg_mL"
+    assert any("acute_infection_3_1" in x for x in published)
+    response = client.post(
+        "/api/readings/",
+        {
+            "channel": "consciousness_level",
+            "value": "CONFUSION",
+            "unit": "ACVPU",
+            "measured_at": "2026-11-14T00:33:00Z",
+        },
+        format="json",
+        HTTP_X_SIMULATION_SCOPE="crew",
+    )
+    assert response.status_code == 201
+    assert (
+        crew_findings(ENVIRONMENTS["iss_leo"])["acute_infection_3_1"]["qsofa_score"]
+        == 3
+    )
+    response = client.post(
+        "/api/readings/",
+        {
+            "channel": "consciousness_level",
+            "value": "bad",
+            "unit": "ACVPU",
+            "measured_at": "2026-11-14T00:34:00Z",
+        },
+        format="json",
+        HTTP_X_SIMULATION_SCOPE="crew",
+    )
+    assert response.status_code == 400

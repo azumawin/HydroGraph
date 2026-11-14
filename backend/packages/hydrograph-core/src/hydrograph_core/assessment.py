@@ -11,9 +11,9 @@ empty ``channels`` tuple marks one whose inputs the simulator does not send
 
 Context a single reading cannot carry, assumed here:
 
-- NEWS2 (Finding 3) assumes room air and an alert patient: neither is a
-  channel, and both score 0.
-- Finding 3's 2 h post-ARED window is not known, so IL-6 is always evaluated.
+- NEWS2 uses explicit oxygen and ACVPU context when present, otherwise
+  assumes room air and alertness with per-field provenance.
+- Finding 3 uses explicit post-ARED context when supplied, otherwise False.
 - Finding 4's "rising respiratory rate" has no definition and headache is not
   reported, so both are passed as False.
 - Finding 7's resting lactate is the latest lactate reading.
@@ -83,6 +83,10 @@ FINDINGS: Final[Mapping[str, FindingInfo]] = MappingProxyType(
                 "bp_systolic",
                 "heart_rate",
                 "body_temperature",
+                "consciousness_level",
+                "supplemental_o2",
+                "post_ared_exercise_window",
+                "il6_pg_mL",
                 "il6_serum",
                 "viral_ebv_detected",
                 "viral_vzv_detected",
@@ -116,6 +120,7 @@ type FindingResult = (
 
 
 class News2Result(TypedDict):
+    components: dict[str, int]
     score: int
     max_parameter_score: int
 
@@ -126,6 +131,9 @@ def news2(
     sbp_mmhg: float,
     heart_rate_bpm: float,
     temp_c: float,
+    *,
+    consciousness_level: str = "ALERT",
+    supplemental_o2: bool = False,
 ) -> News2Result:
     """
     National Early Warning Score 2, SpO2 scale 1, room air, alert patient.
@@ -204,12 +212,45 @@ def news2(
     else:
         temp_score = 2
 
-    scores = (rr_score, spo2_score, sbp_score, hr_score, temp_score)
-    return {"score": sum(scores), "max_parameter_score": max(scores)}
+    if consciousness_level not in (
+        "ALERT",
+        "CONFUSION",
+        "VOICE",
+        "PAIN",
+        "UNRESPONSIVE",
+    ):
+        raise ValueError("invalid ACVPU state")
+    scores = (
+        rr_score,
+        spo2_score,
+        sbp_score,
+        hr_score,
+        temp_score,
+        2 if supplemental_o2 else 0,
+        0 if consciousness_level == "ALERT" else 3,
+    )
+    return {
+        "score": sum(scores),
+        "max_parameter_score": max(scores),
+        "components": dict(
+            zip(
+                (
+                    "respiration",
+                    "spo2",
+                    "systolic",
+                    "heart_rate",
+                    "temperature",
+                    "oxygen",
+                    "consciousness",
+                ),
+                scores,
+            )
+        ),
+    }
 
 
 def evaluate_findings(
-    latest: Mapping[str, float | bool],
+    latest: Mapping[str, float | bool | str],
     body_mass_first_kg: float | None,
     body_mass_week_before_kg: float | None,
     environment: EnvironmentInfo,
@@ -234,7 +275,18 @@ def evaluate_findings(
     """
 
     def has(finding: str) -> bool:
-        return all(c in latest for c in FINDINGS[finding]["channels"])
+        required = (
+            (
+                "respiratory_rate",
+                "spo2",
+                "bp_systolic",
+                "heart_rate",
+                "body_temperature",
+            )
+            if finding == "acute_infection_3_1"
+            else FINDINGS[finding]["channels"]
+        )
+        return all(c in latest for c in required)
 
     def num(channel: str) -> float:
         return float(latest[channel])
@@ -286,17 +338,51 @@ def evaluate_findings(
             num("bp_systolic") / 133.322,
             num("heart_rate") * 60.0,
             temp_c,
+            consciousness_level=str(latest.get("consciousness_level", "ALERT")),
+            supplemental_o2=latest.get("supplemental_o2", False) is True,
         )
         viral = ("viral_ebv_detected", "viral_vzv_detected", "viral_cmv_detected")
-        # kg/m^3 -> pg/mL; post-ARED window unknown: see module doc.
-        results["acute_infection_3_1"] = acute_infection_3_1(
+        source = (
+            "il6_pg_mL"
+            if "il6_pg_mL" in latest
+            else "il6_serum" if "il6_serum" in latest else None
+        )
+        il6 = num(source) * 1e9 if source else None
+        result = acute_infection_3_1(
             score["score"],
             score["max_parameter_score"],
             temp_c,
-            num("il6_serum") * 1e9,
-            False,
-            any(latest[c] is True for c in viral),
+            il6,
+            latest.get("post_ared_exercise_window", False) is True,
+            any(latest.get(c) is True for c in viral),
         )
+        result["qsofa_score"] = qsofa(
+            num("respiratory_rate") * 60,
+            num("bp_systolic") / 133.322,
+            str(latest.get("consciousness_level", "ALERT")),
+        )
+        result["news2_components"] = score["components"]
+        result["il6_source_channel"] = source
+        result["context_values"] = {
+            c: latest.get(c, "ALERT" if c == "consciousness_level" else False)
+            for c in (
+                "consciousness_level",
+                "supplemental_o2",
+                "post_ared_exercise_window",
+            )
+        }
+        result["context_provenance"] = {
+            c: "explicit" if c in latest else "assumed"
+            for c in (
+                "consciousness_level",
+                "supplemental_o2",
+                "post_ared_exercise_window",
+            )
+        }
+        result["unavailable_assays"] = [
+            c for c in (*viral, "il6_serum", "il6_pg_mL") if c not in latest
+        ]
+        results["acute_infection_3_1"] = result
 
     if has("radiation_exposure_3_2"):
         # Sv -> mSv; Sv/s -> uSv/h.
@@ -308,3 +394,22 @@ def evaluate_findings(
         )
 
     return results
+
+
+def qsofa(
+    respiratory_rate_min: float, sbp_mmhg: float, consciousness_level: str = "ALERT"
+) -> int:
+    """ACVPU adaptation: any non-ALERT state is altered consciousness."""
+    if consciousness_level not in (
+        "ALERT",
+        "CONFUSION",
+        "VOICE",
+        "PAIN",
+        "UNRESPONSIVE",
+    ):
+        raise ValueError("invalid ACVPU state")
+    return (
+        int(respiratory_rate_min >= 22)
+        + int(sbp_mmhg <= 100)
+        + int(consciousness_level != "ALERT")
+    )

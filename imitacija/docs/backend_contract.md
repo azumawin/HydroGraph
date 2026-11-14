@@ -116,3 +116,20 @@ minus 0.250 L intake to 1.800 L net deficit, 73.2 kg mass and 2.4% loss from 75 
 Finding 2 uses mass and USG and returns a boolean status; red severity and shock
 index are separate presentation/policy work. Isolate run baselines in HTTP tests:
 the current backend uses the earliest stored mass, not the simulation run header.
+
+## Scenario 4 explicit infection context
+
+`consciousness_level` uses wire unit `ACVPU` and exactly one of `ALERT`,
+`CONFUSION`, `VOICE`, `PAIN`, `UNRESPONSIVE`; other channels retain strict numeric
+or boolean values. Bodies still contain exactly four fields. `supplemental_o2`
+and `post_ared_exercise_window` are boolean state fixtures. `il6_pg_mL` is a
+separate synthetic GFET/interstitial fixture (`kg/m^3`), distinct from serum IL-6.
+The finding selects GFET when present, otherwise serum, recording its source.
+
+Finding 3 becomes ready from the five vitals; optional assays add triggers when
+available. NEWS2 includes oxygen and consciousness, with component scores;
+qSOFA uses RR ≥22, SBP ≤100 and non-ALERT consciousness. Missing context retains
+legacy assumptions with per-field provenance. Missing assays are explicitly
+listed, and missing IL-6 is null. The example yields NEWS2 8 / qSOFA 2 / critical.
+The demo renders the two scores and IL-6 source. The receiver still monitors one
+astronaut and does not isolate runs; use a clean test database for integration.

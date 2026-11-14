@@ -39,7 +39,12 @@ class TestNews2(unittest.TestCase):
     def test_all_normal_scores_zero(self) -> None:
         """Source: NEWS2 chart, RCP 2017 (0 for RR 12-20, SpO2 >= 96, SBP 111-219, HR 51-90, T 36.1-38.0)."""
         self.assertEqual(
-            news2(14, 98, 120, 70, 36.8), {"score": 0, "max_parameter_score": 0}
+            {
+                k: v
+                for k, v in news2(14, 98, 120, 70, 36.8).items()
+                if k != "components"
+            },
+            {"score": 0, "max_parameter_score": 0},
         )
 
     def test_band_edges(self) -> None:
@@ -62,7 +67,12 @@ class TestNews2(unittest.TestCase):
 
     def test_max_parameter_score(self) -> None:
         self.assertEqual(
-            news2(25, 95, 120, 95, 36.8), {"score": 5, "max_parameter_score": 3}
+            {
+                k: v
+                for k, v in news2(25, 95, 120, 95, 36.8).items()
+                if k != "components"
+            },
+            {"score": 5, "max_parameter_score": 3},
         )
 
 

@@ -50,6 +50,12 @@ const HealthAssistant = () => {
                 </div>
                 {isFlagged && (
                   <>
+                    {finding.qsofa_score !== undefined && (
+                      <p className="vitals-dashboard-finding-triggers">
+                        NEWS2 {finding.news2_score} / qSOFA {finding.qsofa_score}
+                        {finding.il6_source_channel && ` · IL-6: ${finding.il6_source_channel}`}
+                      </p>
+                    )}
                     <p className="vitals-dashboard-finding-triggers">
                       {finding.triggers.join(" · ")}
                     </p>
