@@ -56,7 +56,7 @@ async def follow_environment(
             if not catalog:
                 listed = await client.get(settings.environments_route)
                 _ = listed.raise_for_status()
-                catalog = {str(e["id"]): e for e in listed.json()["environments"]}
+                catalog = listed.json()["environments"]
             current = await client.get(settings.environment_route)
             _ = current.raise_for_status()
             selected = str(current.json()["id"])

@@ -1,17 +1,18 @@
 # JSON shapes
 
-Two kinds of JSON: **readings**, which change every few seconds, and the
-**dictionary**, which is static and fetched once. Everything that describes a
-channel rather than a measurement (`name`, `explanation`, `body_regions`) lives
-in the dictionary, so readings stay small.
+Two kinds of JSON: **readings** and **findings**, which change every few seconds,
+and the **dictionary**, which is static and sent once. Everything that describes a
+channel rather than a measurement (`name`, `scope`, `unit`, `display`,
+`body_regions`, `explanation`) lives in the dictionary, so readings carry only what
+changes. Every dictionary section is an object keyed by id.
 
 Endpoints: the device sends `POST /api/readings/`; the frontend opens
 `GET /api/stream/` (server-sent events), which sends the dictionary first, then the
-environment in effect, then readings and findings; the frontend switches the
-environment with `PUT /api/environment/`. `GET /api/environments/` serves the
-dictionary's `environments` list on its own, and `GET /api/health-conditions/` the
-current `finding` set, each for a client that wants it without the stream.
-Details: `backend/README.md`.
+environment in effect, then readings and findings; the frontend fills its charts
+with `GET /api/readings/` (section 2a) and switches the environment with
+`PUT /api/environment/`. `GET /api/environments/` serves the environment catalog
+keyed by id, and `GET /api/health-conditions/` serves the current finding set
+without the stream. Details: `backend/README.md`.
 
 ## 1. Device → backend: reading body
 
@@ -39,22 +40,38 @@ retries and the full channel registry: `backend-integration.md`.
 ## 2. Backend → frontend: reading
 
 `event: reading` on the stream, and the `201` body of the POST. It is the device
-body plus the backend's evaluation and the scope header:
+body minus `unit` (always the channel's dictionary `unit`), plus the backend's
+evaluation:
 
 ```json
 {
   "channel": "bp_systolic",
   "value": 15198.75216531,
-  "unit": "Pa",
-  "evaluation": "unspecified",
   "measured_at": "2026-11-14T08:00:00Z",
-  "scope": "crew"
+  "evaluation": "unspecified"
 }
 ```
+
+`value` stays in the SI wire unit; show it with the channel's dictionary `display`.
 
 On connect the stream sends the latest reading per `channel`,
 then every new one. Late readings are sent too; keep whichever has the newer
 `measured_at`.
+
+## 2a. Backend → frontend: reading history
+
+`GET /api/readings/` returns the latest `limit` readings (default 120, 1–1000) of
+each channel, oldest first, in the section 2 shape, keyed by channel; channels
+without readings are left out. `?channel=` (repeatable) narrows the channels; an
+unknown channel or out-of-range `limit` is a `400`.
+
+```json
+{ "readings": { "heart_rate": [{ "channel": "heart_rate", "value": 1.2, "measured_at": "2026-11-14T08:00:00Z", "evaluation": "nominal" }] } }
+```
+
+The stream's snapshot sends only the latest reading per channel, so the dashboard
+requests history once the dictionary arrives (on every (re)connect) and merges it
+with live readings by `measured_at`. Evaluations use the environment in effect.
 
 `evaluation` is one of `"nominal" | "warning" | "critical" | "unspecified"`
 (`hydrograph_core.Evaluation`). `unspecified` means the specs give no threshold for
@@ -69,21 +86,21 @@ finding's input channels.
 ```json
 {
   "id": "radiation_exposure_3_2",
-  "cumulative_dose_msv": 2.8,
-  "dose_rate_usv_h": 19.4,
-  "triggers": ["solar particle event"],
   "status": "critical",
-  "action": "Move to shielded storm shelter zone immediately and confirm hatch closure"
+  "triggers": ["solar particle event"],
+  "action": "Move to shielded storm shelter zone immediately and confirm hatch closure",
+  "values": { "cumulative_dose_msv": 2.8, "dose_rate_usv_h": 19.4 }
 }
 ```
 
-- `id` is the finding (a key of the dictionary's `findings`); the keys between
-  `id` and `triggers` are that finding's evaluated values.
+- `id` is the finding (a key of the dictionary's `findings`).
+- `status` is `"nominal" | "warning" | "critical"` for every finding. The three
+  with one severity (dehydration, energy balance, bone) are `"warning"` when
+  present, `"nominal"` when not.
 - `triggers` names each criterion that fired; empty when none did.
-- `status` is `true` / `false` (finding present or not) for findings with one
-  severity (dehydration, energy balance, bone), otherwise
-  `"nominal" | "warning" | "critical"`.
 - `action` is the plan's action card, or `"No finding"`.
+- `values` holds the finding's own evaluated quantities, in the units their names
+  end in; the keys differ per finding.
 - Seven findings are monitored; the other three need inputs the simulator does
   not send and are never sent (their dictionary `channels` is empty).
 - `GET /api/health-conditions/` returns the same objects as a JSON array under
@@ -98,9 +115,8 @@ join it to readings by `channel` and to findings by `id`.
 
 ```json
 {
-  "environments": [
-    {
-      "id": "lunar_surface",
+  "environments": {
+    "lunar_surface": {
       "name": "Lunar surface",
       "gravity_g": 0.166,
       "comm_delay_rt_s": 2.6,
@@ -108,10 +124,13 @@ join it to readings by `channel` and to findings by `id`.
       "storm_shelter_available": true,
       "day_length_h": 708.7
     }
-  ],
+  },
   "channels": {
     "bp_systolic": {
       "name": "Blood pressure (systolic)",
+      "scope": "crew",
+      "unit": "Pa",
+      "display": { "unit": "mmHg", "scale": 0.0075006, "offset": 0.0 },
       "body_regions": ["heart", "chest"],
       "explanation": "Why this is measured, what it means…"
     }
@@ -126,9 +145,14 @@ join it to readings by `channel` and to findings by `id`.
 ```
 
 - `channels` has one entry per channel the backend accepts (the simulator's 35).
+  `scope` is the `X-Simulation-Scope` the device must send; `unit` is the SI wire
+  unit of every reading's `value`.
+- `display` converts a numeric value for people: `value * scale + offset`, in
+  `display.unit`, the spec's clinical unit (mmHg, bpm, °C, µSv/h, ...). It is `""`
+  with scale 1 for booleans and dimensionless ratios.
 - `findings` has all 10 findings; `channels` lists each one's inputs, empty for
   the three that are not monitored.
-- `environments` has four entries, in dropdown order: `iss_leo`, `lunar_surface`,
+- `environments` has four entries, keyed by id, in dropdown order: `iss_leo`, `lunar_surface`,
   `mars_transit`, `mars_surface`. `name` is the dropdown label.
 - `comm_delay_rt_s` is the **round-trip** delay — the one that decides whether the
   crew can ask the ground. It is really a range (Mars round trip is 364–2684 s);
@@ -159,7 +183,8 @@ every open stream:
 ```
 
 `GET /api/environment/` returns the same object; `PUT /api/environment/` with
-`{"id": "mars_transit"}` switches it (`400` for an id not in `environments`). The
+`{"id": "mars_transit"}` switches it (`400` for an id not a key of `environments`).
+`GET /api/environments/` returns `{"environments": …}`, the dictionary's object. The
 default is `iss_leo`. A switch also re-sends the latest `ambient_dose_rate` reading and
 the radiation finding, re-graded against the new baseline. The simulator follows the
 switch (see `backend-integration.md`, "Following the backend environment").

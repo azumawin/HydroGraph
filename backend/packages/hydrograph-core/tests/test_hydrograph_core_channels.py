@@ -110,3 +110,31 @@ class TestEvaluateReading(unittest.TestCase):
                     ),
                     expected,
                 )
+
+
+class TestDisplay(unittest.TestCase):
+    def test_converts_wire_values_to_spec_units(self) -> None:
+        cases: list[tuple[str, float, str, float]] = [
+            ("heart_rate", 72 / 60, "bpm", 72.0),
+            ("bp_systolic", 114 * MMHG, "mmHg", 114.0),
+            ("spo2", 0.97, "%", 97.0),
+            ("body_temperature", 310.15, "°C", 37.0),
+            ("il6_serum", 3e-9, "pg/mL", 3.0),
+            ("ambient_dose_rate", 14.6 * USV_H, "µSv/h", 14.6),
+            ("ambient_integrated_dose", 0.0028, "mSv", 2.8),
+        ]
+        for channel, wire, unit, shown in cases:
+            with self.subTest(channel=channel):
+                display = CHANNELS[channel]["display"]
+                self.assertEqual(display["unit"], unit)
+                self.assertAlmostEqual(
+                    wire * display["scale"] + display["offset"], shown
+                )
+
+    def test_booleans_have_no_display_unit(self) -> None:
+        for channel, info in CHANNELS.items():
+            if info["value_type"] == "boolean":
+                with self.subTest(channel=channel):
+                    self.assertEqual(
+                        info["display"], {"unit": "", "scale": 1.0, "offset": 0.0}
+                    )

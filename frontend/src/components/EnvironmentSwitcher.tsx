@@ -19,7 +19,7 @@ const EnvironmentSwitcher = () => {
   const isSelectingEnvironment = useTelemetryStore((state) => state.isSelectingEnvironment);
   const selectEnvironment = useTelemetryStore((state) => state.selectEnvironment);
 
-  const selectedEnvironment = environments?.find((environment) => environment.id === environmentId);
+  const selectedEnvironment = environmentId === null ? undefined : environments?.[environmentId];
 
   const facts =
     selectedEnvironment === undefined
@@ -47,7 +47,8 @@ const EnvironmentSwitcher = () => {
     void selectEnvironment(event.target.value);
   };
 
-  if (environments === undefined || selectedEnvironment === undefined) return null;
+  if (environments === undefined || environmentId === null || selectedEnvironment === undefined)
+    return null;
 
   return (
     <div className="vitals-dashboard-environment">
@@ -58,12 +59,12 @@ const EnvironmentSwitcher = () => {
         </span>
         <select
           className="vitals-dashboard-environment-select"
-          value={selectedEnvironment.id}
+          value={environmentId}
           disabled={isSelectingEnvironment}
           onChange={handleEnvironmentChange}
         >
-          {environments.map((environment) => (
-            <option key={environment.id} value={environment.id}>
+          {Object.entries(environments).map(([id, environment]) => (
+            <option key={id} value={id}>
               {environment.name}
             </option>
           ))}

@@ -69,7 +69,11 @@ def test_reading_publishes_only_findings_that_use_it() -> None:
         "measured_at": "2026-11-14T09:00:00Z",
     }
     _, finding = post(body, CREW)
-    assert (finding["id"], finding["status"]) == ("bone_demineralization_1_2", True)
+    assert (finding["id"], finding["status"]) == (
+        "bone_demineralization_1_2",
+        "warning",
+    )
+    assert finding["values"] == {"ntx_change_pct": 3.0, "urine_volume_l_day": 1.5}
 
     body = {
         "channel": "hrv_rmssd",

@@ -42,7 +42,7 @@ Headers supply the context without changing nigelNote's body:
 | `X-Dictionary-Version` | Static registry schema/version, currently `1`. |
 | `Authorization` | Optional Bearer token from the `IMITACIJA_TOKEN` environment variable. |
 
-Return 2xx after accepting a reading. The HydroGraph backend answers `201` with the reading plus its `evaluation` and `scope` (`docs/json-shape.md`, section 2), and `400` with field errors for an unknown channel, wrong unit, wrong value type or mismatched `X-Simulation-Scope`; the simulator counts a 400 as a failed delivery. It monitors one astronaut and ignores `X-Owner-ID`, so configure a single `[[crew]]` member. Permanent authentication/schema failures count as failed delivery; selected transient failures retry with the same body/key. Finite runs may discard delayed results at their bounded shutdown deadline. The ending counters report delivery, overflow, expiry, failure, retry and shutdown-drop totals. Reconcile accepted results with idempotency keys rather than expecting exactly-once network delivery.
+Return 2xx after accepting a reading. The HydroGraph backend answers `201` with the reading's `channel`, `value` and `measured_at` plus its `evaluation` (`docs/json-shape.md`, section 2), and `400` with field errors for an unknown channel, wrong unit, wrong value type or mismatched `X-Simulation-Scope`; the simulator counts a 400 as a failed delivery. It monitors one astronaut and ignores `X-Owner-ID`, so configure a single `[[crew]]` member. Permanent authentication/schema failures count as failed delivery; selected transient failures retry with the same body/key. Finite runs may discard delayed results at their bounded shutdown deadline. The ending counters report delivery, overflow, expiry, failure, retry and shutdown-drop totals. Reconcile accepted results with idempotency keys rather than expecting exactly-once network delivery.
 
 Export static configuration-specific metadata before integration:
 
@@ -100,7 +100,7 @@ for the source's end-to-end Critical Red Alert. See `badscenario2.md`, section 7
 With `follow_backend_environment = true` (set in `healthy.toml`, `badscenario1.toml`
 and `badscenario2.toml`), the simulator polls `GET environment_route`
 (`/api/environment/`, every `environment_poll_wall_s`, default 2 s) and, once,
-`GET environments_route` (`/api/environments/`) for each environment's values. When
+`GET environments_route` (`/api/environments/`, keyed by environment id) for each environment's values. When
 the dashboard switches environment, the running simulation takes that environment's
 `baseline_dose_rate_usv_h` as its cabin dose rate, its `gravity_g`, and half its
 round-trip `comm_delay_rt_s` as the one-way result delay. The integrated monitor dose

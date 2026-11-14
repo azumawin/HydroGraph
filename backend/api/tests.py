@@ -33,15 +33,14 @@ def test_environments_lists_the_predefined_set(client: APIClient) -> None:
 
     assert response.status_code == 200
     payload = cast("dict[str, object]", response.json())
-    environments = cast("list[dict[str, object]]", payload["environments"])
-    assert [e["id"] for e in environments] == [
+    environments = cast("dict[str, dict[str, object]]", payload["environments"])
+    assert list(environments) == [
         "iss_leo",
         "lunar_surface",
         "mars_transit",
         "mars_surface",
     ]
-    assert environments[1] == {
-        "id": "lunar_surface",
+    assert environments["lunar_surface"] == {
         "name": "Lunar surface",
         "gravity_g": 0.166,
         "comm_delay_rt_s": 2.6,
@@ -80,10 +79,8 @@ def test_post_reading_returns_doc_shape(client: APIClient) -> None:
     assert cast("dict[str, object]", response.json()) == {
         "channel": "spo2",
         "value": 0.89,
-        "unit": "1",
-        "evaluation": "critical",
         "measured_at": TICK,
-        "scope": "crew",
+        "evaluation": "critical",
     }
     assert Reading.objects.count() == 1
 
@@ -102,7 +99,6 @@ def test_post_accepts_boolean_environment_channel(client: APIClient) -> None:
     payload = cast("dict[str, object]", response.json())
     assert payload["value"] is True
     assert payload["evaluation"] == "critical"
-    assert payload["scope"] == "environment"
 
 
 @pytest.mark.django_db
@@ -150,6 +146,53 @@ def test_post_rejects_number_for_boolean_channel(client: APIClient) -> None:
 
 
 @pytest.mark.django_db
+def test_history_returns_latest_per_channel_oldest_first(client: APIClient) -> None:
+    for minute, value in [(3, 0.95), (1, 0.97), (2, 0.89)]:  # out of order
+        body = {
+            "channel": "spo2",
+            "value": value,
+            "unit": "1",
+            "measured_at": f"2026-11-14T08:0{minute}:00Z",
+        }
+        _ = client.post(reverse("readings"), body, format="json", headers=CREW)
+
+    response = client.get(reverse("readings"), {"limit": 2})
+
+    assert response.status_code == 200
+    assert cast("dict[str, object]", response.json()) == {
+        "readings": {
+            "spo2": [
+                {
+                    "channel": "spo2",
+                    "value": 0.89,
+                    "measured_at": "2026-11-14T08:02:00Z",
+                    "evaluation": "critical",
+                },
+                {
+                    "channel": "spo2",
+                    "value": 0.95,
+                    "measured_at": "2026-11-14T08:03:00Z",
+                    "evaluation": "nominal",
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db
+def test_history_filters_by_channel_and_rejects_bad_query(client: APIClient) -> None:
+    body = {"channel": "spo2", "value": 0.97, "unit": "1", "measured_at": TICK}
+    _ = client.post(reverse("readings"), body, format="json", headers=CREW)
+
+    filtered = client.get(reverse("readings"), {"channel": ["heart_rate", "glucose"]})
+    assert filtered.json() == {"readings": {}}
+
+    bad = client.get(reverse("readings"), {"channel": "heartrate", "limit": 0})
+    assert bad.status_code == 400
+    assert set(cast("dict[str, object]", bad.json())) == {"channel", "limit"}
+
+
+@pytest.mark.django_db
 def test_health_conditions_returns_the_findings_the_readings_support(
     client: APIClient,
 ) -> None:
@@ -166,8 +209,10 @@ def test_health_conditions_returns_the_findings_the_readings_support(
         "findings": [
             {
                 "id": "radiation_exposure_3_2",
-                "cumulative_dose_msv": 1.0,
-                "dose_rate_usv_h": 18.0,
+                "values": {
+                    "cumulative_dose_msv": 1.0,
+                    "dose_rate_usv_h": 18.0,
+                },
                 "triggers": ["solar particle event"],
                 "status": "critical",
                 "action": SHELTER,
@@ -202,7 +247,7 @@ def test_health_conditions_omits_findings_with_a_missing_input(
     payload = cast("dict[str, object]", client.get(reverse("health-conditions")).json())
     findings = cast("list[dict[str, object]]", payload["findings"])
     assert [f["id"] for f in findings] == ["bone_demineralization_1_2"]
-    assert findings[0]["status"] is True
+    assert findings[0]["status"] == "warning"
 
 
 @pytest.mark.django_db

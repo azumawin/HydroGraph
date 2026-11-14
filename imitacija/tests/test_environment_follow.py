@@ -12,20 +12,18 @@ from imitacija.physiology import environment_values, monitor_dose_msv
 from imitacija.scheduler import Scheduler
 
 CATALOG = {
-    "environments": [
-        {
-            "id": "iss_leo",
+    "environments": {
+        "iss_leo": {
             "gravity_g": 0.0,
             "comm_delay_rt_s": 1.2,
             "baseline_dose_rate_usv_h": 14.6,
         },
-        {
-            "id": "mars_transit",
+        "mars_transit": {
             "gravity_g": 0.0,
             "comm_delay_rt_s": 1560.0,
             "baseline_dose_rate_usv_h": 76.7,
         },
-    ]
+    }
 }
 
 

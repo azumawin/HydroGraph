@@ -115,14 +115,14 @@ def test_body_scan_regions_show_the_worst_evaluation(dashboard: Page, backend: B
     expect(ui.region_status(ui.region(dashboard, "Arms"))).to_have_text("No reading")
 
 
-def test_present_or_absent_finding_shows_triggers_and_action(
+def test_single_severity_finding_shows_as_warning_with_triggers_and_action(
     dashboard: Page, backend: Backend
 ) -> None:
     backend.post("bone_ntx_pct_baseline", 0.30, "1")
     backend.post("urine_volume_24h", 1.5e-3, "m^3")
 
     bone = ui.finding(dashboard, "Bone demineralization & renal stone risk")
-    expect(ui.finding_status(bone)).to_have_text("Present")
+    expect(ui.finding_status(bone)).to_have_text("Warning")
     expect(bone.locator(".vitals-dashboard-finding-triggers")).to_have_text(
         "NTx > +25% from baseline · urine volume < 2.0 L/day"
     )
@@ -185,9 +185,29 @@ def test_reload_restores_the_latest_state(dashboard: Page, backend: Backend) -> 
     expect(ui.value(heart_rate)).to_have_text("70")
     expect(ui.status(heart_rate)).to_have_text("Nominal")
     expect(ui.value(ui.vital(dashboard, "Blood oxygen"))).to_have_text("95")
-    # The stream's snapshot carries the latest reading per channel, not history.
+    # The stream's snapshot has only the latest reading; the history request the rest.
     expect(ui.chart(heart_rate)).to_have_attribute(
-        "aria-label", "Heart rate history. 1 recorded timestamps."
+        "aria-label", "Heart rate history. 2 recorded timestamps."
+    )
+
+
+def test_history_fills_the_charts_on_first_load(
+    page: Page, frontend: str, backend: Backend
+) -> None:
+    for minute, bpm in enumerate([64, 68, 72, 76]):
+        backend.post("heart_rate", bpm / 60, "s^-1", minutes=minute)
+        backend.post("bp_systolic", (118 + minute) * MMHG, "Pa", minutes=minute)
+        backend.post("bp_diastolic", (78 + minute) * MMHG, "Pa", minutes=minute)
+
+    page.goto(frontend)
+
+    heart_rate = ui.vital(page, "Heart rate")
+    expect(ui.chart(heart_rate)).to_have_attribute(
+        "aria-label", "Heart rate history. 4 recorded timestamps."
+    )
+    expect(ui.value(heart_rate)).to_have_text("76")
+    expect(ui.chart(ui.vital(page, "Blood pressure"))).to_have_attribute(
+        "aria-label", "Blood pressure history. 4 recorded timestamps."
     )
 
 

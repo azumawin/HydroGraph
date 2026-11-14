@@ -13,14 +13,19 @@ from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from api.assistant import AssistantError, ChatMessage, reply
 from api.broadcast import publish
 from api.environment import current_environment, current_environment_id
 from api.findings import affected_findings, crew_findings
 from api.models import EnvironmentSelection, Reading
 from api.serializers import (
+    ChatSerializer,
     EnvironmentSelectionSerializer,
+    HistoryQuery,
+    HistoryQuerySerializer,
     ReadingIn,
     ReadingInSerializer,
+    ReadingPayload,
     environments_payload,
     finding_payload,
     reading_payload,
@@ -53,14 +58,11 @@ def health(_request: Request) -> Response:
             "type": "object",
             "properties": {
                 "environments": {
-                    "type": "array",
-                    "items": {
+                    "type": "object",
+                    "description": "Keyed by environment id, in dropdown order.",
+                    "additionalProperties": {
                         "type": "object",
                         "properties": {
-                            "id": {
-                                "type": "string",
-                                "enum": list(hydrograph_core.ENVIRONMENTS),
-                            },
                             "name": {"type": "string"},
                             "gravity_g": {"type": "number"},
                             "comm_delay_rt_s": {"type": "number"},
@@ -151,20 +153,12 @@ def environment(request: Request) -> Response:
                                 "items": {"type": "string"},
                             },
                             "status": {
-                                "oneOf": [
-                                    {"type": "boolean"},
-                                    {
-                                        "type": "string",
-                                        "enum": list(
-                                            get_args(hydrograph_core.Severity)
-                                        ),
-                                    },
-                                ]
+                                "type": "string",
+                                "enum": list(get_args(hydrograph_core.Severity)),
                             },
                             "action": {"type": "string"},
+                            "values": {"type": "object", "additionalProperties": True},
                         },
-                        # plus that finding's own evaluated values
-                        "additionalProperties": True,
                     },
                 }
             },
@@ -193,7 +187,55 @@ def health_conditions(_request: Request) -> Response:
     return Response({"findings": [finding_payload(f, r) for f, r in results.items()]})
 
 
+READING_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "channel": {"type": "string"},
+        "value": {
+            "oneOf": [{"type": "number"}, {"type": "boolean"}, {"type": "string"}]
+        },
+        "measured_at": {"type": "string", "format": "date-time"},
+        "evaluation": {
+            "type": "string",
+            "enum": list(get_args(hydrograph_core.Evaluation)),
+        },
+    },
+}
+
+
 @extend_schema(
+    methods=["GET"],
+    summary="Reading history per channel",
+    parameters=[
+        OpenApiParameter(
+            "channel",
+            str,
+            OpenApiParameter.QUERY,
+            many=True,
+            description="Repeat for several; all channels when omitted.",
+        ),
+        OpenApiParameter(
+            "limit",
+            int,
+            OpenApiParameter.QUERY,
+            description="Latest readings per channel, 1-1000 (default 120).",
+        ),
+    ],
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "readings": {
+                    "type": "object",
+                    "description": "Channel to its readings, oldest first.",
+                    "additionalProperties": {"type": "array", "items": READING_SCHEMA},
+                }
+            },
+        }
+    },
+)
+@extend_schema(
+    methods=["POST"],
     summary="Ingest one sensor reading",
     parameters=[
         OpenApiParameter(
@@ -205,26 +247,16 @@ def health_conditions(_request: Request) -> Response:
         ),
     ],
     request=ReadingInSerializer,
-    responses={
-        201: {
-            "type": "object",
-            "properties": {
-                "channel": {"type": "string"},
-                "value": {"oneOf": [{"type": "number"}, {"type": "boolean"}]},
-                "unit": {"type": "string"},
-                "evaluation": {
-                    "type": "string",
-                    "enum": list(get_args(hydrograph_core.Evaluation)),
-                },
-                "measured_at": {"type": "string", "format": "date-time"},
-                "scope": {"type": "string", "enum": ["crew", "environment"]},
-            },
-        }
-    },
+    responses={201: READING_SCHEMA},
 )
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 def readings(request: Request) -> Response:
-    """Store the reading and push it, and the findings it changes, to every stream."""
+    """GET: the latest ``limit`` readings per channel, oldest first, so a client
+    can fill its charts on load. POST: store a reading and push it, and the
+    findings it changes, to every stream.
+    """
+    if request.method == "GET":
+        return reading_history(request)
     scope = request.headers.get("X-Simulation-Scope", "")
     serializer = ReadingInSerializer(data=request.data, context={"scope": scope})
     _ = serializer.is_valid(raise_exception=True)
@@ -240,6 +272,54 @@ def readings(request: Request) -> Response:
     for finding, result in affected_findings(reading.channel, environment).items():
         publish(sse_event("finding", finding_payload(finding, result)))
     return Response(payload, status=status.HTTP_201_CREATED)
+
+
+def reading_history(request: Request) -> Response:
+    """Channels without readings are left out; grading uses the environment in
+    effect, as the stream does."""
+    query = HistoryQuerySerializer(
+        data={
+            "channel": request.query_params.getlist("channel"),
+            "limit": request.query_params.get("limit", 120),
+        }
+    )
+    _ = query.is_valid(raise_exception=True)
+    data = cast(HistoryQuery, query.validated_data)
+    environment = current_environment()
+    history: dict[str, list[ReadingPayload]] = {}
+    for channel in data["channel"] or hydrograph_core.CHANNELS:
+        latest = list(
+            Reading.objects.filter(channel=channel).order_by("-measured_at", "-id")[
+                : data["limit"]
+            ]
+        )
+        if latest:
+            history[channel] = [
+                reading_payload(r, environment) for r in reversed(latest)
+            ]
+    return Response({"readings": history})
+
+
+@extend_schema(
+    summary="Ask the health assistant",
+    request=ChatSerializer,
+    responses={
+        200: {"type": "object", "properties": {"reply": {"type": "string"}}},
+        503: {"type": "object", "properties": {"detail": {"type": "string"}}},
+    },
+)
+@api_view(["POST"])
+def assistant(request: Request) -> Response:
+    """The LLM's next message, briefed with the live findings and readings."""
+    serializer = ChatSerializer(data=request.data)
+    _ = serializer.is_valid(raise_exception=True)
+    data = cast("dict[str, list[ChatMessage]]", serializer.validated_data)
+    try:
+        return Response({"reply": reply(data["messages"])})
+    except AssistantError as error:
+        return Response(
+            {"detail": str(error)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
 
 
 @require_GET

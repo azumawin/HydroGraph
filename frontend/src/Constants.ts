@@ -6,6 +6,8 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://127.0.0.1:8000";
 export const TELEMETRY = {
   STREAM_URL: `${BACKEND_URL}/api/stream/`,
   ENVIRONMENT_URL: `${BACKEND_URL}/api/environment/`,
+  READINGS_URL: `${BACKEND_URL}/api/readings/`,
+  ASSISTANT_URL: `${BACKEND_URL}/api/assistant/`,
   EVENTS: {
     DICTIONARY: "dictionary",
     ENVIRONMENT: "environment",
@@ -13,6 +15,7 @@ export const TELEMETRY = {
     FINDING: "finding",
   },
   CONNECTION_LABEL: "live telemetry",
+  HISTORY_LABEL: "reading history",
   FLUSH_INTERVAL_MS: 250,
   MALFORMED_MESSAGE: "Received a telemetry message that does not match the backend contract.",
   DISCONNECTED_MESSAGE: "Lost the connection to the telemetry stream.",
@@ -34,23 +37,17 @@ export const ENVIRONMENT_FORMAT = {
   MAX_HOURS_SHOWN: 48,
 };
 
+export const ASSISTANT = {
+  PLACEHOLDER: "Ask about the findings…",
+  SEND_LABEL: "Send",
+  THINKING: "Thinking…",
+  STARTER: "Summarize the current findings and tell me what to do.",
+  STARTER_LABEL: "Summarize findings and advise",
+  FALLBACK_ERROR: "The assistant could not answer. Try again.",
+};
+
 export const VITALS_HISTORY = {
   MAX_POINTS_PER_CHANNEL: 120,
-};
-
-export type VitalDisplayUnit = {
-  UNIT: string;
-  SCALE: number;
-  OFFSET: number;
-};
-
-export const VITALS_DISPLAY_UNITS: Record<string, VitalDisplayUnit> = {
-  heart_rate: { UNIT: "bpm", SCALE: 60, OFFSET: 0 },
-  bp_systolic: { UNIT: "mmHg", SCALE: 1 / 133.322, OFFSET: 0 },
-  bp_diastolic: { UNIT: "mmHg", SCALE: 1 / 133.322, OFFSET: 0 },
-  glucose: { UNIT: "mmol/L", SCALE: 1, OFFSET: 0 },
-  body_temperature: { UNIT: "°C", SCALE: 1, OFFSET: -273.15 },
-  spo2: { UNIT: "%", SCALE: 100, OFFSET: 0 },
 };
 
 export const VITALS_FORMAT = {
@@ -73,8 +70,6 @@ export const VITALS_EVALUATION_LABELS = {
 };
 
 export const FINDING_STATUS_LABELS = {
-  PRESENT: "Present",
-  ABSENT: "None",
   nominal: "Nominal",
   warning: "Warning",
   critical: "Critical",

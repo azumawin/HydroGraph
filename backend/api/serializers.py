@@ -12,9 +12,11 @@ from hydrograph_core import (
     CHANNELS,
     ENVIRONMENTS,
     FINDINGS,
+    Display,
     EnvironmentInfo,
     Evaluation,
     FindingResult,
+    Severity,
     evaluate_reading,
 )
 from rest_framework import serializers
@@ -77,15 +79,35 @@ class ReadingInSerializer(serializers.Serializer[None]):
         return attrs
 
 
+class HistoryQuery(TypedDict):
+    """``validated_data`` of :class:`HistoryQuerySerializer`."""
+
+    channel: list[str]
+    limit: int
+
+
+class HistoryQuerySerializer(serializers.Serializer[None]):
+    """The query of ``GET /api/readings/``: which channels, how many readings each."""
+
+    channel: serializers.ListField = serializers.ListField(
+        child=serializers.ChoiceField(choices=list(CHANNELS)), required=False
+    )
+    limit: serializers.IntegerField = serializers.IntegerField(
+        min_value=1, max_value=1000, default=120
+    )
+
+
 class ReadingPayload(TypedDict):
-    """A reading for the frontend (docs/json-shape.md, section 2)."""
+    """A reading for the frontend (docs/json-shape.md, section 2).
+
+    Only what changes per reading; unit and scope are per channel, in the
+    dictionary.
+    """
 
     channel: str
     value: float | bool | str
-    unit: str
-    evaluation: Evaluation
     measured_at: str
-    scope: Literal["crew", "environment"]
+    evaluation: Evaluation
 
 
 def reading_payload(reading: Reading, environment: EnvironmentInfo) -> ReadingPayload:
@@ -93,33 +115,23 @@ def reading_payload(reading: Reading, environment: EnvironmentInfo) -> ReadingPa
 
     ``environment`` is the one in effect; the dose rate is graded against it.
     """
-    info = CHANNELS[reading.channel]
     value = cast("float | bool | str", reading.value)
     measured_at = reading.measured_at.astimezone(UTC).isoformat()
     return {
         "channel": reading.channel,
         "value": value,
-        "unit": info["unit"],
-        "evaluation": evaluate_reading(reading.channel, value, environment=environment),
         "measured_at": measured_at.replace("+00:00", "Z"),
-        "scope": info["scope"],
+        "evaluation": evaluate_reading(reading.channel, value, environment=environment),
     }
 
 
 class ChannelEntry(TypedDict):
     name: str
+    scope: Literal["crew", "environment"]
+    unit: str
+    display: Display
     body_regions: list[str]
     explanation: str
-
-
-class EnvironmentEntry(TypedDict):
-    id: str
-    name: str
-    gravity_g: float
-    comm_delay_rt_s: float
-    baseline_dose_rate_usv_h: float
-    storm_shelter_available: bool
-    day_length_h: float
 
 
 class FindingEntry(TypedDict):
@@ -128,29 +140,35 @@ class FindingEntry(TypedDict):
 
 
 class DictionaryPayload(TypedDict):
-    """The static dictionary for the frontend (docs/json-shape.md, section 4)."""
+    """The static dictionary for the frontend (docs/json-shape.md, section 4).
 
-    environments: list[EnvironmentEntry]
+    Every section is keyed by id, in core's order.
+    """
+
+    environments: dict[str, EnvironmentInfo]
     channels: dict[str, ChannelEntry]
     findings: dict[str, FindingEntry]
 
 
-def environments_payload() -> list[EnvironmentEntry]:
-    """Every mission environment, in core's order, with its key as ``id``.
+def environments_payload() -> dict[str, EnvironmentInfo]:
+    """Every mission environment by id, in core's (dropdown) order.
 
     Served on its own by ``GET /api/environments/`` and as part of the stream
     dictionary, so the two always describe the same set.
     """
-    return [{"id": k, **v} for k, v in ENVIRONMENTS.items()]
+    return dict(ENVIRONMENTS)
 
 
 def dictionary_payload() -> DictionaryPayload:
-    """Environments and per-channel display text, all from core."""
+    """Environments, channel metadata and findings, all from core."""
     return {
         "environments": environments_payload(),
         "channels": {
             k: {
                 "name": v["name"],
+                "scope": v["scope"],
+                "unit": v["unit"],
+                "display": v["display"],
                 "body_regions": list(v["body_regions"]),
                 "explanation": v["explanation"],
             }
@@ -163,13 +181,58 @@ def dictionary_payload() -> DictionaryPayload:
     }
 
 
-def finding_payload(finding: str, result: FindingResult) -> dict[str, object]:
-    """A finding for the frontend (docs/json-shape.md, section 3): core's result
-    plus which finding it is."""
-    return {"id": finding, **result}
+class FindingPayload(TypedDict):
+    """A finding for the frontend (docs/json-shape.md, section 3)."""
+
+    id: str
+    status: Severity
+    triggers: list[str]
+    action: str
+    values: dict[str, object]
+
+
+def finding_payload(finding: str, result: FindingResult) -> FindingPayload:
+    """Core's result in one shape for every finding.
+
+    A single-severity finding's ``True`` / ``False`` becomes ``"warning"`` /
+    ``"nominal"``; the finding's own evaluated quantities go under ``values``.
+    """
+    fields: dict[str, object] = dict(result)
+    status = fields.pop("status")
+    triggers = cast("list[str]", fields.pop("triggers"))
+    action = cast("str", fields.pop("action"))
+    if isinstance(status, bool):
+        status = "warning" if status else "nominal"
+    return {
+        "id": finding,
+        "status": cast("Severity", status),
+        "triggers": triggers,
+        "action": action,
+        "values": fields,
+    }
 
 
 class EnvironmentSelectionSerializer(serializers.Serializer[None]):
     """The body of ``PUT /api/environment/``."""
 
     id: serializers.ChoiceField = serializers.ChoiceField(choices=list(ENVIRONMENTS))
+
+
+class ChatMessageSerializer(serializers.Serializer[None]):
+    role: serializers.ChoiceField = serializers.ChoiceField(
+        choices=["user", "assistant"]
+    )
+    content: serializers.CharField = serializers.CharField(max_length=4000)
+
+
+class ChatSerializer(serializers.Serializer[None]):
+    """The body of ``POST /api/assistant/``: the conversation, oldest first."""
+
+    messages: ChatMessageSerializer = ChatMessageSerializer(
+        many=True, allow_empty=False
+    )
+
+    def validate_messages(self, value: list[object]) -> list[object]:
+        if len(value) > 40:
+            raise serializers.ValidationError("At most 40 messages.")
+        return value

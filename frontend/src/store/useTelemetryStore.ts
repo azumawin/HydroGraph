@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { openTelemetryStream, putEnvironment } from "../api/Service.ts";
+import { fetchReadingHistory, openTelemetryStream, putEnvironment } from "../api/Service.ts";
 import type {
   ChannelInfo,
   Evaluation,
@@ -7,9 +7,11 @@ import type {
   TelemetryFinding,
   TelemetryReading,
 } from "../api/Service.ts";
-import { TELEMETRY, VITALS_DISPLAY_UNITS, VITALS_HISTORY } from "../Constants.ts";
+import { TELEMETRY, VITALS_HISTORY } from "../Constants.ts";
 
-export type VitalReading = ChannelInfo & {
+// a reading in its channel's display unit; everything static about the channel
+// stays in the dictionary
+export type VitalReading = {
   channel: string;
   value: TelemetryReading["value"];
   unit: string;
@@ -20,7 +22,6 @@ export type VitalReading = ChannelInfo & {
 export type VitalHistoryPoint = {
   timestamp: number;
   value: number;
-  unit: string;
 };
 
 type TelemetryStore = {
@@ -29,6 +30,7 @@ type TelemetryStore = {
   history: Record<string, VitalHistoryPoint[]>;
   findings: Record<string, TelemetryFinding>;
   hasTelemetryError: boolean;
+  hasHistoryError: boolean;
   environmentId: string | null;
   isSelectingEnvironment: boolean;
   hasEnvironmentSelectError: boolean;
@@ -37,16 +39,12 @@ type TelemetryStore = {
 };
 
 const toVitalReading = (reading: TelemetryReading, info: ChannelInfo): VitalReading => {
-  const { channel, value, unit, evaluation, measured_at } = reading;
-  const display = VITALS_DISPLAY_UNITS[channel];
-  if (display === undefined || typeof value !== "number") {
-    return { ...info, channel, value, unit, evaluation, measured_at };
-  }
+  const { channel, value, evaluation, measured_at } = reading;
+  const { display } = info;
   return {
-    ...info,
     channel,
-    value: value * display.SCALE + display.OFFSET,
-    unit: display.UNIT,
+    value: typeof value === "number" ? value * display.scale + display.offset : value,
+    unit: display.unit,
     evaluation,
     measured_at,
   };
@@ -66,6 +64,7 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
   history: {},
   findings: {},
   hasTelemetryError: false,
+  hasHistoryError: false,
   environmentId: null,
   isSelectingEnvironment: false,
   hasEnvironmentSelectError: false,
@@ -73,6 +72,7 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
     let pendingReadings: TelemetryReading[] = [];
     let pendingFindings: TelemetryFinding[] = [];
     let flushTimeoutId: number | undefined;
+    let isClosed = false;
 
     // one store update per interval instead of per message keeps rendering fast
     // when the simulator sends hundreds of readings a second
@@ -100,7 +100,6 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
           history[vital.channel] = withHistoryPoint(history[vital.channel] ?? [], {
             timestamp,
             value: vital.value,
-            unit: vital.unit,
           });
         }
       }
@@ -122,7 +121,21 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
     };
 
     const stream = openTelemetryStream({
-      onDictionary: (dictionary) => set({ dictionary, hasTelemetryError: false }),
+      onDictionary: (dictionary) => {
+        set({ dictionary, hasTelemetryError: false });
+        // after the dictionary, so every history reading can be converted; sent on each
+        // (re)connect, and the flush merges history with live readings by timestamp
+        fetchReadingHistory(VITALS_HISTORY.MAX_POINTS_PER_CHANNEL)
+          .then((readings) => {
+            if (isClosed) return;
+            pendingReadings.push(...readings);
+            set({ hasHistoryError: false });
+            scheduleFlush();
+          })
+          .catch(() => {
+            if (!isClosed) set({ hasHistoryError: true });
+          });
+      },
       onEnvironment: (environmentId) => set({ environmentId }),
       onReading: (reading) => {
         pendingReadings.push(reading);
@@ -136,6 +149,7 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
     });
 
     return () => {
+      isClosed = true;
       stream.close();
       window.clearTimeout(flushTimeoutId);
     };

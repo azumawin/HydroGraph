@@ -1,3 +1,5 @@
+import type { Evaluation } from "../../api/Service.ts";
+
 export const BODY_SCAN_VIEW = {
   CAMERA_POSITION: [0, 0, 100] as [number, number, number],
   CAMERA_ZOOM: 50,
@@ -58,6 +60,19 @@ export const BODY_EVALUATION_PRIORITY = {
   warning: 2,
   critical: 3,
 } as const;
+
+export const worstEvaluation = (
+  evaluations: readonly (Evaluation | undefined)[],
+): Evaluation | undefined =>
+  evaluations.reduce<Evaluation | undefined>(
+    (worst, evaluation) =>
+      evaluation !== undefined &&
+      (worst === undefined ||
+        BODY_EVALUATION_PRIORITY[evaluation] > BODY_EVALUATION_PRIORITY[worst])
+        ? evaluation
+        : worst,
+    undefined,
+  );
 
 export const BODY_MODEL_SURFACE = {
   RESOLUTION: 128,

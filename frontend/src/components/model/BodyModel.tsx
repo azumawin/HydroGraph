@@ -2,20 +2,15 @@ import { useThree } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import type { BufferGeometry } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import {
-  BODY_EVALUATION_PRIORITY,
-  BODY_MODEL_THEME,
-  BODY_REGION_IDS,
-  BODY_SCAN_VIEW,
-} from "./ModelConstants.ts";
-import type { VitalReading } from "../../store/useTelemetryStore.ts";
+import type { Evaluation } from "../../api/Service.ts";
+import { BODY_MODEL_THEME, BODY_REGION_IDS, BODY_SCAN_VIEW } from "./ModelConstants.ts";
 import { createBodyGeometry } from "./createBodyGeometry.ts";
 
 type BodyModelProps = {
-  readings: readonly VitalReading[];
+  regionEvaluations: Partial<Record<string, Evaluation>>;
 };
 
-const BodyModel = ({ readings }: BodyModelProps) => {
+const BodyModel = ({ regionEvaluations }: BodyModelProps) => {
   const viewportWidth = useThree((state) => state.viewport.width);
   const viewportHeight = useThree((state) => state.viewport.height);
   const camera = useThree((state) => state.camera);
@@ -30,21 +25,6 @@ const BodyModel = ({ readings }: BodyModelProps) => {
     warning: theme.getPropertyValue(BODY_MODEL_THEME.WARNING).trim(),
     critical: theme.getPropertyValue(BODY_MODEL_THEME.CRITICAL).trim(),
   };
-  const regionEvaluations: Partial<Record<string, VitalReading["evaluation"]>> = {};
-
-  for (const reading of readings) {
-    for (const region of reading.body_regions) {
-      const currentEvaluation = regionEvaluations[region];
-
-      if (
-        currentEvaluation === undefined ||
-        BODY_EVALUATION_PRIORITY[reading.evaluation] > BODY_EVALUATION_PRIORITY[currentEvaluation]
-      ) {
-        regionEvaluations[region] = reading.evaluation;
-      }
-    }
-  }
-
   const geometryData = useMemo(() => createBodyGeometry(), []);
   const modelScale =
     Math.min(
