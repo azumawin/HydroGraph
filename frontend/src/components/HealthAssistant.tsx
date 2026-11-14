@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { MessageSquare, SendHorizontal } from "lucide-react";
+import { SendHorizontal } from "lucide-react";
 import { assistantErrorDetail, postAssistant } from "../api/Service.ts";
 import type { ChatMessage, TelemetryFinding } from "../api/Service.ts";
 import { ASSISTANT, FINDING_STATUS_LABELS } from "../Constants.ts";
@@ -96,11 +96,10 @@ const HealthAssistant = () => {
   };
 
   return (
-    <section className="vitals-dashboard-panel vitals-dashboard-health-assistant">
-      <header className="vitals-dashboard-panel-header">
-        <MessageSquare className="vitals-dashboard-icon" />
-        <h2 className="vitals-dashboard-panel-title m-0">Health assistant</h2>
-      </header>
+    <section
+      className="vitals-dashboard-panel vitals-dashboard-health-assistant"
+      aria-label="Health assistant"
+    >
       <div
         ref={transcriptRef}
         className="vitals-dashboard-panel-content min-h-0 flex-1 overflow-y-auto p-6"

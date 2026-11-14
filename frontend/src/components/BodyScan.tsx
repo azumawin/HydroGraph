@@ -1,5 +1,4 @@
 import { Canvas } from "@react-three/fiber";
-import { ScanLine } from "lucide-react";
 import { Component, Suspense } from "react";
 import type { ReactNode } from "react";
 import type { Evaluation } from "../api/Service.ts";
@@ -42,11 +41,10 @@ const BodyScan = () => {
   }
 
   return (
-    <section className="vitals-dashboard-panel vitals-dashboard-body-scan">
-      <header className="vitals-dashboard-panel-header">
-        <ScanLine className="vitals-dashboard-icon" />
-        <h2 className="vitals-dashboard-panel-title m-0">Biometric body scan</h2>
-      </header>
+    <section
+      className="vitals-dashboard-panel vitals-dashboard-body-scan"
+      aria-label="Biometric body scan"
+    >
       <div className="vitals-dashboard-body-scan-content">
         <div className="vitals-dashboard-panel-content vitals-dashboard-body-scan-viewer min-h-0 flex-1">
           <BodyScanErrorBoundary>
