@@ -78,7 +78,7 @@
   border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
   border-radius: 999px;
   color: var(--color-text-secondary);
-  background: color-mix(in srgb, currentColor 8%, transparent);
+  background: var(--color-glass-tint);
   font-size: 12px;
   font-weight: 500;
   line-height: 16px;

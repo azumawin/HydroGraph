@@ -49,7 +49,8 @@
   padding: 8px 16px;
   border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: var(--color-glass-fill);
+  background:
+    linear-gradient(var(--color-glass-fill), var(--color-glass-fill)), var(--color-glass-tint);
 }
 
 .vitals-dashboard .vitals-dashboard-environment-select-label {
@@ -224,7 +225,7 @@
         transparent 42%,
         var(--color-glass-fill)
       ),
-      var(--color-glass-fill);
+      linear-gradient(var(--color-glass-fill), var(--color-glass-fill)), var(--color-glass-tint);
     backdrop-filter: blur(20px);
   }
 }

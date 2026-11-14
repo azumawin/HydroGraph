@@ -62,7 +62,7 @@ Define these HydroGraph theme values centrally in the existing [theme stylesheet
 
 All base palette values are neutral greys with equal red, green, and blue channels. Do not introduce blue or teal undertones into the canvas, glass, text, or interaction accents. The existing NASA logo retains its original colors.
 
-Status colors live in the same theme: normal and optimal use `--color-status-normal` (`#83D4AC`), unusual uses `--color-status-unusual` (`#EDB65B`), and critical uses `--color-status-critical` (`#EF6969`). Use those colors only for evaluations supplied by the application. A missing reading must never be presented as healthy.
+Status colors live in the same theme: normal and optimal use `--color-status-normal` (`#83D4AC`), unusual uses `--color-status-unusual` (`#EDB65B`), and critical uses `--color-status-critical` (`#FF9C9C`). Use those colors only for evaluations supplied by the application. A missing reading must never be presented as healthy.
 
 Chart colors identify labeled series, independently of evaluation: heart rate `#EF8585`, systolic pressure `#C6A4EB`, diastolic pressure `#88BCE8`, blood sugar `#83D4AC`, temperature `#EDC576`, and sleep `#9BB3EC`. Define these as `--color-chart-*` tokens in the theme. Keep the canvas, glass, icons, and interaction accents neutral.
 
@@ -72,6 +72,7 @@ Derive supporting treatments from these tokens with the project's existing `colo
 | ---------------------- | ------------------------------- |
 | Accent wash            | Accent 12%, transparent 88%     |
 | Glass fill             | Surface 8%, transparent 92%     |
+| Glass tint             | Background 80%, transparent 20% |
 | Directional reflection | Surface 16%, transparent 84%    |
 | Border                 | Surface 28%, transparent 72%    |
 | Divider                | Surface 16%, transparent 84%    |
@@ -87,7 +88,7 @@ Apple's materials guidance distinguishes functional Liquid Glass from content ma
 Use three material levels:
 
 1. **Canvas:** a 125-degree sweep of charcoal, graphite, and silver grey, with broad silver-grey light from the left and mist grey from the upper right. Layer the locally adapted React Bits Plasma effect over this base: broad silver folds, slow continuous motion, soft highlights, and no grain or cursor tracking. Read the effect color from the existing silver theme token. The light bands must cross panel boundaries so their transmission is visible. Keep the backdrop smooth and free of fine detail. Retain the static sweep when WebGL is unavailable and show a quiet status message.
-2. **Panel glass:** an 8% white base fill with a 135-degree reflection that starts at 16% white, clears at 42%, and returns to 8% at the opposite edge. Use `backdrop-filter: blur(20px)` without saturation enhancement. The layered fill intentionally varies in opacity across the panel, letting the Plasma folds remain visible through the glass.
+2. **Panel glass:** a glass-tint layer under an 8% white base fill, with a 135-degree reflection that starts at 16% white, clears at 42%, and returns to 8% at the opposite edge. Use `backdrop-filter: blur(20px)` without saturation enhancement. The layered fill intentionally varies in opacity across the panel, letting the Plasma folds remain visible through the glass. The tint keeps text at WCAG AA contrast over the brightest environment backdrops; status labels sit on a glass-tint fill.
 3. **Edges and depth:** a 1 px translucent white border; a 1 px bright inset top edge; softer inset left and bottom edges; and a `0 18px 48px` shadow using the shadow token. Keep divider lines quieter than outer edges. Future inner controls should use simple fills rather than another backdrop filter.
 
 Apply transparency to the background color, never to a whole panel's `opacity`; text and icons must retain their intended color. Use backdrop filtering rather than `filter: blur(...)`, which would blur the content itself.
@@ -127,7 +128,7 @@ Use fine Recharts strokes with restrained fills and hover details. The history s
 
 The [body-scan panel](./src/components/BodyScan.tsx) contains a procedural faceless human with soft mineral shading and a relaxed stance. It retains the same neutral header and glass material as the vitals panel. Dragging rotates the figure; there is no automatic animation.
 
-The body uses `--color-body-neutral` (`#A6A6A6`). Explicit unusual evaluations use `--color-status-unusual` (`#EDB65B`) and critical evaluations use `--color-status-critical` (`#EF6969`) on their named surface regions. Normal, optimal, and unmeasured regions remain grey; grey alone does not establish that a measurement exists. The current service supplies sample readings. Define all palette values in the theme stylesheet, and keep region geometry and lighting settings in [ModelConstants.ts](./src/components/model/ModelConstants.ts).
+The body uses `--color-body-neutral` (`#A6A6A6`). Explicit unusual evaluations use `--color-status-unusual` (`#EDB65B`) and critical evaluations use `--color-status-critical` (`#FF9C9C`) on their named surface regions. Normal, optimal, and unmeasured regions remain grey; grey alone does not establish that a measurement exists. The current service supplies sample readings. Define all palette values in the theme stylesheet, and keep region geometry and lighting settings in [ModelConstants.ts](./src/components/model/ModelConstants.ts).
 
 Keep labels on a stable reading surface beside the model. Group supplied evaluations into head and neck, upper body, arms, lower body, and joints; show the highest supplied severity for each group, or “No reading” when none is supplied. These are reading-linked regions, not new diagnoses. Avoid holographic rings, a neon floor, and decorative scanning motion. Organs and anatomical diagnostic detail are outside the current model.
 
