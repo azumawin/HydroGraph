@@ -29,6 +29,7 @@ HEALTHY: dict[str, float | bool] = {
     "ambient_dose_rate": 18e-6 / 3600,
     "ambient_integrated_dose": 0.001,
     "spe_flag": False,
+    "jugular_strain_pct": 0.0065,
 }
 
 
@@ -93,6 +94,7 @@ class TestEvaluateFindings(unittest.TestCase):
             "spo2": 0.89,
             "spe_flag": True,
             "viral_cmv_detected": True,
+            "jugular_strain_pct": 0.0155,
         }
         results = evaluate_findings(sick, 75.0, None)
         self.assertIn(
@@ -102,6 +104,11 @@ class TestEvaluateFindings(unittest.TestCase):
         self.assertEqual(results["hypoxia_co2_2_2"]["status"], "critical")
         self.assertEqual(results["radiation_exposure_3_2"]["status"], "critical")
         self.assertEqual(results["acute_infection_3_1"]["status"], "warning")
+        self.assertEqual(results["sans_fluid_shift_1_3"]["status"], "warning")
+
+    def test_jugular_strain_boundary_survives_float_noise(self) -> None:
+        results = evaluate_findings({"jugular_strain_pct": 0.011}, None, None)
+        self.assertEqual(results["sans_fluid_shift_1_3"]["status"], "warning")
 
     def test_weekly_loss_prefers_week_before(self) -> None:
         latest = {**HEALTHY, "body_mass": 74.0}

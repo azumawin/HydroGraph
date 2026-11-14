@@ -5,9 +5,9 @@ channel readings (:mod:`hydrograph_core.channels`). This module bridges the
 two for one crew member: :func:`evaluate_findings` converts the latest
 readings and calls every finding whose inputs the simulator provides.
 
-Six of the ten findings are monitored. :data:`FINDINGS` lists all ten; an
+Seven of the ten findings are monitored. :data:`FINDINGS` lists all ten; an
 empty ``channels`` tuple marks one whose inputs the simulator does not send
-(postural BP, sleep, PHQ-9/GAD-7, EEG/PVT, jugular distension).
+(postural BP, sleep, PHQ-9/GAD-7, EEG/PVT).
 
 Context a single reading cannot carry, assumed here:
 
@@ -32,12 +32,14 @@ from .findings import (
     HypoxiaResult,
     InfectionResult,
     RadiationResult,
+    SansResult,
     acute_infection_3_1,
     bone_demineralization_1_2,
     dehydration_2_1,
     hypoxia_co2_2_2,
     negative_energy_balance_2_3,
     radiation_exposure_3_2,
+    sans_fluid_shift_1_3,
 )
 
 
@@ -58,7 +60,7 @@ FINDINGS: Final[Mapping[str, FindingInfo]] = MappingProxyType(
         },
         "sans_fluid_shift_1_3": {
             "name": "SANS & cephalic fluid shift",
-            "channels": (),
+            "channels": ("jugular_strain_pct",),
         },
         "dehydration_2_1": {
             "name": "Dehydration & electrolyte loss",
@@ -108,6 +110,7 @@ type FindingResult = (
     | EnergyBalanceResult
     | InfectionResult
     | RadiationResult
+    | SansResult
 )
 
 
@@ -239,6 +242,13 @@ def evaluate_findings(
         results["bone_demineralization_1_2"] = bone_demineralization_1_2(
             num("bone_ntx_pct_baseline") * 100.0,
             num("urine_volume_24h") * 1000.0,
+        )
+
+    if has("sans_fluid_shift_1_3"):
+        # Fractional strain -> %, rounded so float noise cannot move a band
+        # boundary (0.011 * 100 = 1.0999...).
+        results["sans_fluid_shift_1_3"] = sans_fluid_shift_1_3(
+            round(num("jugular_strain_pct") * 100.0, 9)
         )
 
     if has("dehydration_2_1") and body_mass_first_kg is not None:

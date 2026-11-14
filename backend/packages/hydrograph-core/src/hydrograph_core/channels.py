@@ -254,6 +254,51 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
             ("kidneys",),
             "Below 2.0 L/day raises kidney stone risk alongside bone loss.",
         ),
+        "jugular_strain_pct": _crew(
+            "Jugular strain",
+            "1",
+            ("neck", "head"),
+            (
+                "Neck-patch strain from cephalic fluid shift; above 1.1 % signals "
+                "the SANS fluid shift, above 1.8 % optic nerve compression risk."
+            ),
+        ),
+        "delta_R_over_R0": _crew(
+            "Neck-patch resistance change",
+            "1",
+            ("neck",),
+            (
+                "Raw hydrogel signal behind jugular strain (gauge factor times "
+                "strain). The specs give no cutoff."
+            ),
+        ),
+        "icp_risk_indicator_mmHg": _crew(
+            "Intracranial pressure indicator",
+            "Pa",
+            ("head", "eyes"),
+            (
+                "Estimated from neck strain; 12-18 mmHg is moderate and above "
+                "18 mmHg high SANS optic nerve compression risk."
+            ),
+        ),
+        "visual_acuity_logmar": _crew(
+            "Visual acuity (LogMAR)",
+            "1",
+            ("eyes",),
+            (
+                "On-screen eye test result; higher is worse. The specs give no "
+                "cutoff."
+            ),
+        ),
+        "amsler_grid_distortion": _crew(
+            "Amsler grid distortion",
+            "boolean",
+            ("eyes",),
+            (
+                "Distorted lines on the on-screen Amsler grid can signal retinal "
+                "changes from SANS. The specs give no grading."
+            ),
+        ),
         "ambient_ppco2": _environment(
             "Cabin CO2 partial pressure",
             "Pa",
@@ -375,6 +420,24 @@ def evaluate_reading(channel: str, value: float | bool) -> Evaluation:
             # Master plan Finding 8: urine volume < 2.0 L/day. 1 m^3 = 1000 L.
             litres = value * 1000.0
             return "warning" if litres < 2.0 else "nominal"
+        case "jugular_strain_pct":
+            # Master plan Finding 9: 1.1-1.8 % warning, > 1.8 % critical. The
+            # wire value is a fraction (0.0155 = 1.55 %). Rounded so float noise
+            # cannot move an exact boundary (0.011 * 100 = 1.0999...).
+            pct = round(value * 100.0, 9)
+            if pct > 1.8:
+                return "critical"
+            if pct >= 1.1:
+                return "warning"
+            return "nominal"
+        case "icp_risk_indicator_mmHg":
+            # NSA 1.1: nominal < 12.0 mmHg, warning 12.0-18.0, critical > 18.0.
+            mmhg = value / 133.322
+            if mmhg > 18.0:
+                return "critical"
+            if mmhg >= 12.0:
+                return "warning"
+            return "nominal"
         case "ambient_ppco2":
             # Master plan Finding 4: ppCO2 > 3.0 mmHg. 1 mmHg = 133.322 Pa.
             mmhg = value / 133.322
@@ -404,11 +467,15 @@ def evaluate_reading(channel: str, value: float | bool) -> Evaluation:
             | "sweat_rate"
             | "body_mass"
             | "ambient_light_lux"
+            | "delta_R_over_R0"
+            | "visual_acuity_logmar"
+            | "amsler_grid_distortion"
         ):
             # No single-reading cutoff in either document: graded against a
             # baseline or trend (body mass, sweat, NTx, vitamin D), only inside
             # a finding (BP, respiratory rate), for another specimen (cortisol
-            # cutoffs are for normalized ISF), or not at all (HRV, light).
+            # cutoffs are for normalized ISF), or not at all (HRV, light,
+            # resistance change, visual acuity, Amsler grid).
             return "unspecified"
         case _:
             raise ValueError(f'Unknown channel "{channel}".')

@@ -100,8 +100,9 @@ To feed it from the simulator, set `base_url = "http://127.0.0.1:8000"` and
 - then, the moment a reading is POSTed, its `reading` event and a `finding` event
   for each finding that uses its channel.
 
-Findings come from core (`hydrograph_core.assessment`): six of the master plan's ten
-are monitored, from the latest crew and cabin readings (`api/findings.py`). The other four need inputs the simulator does not send.
+Findings come from core (`hydrograph_core.assessment`): seven of the master plan's ten
+are monitored, from the latest crew and cabin readings (`api/findings.py`). The other
+three (orthostatic, sleep, behavioral) need inputs the simulator does not send.
 
 Delivery is an in-memory queue per open stream (`api/broadcast.py`), so it needs a
 single server process, which `runserver` is. A reconnect (`EventSource`'s automatic

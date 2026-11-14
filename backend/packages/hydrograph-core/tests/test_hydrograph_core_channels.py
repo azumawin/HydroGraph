@@ -52,6 +52,15 @@ class TestEvaluateReading(unittest.TestCase):
             ("spe_flag", False, "nominal"),
             ("spe_flag", True, "critical"),
             ("cortisol_saliva", 20e-6, "unspecified"),
+            ("jugular_strain_pct", 0.0109, "nominal"),
+            ("jugular_strain_pct", 0.0110, "warning"),
+            ("jugular_strain_pct", 0.0181, "critical"),
+            ("icp_risk_indicator_mmHg", 11.9 * MMHG, "nominal"),
+            ("icp_risk_indicator_mmHg", 12.0 * MMHG, "warning"),
+            ("icp_risk_indicator_mmHg", 18.1 * MMHG, "critical"),
+            ("delta_R_over_R0", 0.1, "unspecified"),
+            ("visual_acuity_logmar", 0.2, "unspecified"),
+            ("amsler_grid_distortion", True, "unspecified"),
         ]
         for channel, value, expected in cases:
             with self.subTest(channel=channel, value=value):

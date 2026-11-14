@@ -1,7 +1,7 @@
 # hydrograph-core
 
 Pure domain logic for the HydroGFN health monitor: the master plan's 10 Tier 1
-health findings, the sensor channel catalog (the simulator's 29 channels, in SI
+health findings, the sensor channel catalog (the simulator's 34 channels, in SI
 wire units) with single-reading thresholds, and the mission environments. No Django imports, no I/O, no state. The backend
 consumes it; any rule about what a value means belongs here, not in `api/`.
 

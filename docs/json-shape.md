@@ -80,7 +80,7 @@ finding's input channels.
   severity (dehydration, energy balance, bone), otherwise
   `"nominal" | "warning" | "critical"`.
 - `action` is the plan's action card, or `"No finding"`.
-- Six findings are monitored; the other four need inputs the simulator does
+- Seven findings are monitored; the other three need inputs the simulator does
   not send and are never sent (their dictionary `channels` is empty).
 
 ## 4. Backend → frontend: dictionary
@@ -110,9 +110,9 @@ join it to readings by `channel` and to findings by `id`.
 }
 ```
 
-- `channels` has one entry per channel the backend accepts (the simulator's 29).
+- `channels` has one entry per channel the backend accepts (the simulator's 34).
 - `findings` has all 10 findings; `channels` lists each one's inputs, empty for
-  the four that are not monitored.
+  the three that are not monitored.
 - `comm_delay_s` is really a range; simplified to one number for the demo.
 - `body_regions` makes the clickable body figure data-driven instead of a
   hardcoded SVG switch statement.

@@ -65,3 +65,15 @@ Every enabled owner/channel emits exactly once with `measured_at` equal to the c
 Startup `X-Window-Seconds` is 0: a nominal 24-hour urine baseline must not be interpreted as urine actually collected during a zero-duration interval. Profile RMSSD, nominal daily urine volume (2.7 L), glucose baseline and configured local sweat references stand in for windows that do not yet exist. Normal scheduled readings use `X-Sample-Kind: scheduled` and their real collection windows/processing delays. Preview snapshots expose the same `sample_kind` as metadata around `reading`.
 
 The first normal acquisition remains at its original time; no time-zero acquisition is duplicated. Empty IL-6/troponin event lists suppress later assay collections, not startup initialization. Use `enabled_channels` to omit a metric entirely. A new process run creates fresh baseline readings with a new run identifier; resuming an existing scheduler does not repeat initialization.
+
+## Optional SANS inputs
+
+The dictionary includes `sans_scenario` settings (or null). The five new channels
+and their conversions are listed in `channel_catalog.md`. For Finding 9, map
+`jugular_strain_pct` wire fractions to the evaluator's `jugular_distension_pct`
+percentage argument by multiplying by 100. A value of 0.0155 becomes 1.55.
+Keep `startup_baseline` visual fixtures separate from completed scheduled screens.
+The existing finding function does not use HRV, ICP indicators or visual results
+as classification inputs. Readings arrive at `/api/readings/`; the HydroGraph
+backend grades `jugular_strain_pct` and `icp_risk_indicator_mmHg` and runs Finding 9
+from `jugular_strain_pct`, as above.
