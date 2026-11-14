@@ -38,8 +38,6 @@
   --color-accent-wash: color-mix(in srgb, var(--color-accent) 12%, transparent);
   --color-glass-fill: color-mix(in srgb, var(--color-surface) 8%, transparent);
   --color-glass-tint: color-mix(in srgb, var(--color-background) 80%, transparent);
-  --color-glass-reflection: color-mix(in srgb, var(--color-surface) 16%, transparent);
-  --color-edge-highlight: color-mix(in srgb, var(--color-surface) 65%, transparent);
   --color-shadow: color-mix(in srgb, var(--color-background) 30%, transparent);
 
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;

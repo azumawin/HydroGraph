@@ -42,7 +42,7 @@ NASA  HydroGraph
 - Keep the application header at least 96 px tall. The main panel's tab bar is 60 px tall; the body-scan and assistant panels have no header. Align tabs and content to the same inset.
 - Keep the NASA asset and product identity. Use a 96 px logo height and a 12 px brand gap. Keep the header free of a subtitle and a prominent divider.
 - Left-align titles, labels, and prose. Right-align comparable numeric columns when future vitals rows are implemented. Center only the body visualization within its own region.
-- Use 24 px radii for the three primary panels, 12 px for fields and contained controls, and capsule shapes only for compact statuses or segmented controls.
+- Use 14 px radii for the three primary panels, 8–10 px for fields and contained controls, and 4 px for status tags. Avoid capsule shapes. Tabs are plain text with a 2 px underline on the active tab.
 
 ## Color system
 
@@ -68,16 +68,14 @@ Chart colors identify labeled series, independently of evaluation: heart rate `#
 
 Derive supporting treatments from these tokens with the project's existing `color-mix(in srgb, ...)` convention:
 
-| Treatment              | Recipe                          |
-| ---------------------- | ------------------------------- |
-| Accent wash            | Accent 12%, transparent 88%     |
-| Glass fill             | Surface 8%, transparent 92%     |
-| Glass tint             | Background 80%, transparent 20% |
-| Directional reflection | Surface 16%, transparent 84%    |
-| Border                 | Surface 28%, transparent 72%    |
-| Divider                | Surface 16%, transparent 84%    |
-| Edge highlight         | Surface 65%, transparent 35%    |
-| Soft shadow ink        | Background 30%, transparent 70% |
+| Treatment       | Recipe                          |
+| --------------- | ------------------------------- |
+| Accent wash     | Accent 12%, transparent 88%     |
+| Glass fill      | Surface 8%, transparent 92%     |
+| Glass tint      | Background 80%, transparent 20% |
+| Border          | Surface 28%, transparent 72%    |
+| Divider         | Surface 16%, transparent 84%    |
+| Soft shadow ink | Background 30%, transparent 70% |
 
 Keep icons and ordinary text neutral white. The backdrop supplies tonal variation; panel outlines should read as reflections rather than neon strokes. Use the platinum accent for selection and actions. Label each chart series explicitly; reserve semantic text colors for evaluation statuses.
 
@@ -88,8 +86,8 @@ Apple's materials guidance distinguishes functional Liquid Glass from content ma
 Use three material levels:
 
 1. **Canvas:** a 125-degree sweep of charcoal, graphite, and silver grey, with broad silver-grey light from the left and mist grey from the upper right. Layer the locally adapted React Bits Plasma effect over this base: broad silver folds, slow continuous motion, soft highlights, and no grain or cursor tracking. Read the effect color from the existing silver theme token. The light bands must cross panel boundaries so their transmission is visible. Keep the backdrop smooth and free of fine detail. Retain the static sweep when WebGL is unavailable and show a quiet status message.
-2. **Panel glass:** a glass-tint layer under an 8% white base fill, with a 135-degree reflection that starts at 16% white, clears at 42%, and returns to 8% at the opposite edge. Use `backdrop-filter: blur(20px)` without saturation enhancement. The layered fill intentionally varies in opacity across the panel, letting the Plasma folds remain visible through the glass. The tint keeps text at WCAG AA contrast over the brightest environment backdrops; status labels sit on a glass-tint fill.
-3. **Edges and depth:** a 1 px translucent white border; a 1 px bright inset top edge; softer inset left and bottom edges; and a `0 18px 48px` shadow using the shadow token. Keep divider lines quieter than outer edges. Future inner controls should use simple fills rather than another backdrop filter.
+2. **Panel glass:** a glass-tint layer under an 8% white base fill, with no reflection gradient. Use `backdrop-filter: blur(20px)` without saturation enhancement, so the Plasma folds stay visible through the glass. The tint keeps text at WCAG AA contrast over the brightest environment backdrops; status labels sit on a glass-tint fill.
+3. **Edges and depth:** a 1 px translucent white border and a `0 8px 24px` shadow using the shadow token. No inset edge highlights. Keep divider lines quieter than outer edges. Future inner controls should use simple fills rather than another backdrop filter.
 
 Apply transparency to the background color, never to a whole panel's `opacity`; text and icons must retain their intended color. Use backdrop filtering rather than `filter: blur(...)`, which would blur the content itself.
 

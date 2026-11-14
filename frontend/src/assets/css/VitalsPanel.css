@@ -37,12 +37,6 @@
   color: var(--color-text-secondary);
 }
 
-.vitals-dashboard .vitals-dashboard-reading-icon {
-  width: 16px;
-  height: 16px;
-  stroke-width: 1.75;
-}
-
 .vitals-dashboard .vitals-dashboard-reading-label {
   margin: 0;
   font-size: 13px;
@@ -74,9 +68,8 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
-  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
-  border-radius: 999px;
+  padding: 1px 6px;
+  border-radius: 4px;
   color: var(--color-text-secondary);
   background: var(--color-glass-tint);
   font-size: 12px;
@@ -178,18 +171,18 @@
 
 .vitals-dashboard .vitals-dashboard-panel-tabs {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 60px;
+  gap: 24px;
+  min-height: 52px;
   flex-shrink: 0;
   margin: 0 24px;
   border-bottom: 1px solid var(--color-divider);
 }
 
 .vitals-dashboard .vitals-dashboard-panel-tab {
-  padding: 6px 14px;
-  border: 1px solid transparent;
-  border-radius: 999px;
+  margin-bottom: -1px;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
   color: var(--color-text-secondary);
   background: transparent;
   font-size: 14px;
@@ -201,9 +194,8 @@
   }
 
   &.is-active {
-    border-color: var(--color-border);
+    border-bottom-color: var(--color-text);
     color: var(--color-text);
-    background: var(--color-accent-wash);
   }
 }
 
@@ -354,14 +346,14 @@
   gap: 2px;
   padding: 2px;
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--color-glass-tint);
 }
 
 .vitals-dashboard .vitals-dashboard-trends-period {
   padding: 4px 12px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   color: var(--color-text-secondary);
   background: transparent;
   font-size: 12px;
@@ -421,7 +413,7 @@
 }
 
 .vitals-dashboard .vitals-dashboard-trends-cell {
-  border-radius: 3px;
+  border-radius: 2px;
   background: var(--color-glass-fill);
 
   &.is-nominal {
@@ -462,13 +454,8 @@
 }
 
 .vitals-dashboard .vitals-dashboard-advice-contact {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-glass-tint);
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .vitals-dashboard .vitals-dashboard-advice-contact-title,
@@ -488,7 +475,6 @@
 
 .vitals-dashboard .vitals-dashboard-advice-list {
   display: grid;
-  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -496,22 +482,11 @@
 
 .vitals-dashboard .vitals-dashboard-advice-card {
   display: grid;
-  gap: 8px;
-  padding: 14px 16px;
-  border: 1px solid var(--color-divider);
-  border-left: 3px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-glass-tint);
+  gap: 6px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-divider);
   font-size: 13px;
   line-height: 18px;
-
-  &.is-warning {
-    border-left-color: var(--color-status-warning);
-  }
-
-  &.is-critical {
-    border-left-color: var(--color-status-critical);
-  }
 }
 
 .vitals-dashboard .vitals-dashboard-advice-card-heading {

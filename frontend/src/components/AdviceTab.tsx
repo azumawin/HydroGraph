@@ -1,4 +1,3 @@
-import { RadioTower, UserRoundCheck } from "lucide-react";
 import { ADVICE, FINDING_STATUS_LABELS, formatCommDelay } from "../Constants.ts";
 import type { TelemetryFinding } from "../api/Service.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
@@ -31,20 +30,18 @@ const AdviceTab = () => {
   const roundTrip = formatCommDelay(environment.comm_delay_rt_s);
   const isGroundAvailable = environment.comm_delay_rt_s <= ADVICE.REALTIME_GROUND_MAX_RT_S;
   const escalation = isGroundAvailable ? ADVICE.ESCALATION.ground : ADVICE.ESCALATION.autonomous;
-  const ContactIcon = isGroundAvailable ? RadioTower : UserRoundCheck;
 
   return (
     <div className="vitals-dashboard-advice">
       <div className="vitals-dashboard-advice-contact">
-        <ContactIcon className="vitals-dashboard-icon" />
         <div>
           <h3 className="vitals-dashboard-advice-contact-title">
             {isGroundAvailable ? ADVICE.GROUND_AVAILABLE_TITLE : ADVICE.AUTONOMOUS_TITLE}
           </h3>
           <p className="vitals-dashboard-advice-contact-text">
             {isGroundAvailable
-              ? `${environment.name}: ${roundTrip} round trip to the ground, so you can talk to the flight surgeon while you act.`
-              : `${environment.name}: ${roundTrip} round trip to the ground. Any reply comes too late to wait for, so act on the cards below yourself.`}
+              ? `${roundTrip} round trip from ${environment.name}. Call the flight surgeon about anything below.`
+              : `${roundTrip} round trip from ${environment.name}. Don't wait for a reply; act on the steps below.`}
           </p>
         </div>
       </div>
@@ -66,13 +63,9 @@ const AdviceTab = () => {
               </span>
             </div>
             {finding.triggers.length > 0 && (
-              <p className="vitals-dashboard-advice-card-triggers">
-                Because: {finding.triggers.join(", ")}
-              </p>
+              <p className="vitals-dashboard-advice-card-triggers">{finding.triggers.join(", ")}</p>
             )}
-            <p className="vitals-dashboard-advice-card-action">
-              <strong>Do now:</strong> {finding.action}
-            </p>
+            <p className="vitals-dashboard-advice-card-action">{finding.action}</p>
             <p className="vitals-dashboard-advice-card-escalation">{escalation[finding.status]}</p>
           </li>
         ))}
