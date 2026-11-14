@@ -76,3 +76,19 @@ Keep `startup_baseline` visual fixtures separate from completed scheduled screen
 The existing finding function does not use HRV, ICP indicators or visual results
 as classification inputs. Its scheduling and HTTP receiver are separate backend
 integration work; the current Django API exposes no telemetry ingestion endpoint.
+
+## Scenario 2 mapping and severity
+
+`ambient_ppco2` remains an environment-owned Pa reading; convert to mmHg by
+`value / 133.322387415`. Convert `spo2` to percent using `100 * value` and
+respiratory/heart rates from `s^-1` using `60 * value`. The CFE ratio is contextual
+and dimensionless. Bodies retain exactly four fields; existing headers carry
+scope, owner, run identity, sample kind and window provenance.
+
+The existing `hypoxia_co2_2_2()` returns WARNING at 4.8 mmHg / 92% SpO₂,
+whereas the source scenario asks for red. CRITICAL currently requires SpO₂ below
+90%. No severity-policy change or telemetry receiver is included in simulator
+support. RR trend and reported headache remain upstream inputs; missing symptom
+reports must not be inferred from the generated CFE or cabin signal. A receiver,
+five-second evaluation loop and resolved severity policy remain prerequisites
+for the source's end-to-end Critical Red Alert. See `badscenario2.md`, section 7.

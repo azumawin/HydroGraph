@@ -22,6 +22,9 @@ class Frequency:
 
 
 FREQUENCIES: dict[str, Frequency] = {
+    "eeg_cfe": Frequency(
+        "60s mean synthetic ratio fixture; no raw EEG", interval_s=60, window_s=60, rows=(5,)
+    ),
     "cephalic": Frequency("60s mean synthetic strain trend; 50Hz latent grid", 50, 60, 60, (9,)),
     "eye_screen": Frequency("configured synthetic completed eye-screen events", rows=(9,)),
     "heart": Frequency("60s HR estimate; first complete window at 60s", 100, 60, 60, (1,)),

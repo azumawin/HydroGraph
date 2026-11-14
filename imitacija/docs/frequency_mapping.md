@@ -57,3 +57,12 @@ Stable channel identifiers remain in place: matrix `hs_ctni` → `troponin_i`; `
 This task tunes existing channels. The table's unimplemented fluid-intake prompts, urine calcium, activity counts, EEG/PVT, mood, sleep, kinematics, visual tests and cephalic/ICP measurements are not silently added. NEWS2/qSOFA/SIRS, shock index, hydration balance, cumulative sweat-volume summaries, circadian/slope features, five-second alarm decisions and hourly trend reviews belong to the backend. Existing local sodium-loss rate is windowed, but no extra cumulative sweat-volume channel is introduced.
 
 The dictionary exposes `raw_acquisition_hz`, `frequency_matrix_rows`, `frequency_basis`, actual collection schedule and observation-window duration. JSON-preview refresh, HTTP retry/backoff, laboratory availability and measurement acquisition remain separate clocks. Accelerated previews may omit intermediate 1 Hz results between JSON-preview refreshes. After the separately labelled startup fixture, not-yet-available scheduled windows remain absent; no regular readings are fabricated to fill a shared tick.
+
+## Scenario 2 CFE adaptation
+
+`eeg_cfe_ratio` uses group `eeg_cfe`: first scheduled result at 60 seconds,
+then every 60 seconds, with a 60-second completed window. Its synthetic ratio
+reference is averaged on a one-second midpoint grid. Raw acquisition frequency
+is unspecified (`null`); this does not implement row 5's 250 Hz EEG/FFT pipeline.
+Cabin CO₂ and SpO₂ retain 1 Hz publication; HR and respiratory estimates retain
+their minute windows and phases. Five-second acute evaluation remains backend-owned.
