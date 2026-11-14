@@ -1,4 +1,7 @@
-"""Tier 1: the 10 personal health findings (master plan, section 2).
+"""Tier 1: the 10 personal health findings and blood pressure telemetry.
+
+The ten findings follow master plan section 2; the supplementary blood
+pressure evaluator follows ``message.md``.
 
 Each function evaluates one finding for the main window and returns its
 immediate action card. Criteria the master plan quantifies are computed here.
@@ -16,6 +19,7 @@ D     Domain              Function                                 Plan finding
 1     Gravity             ``orthostatic_intolerance_1_1``          1
 1     Gravity             ``bone_demineralization_1_2``            8
 1     Gravity             ``sans_fluid_shift_1_3``                 9
+1     Gravity             ``blood_pressure_1_4``                  Telemetry guide
 2     Closed environment  ``dehydration_2_1``                      2
 2     Closed environment  ``hypoxia_co2_2_2``                      4
 2     Closed environment  ``negative_energy_balance_2_3``          7
@@ -41,6 +45,16 @@ class OrthostaticResult(TypedDict):
     hr_rise_bpm: float
     shock_index: float
     ctni_ng_ml: float | None
+    triggers: list[str]
+    status: Severity
+    action: str
+
+
+class BloodPressureResult(TypedDict):
+    sbp_mmhg: float
+    dbp_mmhg: float
+    map_mmhg: float
+    shock_index: float | None
     triggers: list[str]
     status: Severity
     action: str
@@ -212,6 +226,91 @@ def orthostatic_intolerance_1_1(
         "hr_rise_bpm": round(hr_rise, 1),
         "shock_index": round(shock_index, 2),
         "ctni_ng_ml": ctni_ng_ml,
+        "triggers": triggers,
+        "status": status,
+        "action": action,
+    }
+
+
+def blood_pressure_1_4(
+    sbp_mmhg: float,
+    dbp_mmhg: float,
+    heart_rate_bpm: float | None,
+) -> BloodPressureResult:
+    r"""
+    Blood pressure telemetry (gravity / cardiovascular).
+
+    Mean arterial pressure and shock index:
+        \text{MAP} = \text{DBP} + (\text{SBP} - \text{DBP}) / 3
+        \text{SI} = \text{HR} / \text{SBP}
+
+    References:
+        message.md: Blood Pressure Telemetry Guide, sections 1-3.
+        This supplementary evaluator uses the guide's absolute BP bands and
+        critical SI alert; Finding 1 retains its postural-test criteria.
+
+    Args:
+        sbp_mmhg: Systolic pressure (``blood_pressure_sys_mmHg``) [mmHg].
+        dbp_mmhg: Diastolic pressure (``blood_pressure_dia_mmHg``) [mmHg].
+        heart_rate_bpm: Concurrent heart rate [BPM]; ``None`` when unavailable.
+
+    Returns:
+        ``sbp_mmhg``, ``dbp_mmhg``, ``map_mmhg``, ``shock_index``,
+        ``triggers``, ``status``, ``action``. The worst metric wins.
+        CRITICAL when SBP <= 90 or >= 140, DBP >= 90, or SI > 0.9;
+        otherwise WARNING when SBP <= 100 or > 120, or DBP < 60 or > 80.
+        Explicit low-SBP alerts override the guide's overlapping nominal
+        band. DBP = 80 belongs to the less severe, nominal band. Fractional
+        values between the table's whole-number bands take the next band.
+        Low DBP alone warns; critical hypotension requires SBP <= 90.
+        SI is ``None`` when heart rate is unavailable. MAP is informational.
+        Standing drops require postural context and are evaluated by
+        :func:`orthostatic_intolerance_1_1`.
+
+    Raises:
+        ValueError: Sensor error (SBP <= DBP or pulse pressure < 15 mmHg).
+            The guide's simulator slider limits are not telemetry limits.
+    """
+    if sbp_mmhg <= dbp_mmhg or sbp_mmhg - dbp_mmhg < 15.0:
+        raise ValueError("Sensor Error: SBP must exceed DBP by at least 15 mmHg")
+
+    map_mmhg = dbp_mmhg + (sbp_mmhg - dbp_mmhg) / 3.0
+    shock_index = heart_rate_bpm / sbp_mmhg if heart_rate_bpm is not None else None
+
+    triggers: list[str] = []
+    if sbp_mmhg <= 90.0:
+        triggers.append("SBP <= 90 mmHg")
+    elif sbp_mmhg <= 100.0:
+        triggers.append("SBP <= 100 mmHg")
+    elif sbp_mmhg >= 140.0:
+        triggers.append("SBP >= 140 mmHg")
+    elif sbp_mmhg > 120.0:
+        triggers.append("SBP > 120 mmHg")
+    if dbp_mmhg < 60.0:
+        triggers.append("DBP < 60 mmHg")
+    elif dbp_mmhg >= 90.0:
+        triggers.append("DBP >= 90 mmHg")
+    elif dbp_mmhg > 80.0:
+        triggers.append("DBP > 80 mmHg")
+    if shock_index is not None and shock_index > 0.9:
+        triggers.append("shock index > 0.9")
+
+    if shock_index is not None and shock_index > 0.9:
+        status, action = "critical", "Critical hemodynamic instability alert"
+    elif sbp_mmhg <= 90.0:
+        status, action = "critical", "Critical low blood pressure alert"
+    elif sbp_mmhg >= 140.0 or dbp_mmhg >= 90.0:
+        status, action = "critical", "Critical high blood pressure alert"
+    elif triggers:
+        status, action = "warning", "Blood pressure warning alert"
+    else:
+        status, action = "nominal", "No finding"
+
+    return {
+        "sbp_mmhg": sbp_mmhg,
+        "dbp_mmhg": dbp_mmhg,
+        "map_mmhg": round(map_mmhg, 1),
+        "shock_index": round(shock_index, 2) if shock_index is not None else None,
         "triggers": triggers,
         "status": status,
         "action": action,
