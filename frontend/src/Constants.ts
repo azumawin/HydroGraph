@@ -1,3 +1,6 @@
+import { Activity, Droplet, HeartPulse, Thermometer, Wind } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://127.0.0.1:8000";
 
 export const TELEMETRY = {
@@ -166,18 +169,21 @@ export type VitalSeries = {
 
 export type VitalMetric = {
   LABEL: string;
+  ICON: LucideIcon;
   SERIES: readonly VitalSeries[];
 };
 
 export const VITALS_METRICS = {
   HEART_RATE: {
     LABEL: "Heart rate",
+    ICON: HeartPulse,
     SERIES: [
       { CHANNEL: "heart_rate", LABEL: "Heart rate", COLOR: "var(--color-chart-heart-rate)" },
     ],
   },
   BLOOD_PRESSURE: {
     LABEL: "Blood pressure",
+    ICON: Activity,
     SERIES: [
       { CHANNEL: "bp_systolic", LABEL: "Systolic", COLOR: "var(--color-chart-systolic)" },
       { CHANNEL: "bp_diastolic", LABEL: "Diastolic", COLOR: "var(--color-chart-diastolic)" },
@@ -185,10 +191,12 @@ export const VITALS_METRICS = {
   },
   BLOOD_SUGAR: {
     LABEL: "Blood sugar",
+    ICON: Droplet,
     SERIES: [{ CHANNEL: "glucose", LABEL: "Blood sugar", COLOR: "var(--color-chart-blood-sugar)" }],
   },
   BODY_TEMPERATURE: {
     LABEL: "Body temperature",
+    ICON: Thermometer,
     SERIES: [
       {
         CHANNEL: "body_temperature",
@@ -199,6 +207,7 @@ export const VITALS_METRICS = {
   },
   BLOOD_OXYGEN: {
     LABEL: "Blood oxygen",
+    ICON: Wind,
     SERIES: [{ CHANNEL: "spo2", LABEL: "SpO2", COLOR: "var(--color-chart-oxygen)" }],
   },
 } satisfies Record<string, VitalMetric>;

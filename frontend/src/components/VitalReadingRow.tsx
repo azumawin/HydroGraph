@@ -29,6 +29,7 @@ const VitalReadingRow = ({
             BODY_EVALUATION_PRIORITY[first.evaluation],
         )[0]
       : undefined;
+  const Icon = metric.ICON;
   const evaluation = evaluatedReading?.evaluation;
   const statusLabel = isLoadingReading
     ? "Loading"
@@ -53,6 +54,7 @@ const VitalReadingRow = ({
     <article className="vitals-dashboard-reading">
       <div className="vitals-dashboard-reading-summary">
         <div className="vitals-dashboard-reading-heading">
+          <Icon className="vitals-dashboard-reading-icon" />
           <h3 className="vitals-dashboard-reading-label">{metric.LABEL}</h3>
         </div>
         <div className="vitals-dashboard-reading-measurement">
