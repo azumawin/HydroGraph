@@ -94,6 +94,19 @@ the new CFE channel in the receiver, a five-second evaluation loop and a resolve
 severity policy remain prerequisites
 for the source's end-to-end Critical Red Alert. See `badscenario2.md`, section 7.
 
+
+## Following the backend environment
+
+With `follow_backend_environment = true` (set in `healthy.toml`, `badscenario1.toml`
+and `badscenario2.toml`), the simulator polls `GET environment_route`
+(`/api/environment/`, every `environment_poll_wall_s`, default 2 s) and, once,
+`GET environments_route` (`/api/environments/`) for each environment's values. When
+the dashboard switches environment, the running simulation takes that environment's
+`baseline_dose_rate_usv_h` as its cabin dose rate, its `gravity_g`, and half its
+round-trip `comm_delay_rt_s` as the one-way result delay. The integrated monitor dose
+stays continuous across the switch. A failed poll is reported once and retried; the
+run never stops for it. Scenario validation (SANS needs 0 g) applies only at load, so
+a SANS run keeps its fault after a switch to a gravity environment.
 ## Scenario 3 EVA balance
 
 `whole_body_sweat_rate` is a synthetic crew-owned whole-body fixture in `m^3/s`,
@@ -103,3 +116,20 @@ minus 0.250 L intake to 1.800 L net deficit, 73.2 kg mass and 2.4% loss from 75 
 Finding 2 uses mass and USG and returns a boolean status; red severity and shock
 index are separate presentation/policy work. Isolate run baselines in HTTP tests:
 the current backend uses the earliest stored mass, not the simulation run header.
+
+## Scenario 4 explicit infection context
+
+`consciousness_level` uses wire unit `ACVPU` and exactly one of `ALERT`,
+`CONFUSION`, `VOICE`, `PAIN`, `UNRESPONSIVE`; other channels retain strict numeric
+or boolean values. Bodies still contain exactly four fields. `supplemental_o2`
+and `post_ared_exercise_window` are boolean state fixtures. `il6_pg_mL` is a
+separate synthetic GFET/interstitial fixture (`kg/m^3`), distinct from serum IL-6.
+The finding selects GFET when present, otherwise serum, recording its source.
+
+Finding 3 becomes ready from the five vitals; optional assays add triggers when
+available. NEWS2 includes oxygen and consciousness, with component scores;
+qSOFA uses RR ≥22, SBP ≤100 and non-ALERT consciousness. Missing context retains
+legacy assumptions with per-field provenance. Missing assays are explicitly
+listed, and missing IL-6 is null. The example yields NEWS2 8 / qSOFA 2 / critical.
+The demo renders the two scores and IL-6 source. The receiver still monitors one
+astronaut and does not isolate runs; use a clean test database for integration.

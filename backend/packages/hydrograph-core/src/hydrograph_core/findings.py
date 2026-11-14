@@ -29,7 +29,7 @@ D     Domain              Function                                 Plan finding
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 Severity = Literal["nominal", "warning", "critical"]
 """``status`` of a finding with several severities."""
@@ -56,9 +56,15 @@ class DehydrationResult(TypedDict):
 
 
 class InfectionResult(TypedDict):
+    context_values: NotRequired[dict[str, float | bool | str]]
+    qsofa_score: NotRequired[int]
+    news2_components: NotRequired[dict[str, int]]
+    il6_source_channel: NotRequired[str | None]
+    context_provenance: NotRequired[dict[str, str]]
+    unavailable_assays: NotRequired[list[str]]
     news2_score: int
     core_temp_c: float
-    il6_pg_ml: float
+    il6_pg_ml: float | None
     triggers: list[str]
     status: Severity
     action: str
@@ -280,7 +286,7 @@ def acute_infection_3_1(
     news2_score: int,
     news2_max_parameter_score: int,
     core_temp_c: float,
-    il6_pg_ml: float,
+    il6_pg_ml: float | None,
     post_ared_window: bool,
     herpesvirus_reactivation: bool,
 ) -> InfectionResult:
@@ -330,7 +336,7 @@ def acute_infection_3_1(
         triggers.append("core temp < 36.0 °C")
     if herpesvirus_reactivation:
         triggers.append("latent herpesvirus reactivation")
-    if il6_pg_ml > 3.0 and not post_ared_window:
+    if il6_pg_ml is not None and il6_pg_ml > 3.0 and not post_ared_window:
         triggers.append("IL-6 > 3.0 pg/mL")
 
     action = (
@@ -729,6 +735,7 @@ def radiation_exposure_3_2(
     cumulative_dose_msv: float,
     dose_rate_usv_h: float,
     spe_flag: bool,
+    baseline_dose_rate_usv_h: float,
 ) -> RadiationResult:
     r"""
     Finding 10: Radiation dose & solar particle events (radiation hazard).
@@ -741,20 +748,25 @@ def radiation_exposure_3_2(
         cumulative_dose_msv: Cumulative effective dose [mSv].
         dose_rate_usv_h: Live dose rate [µSv/h].
         spe_flag: Telemetry SPE flag (solar particle event in progress).
+        baseline_dose_rate_usv_h: The environment's nominal background dose
+            rate [µSv/h] (``ENVIRONMENTS``).
 
     Returns:
         ``cumulative_dose_msv``, ``dose_rate_usv_h``, ``triggers``,
         ``status``, ``action``.
         CRITICAL (the storm shelter alert) when an SPE is flagged; otherwise
-        WARNING when the dose rate is > 50 µSv/h (the plan's "warning") or the
-        cumulative dose exceeds the 600 mSv career limit. The plan gives the
-        finding one action card, the shelter, for every criterion.
+        WARNING when the dose rate is > 50 µSv/h above the environment's
+        baseline or the cumulative dose exceeds the 600 mSv career limit. The
+        plan's "> 50 µSv/h warning" is absolute; it is applied as a spike above
+        the baseline because the lunar (57.1) and Mars-transit (76.7) baselines
+        alone exceed it. The plan gives the finding one action card, the
+        shelter, for every criterion.
     """
     triggers: list[str] = []
     if cumulative_dose_msv > 600.0:
         triggers.append("cumulative dose > 600 mSv")
-    if dose_rate_usv_h > 50.0:
-        triggers.append("dose rate > 50 µSv/h")
+    if dose_rate_usv_h - baseline_dose_rate_usv_h > 50.0:
+        triggers.append("dose rate > 50 µSv/h above baseline")
     if spe_flag:
         triggers.append("solar particle event")
 

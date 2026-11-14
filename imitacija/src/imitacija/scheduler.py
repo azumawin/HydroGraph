@@ -10,16 +10,25 @@ from typing import Literal, Protocol
 from .clock import Clock, timestamp
 from .frequency import FREQUENCIES
 from .models import AstronautProfile, Observation, Reading, Settings
-from .physiology import DAY, crew_values, environment_values, startup_crew_values
+from .physiology import (
+    DAY,
+    crew_values,
+    environment_values,
+    monitor_dose_msv,
+    startup_crew_values,
+)
 from .registry import CHANNELS, Channel, effective_channels
 from .scenarios import (
     EVA_CHANNELS,
+    INFECTION_CHANNELS,
     SANS_CHANNELS,
     eva_balance,
     eva_sweat_values,
     eva_usg,
     hypercapnia_eeg_values,
     hypercapnia_references,
+    infection_context_values,
+    infection_references,
     sans_values,
 )
 from .units import convert
@@ -175,6 +184,14 @@ class Scheduler:
         self.started = False
         for rule in (
             *rules(settings),
+            *(
+                (
+                    Rule("infection_context", phase=60, interval=60),
+                    Rule("infection_gfet", phase=60, interval=60),
+                )
+                if settings.acute_infection_scenario
+                else ()
+            ),
             *((Rule("eva_sweat", interval=1),) if settings.eva_dehydration_scenario else ()),
         ):
             members = [
@@ -208,9 +225,43 @@ class Scheduler:
                         owner_rule = Rule(rule.group, phase=60, interval=60)
                     elif rule.group == "usg":
                         owner_rule = Rule("usg", points=eva.usg_event_times_s)
+                infection = settings.acute_infection_scenario
+                if rule.group in {"infection_context", "infection_gfet"} and (
+                    not infection or owner != infection.owner_id
+                ):
+                    continue
+                if infection and owner == infection.owner_id:
+                    if rule.group == "bp":
+                        owner_rule = Rule("bp", phase=60, interval=60)
+                    elif rule.group == "il6":
+                        owner_rule = Rule("il6", points=infection.serum_il6_event_times_s)
+                    elif rule.group == "saliva_pcr":
+                        owner_rule = Rule("saliva_pcr", points=infection.saliva_pcr_event_times_s)
                 due = owner_rule.next_after(0)
                 if due is not None:
                     self._push(due, owner_rule, scope, owner)
+
+    def set_environment(
+        self, *, gravity_g: float, comm_delay_s: float, dose_rate_usv_h: float
+    ) -> None:
+        """Switch the shared compartment mid-run; later samples use the new values.
+
+        The integrated monitor dose is analytic from t = 0, so a dose-rate change
+        carries an offset that keeps it continuous at the switch instant.
+        """
+        now = self.clock.now()
+        old = self.settings.environment
+        switched = old.model_copy(
+            update={
+                "gravity_g": gravity_g,
+                "comm_delay_s": comm_delay_s,
+                "dose_rate_usv_h": dose_rate_usv_h,
+                "dose_offset_msv": 0.0,
+            }
+        )
+        offset = monitor_dose_msv(old, now) - monitor_dose_msv(switched, now)
+        switched = switched.model_copy(update={"dose_offset_msv": offset})
+        self.settings = self.settings.model_copy(update={"environment": switched})
 
     def _push(
         self, due: float, rule: Rule, scope: Literal["crew", "environment"], owner: str
@@ -224,9 +275,10 @@ class Scheduler:
         profile: AstronautProfile | None = (
             self.profiles.get(event.owner) if event.scope == "crew" else None
         )
+        values: dict[str, float | bool | str]
         scenario = self.settings.sans_scenario
         if event.rule.group == "eeg_cfe" and self.settings.hypercapnia_scenario is not None:
-            values = hypercapnia_eeg_values(instant, self.settings.hypercapnia_scenario)
+            values = dict(hypercapnia_eeg_values(instant, self.settings.hypercapnia_scenario))
         elif event.rule.group in {"cephalic", "eye_screen"} and scenario is not None:
             values = sans_values(event.rule.group, instant, scenario)
         else:
@@ -238,6 +290,7 @@ class Scheduler:
                     self.settings.seed,
                     self.settings.sans_scenario,
                     dehydration=self.settings.eva_dehydration_scenario,
+                    infection=self.settings.acute_infection_scenario,
                     hypercapnia=self.settings.hypercapnia_scenario,
                 )
                 if profile is not None
@@ -262,7 +315,7 @@ class Scheduler:
     def _publish(
         self,
         channel: Channel,
-        value: float | bool,
+        value: float | bool | str,
         owner: str,
         scope: Literal["crew", "environment"],
         instant: float,
@@ -274,7 +327,9 @@ class Scheduler:
         sequence = self.sequences.get(key, 0) + 1
         self.sequences[key] = sequence
         wire_value = (
-            value if isinstance(value, bool) else convert(value, channel.factor, channel.offset)
+            value
+            if isinstance(value, (bool, str))
+            else convert(value, channel.factor, channel.offset)
         )
         reading = Reading(
             channel=channel.id,
@@ -316,6 +371,11 @@ class Scheduler:
                 values.update(
                     hypercapnia_references(0, profile, self.settings.hypercapnia_scenario)
                 )
+            infection = self.settings.acute_infection_scenario
+            if infection and profile.id == infection.owner_id:
+                values.update(infection_references(0, profile, infection))
+                values["il6_serum"] = infection.baseline_il6_pg_ml
+                values.update(infection_context_values(0, infection))
             eva = self.settings.eva_dehydration_scenario
             if eva and profile.id == eva.owner_id:
                 values.update(eva_sweat_values(0, eva, startup=True))
@@ -328,6 +388,10 @@ class Scheduler:
             for channel in CHANNELS.values():
                 if channel.id in SANS_CHANNELS and (
                     not scenario or profile.id != scenario.owner_id
+                ):
+                    continue
+                if channel.id in INFECTION_CHANNELS and (
+                    not infection or profile.id != infection.owner_id
                 ):
                     continue
                 if channel.id in EVA_CHANNELS and (not eva or profile.id != eva.owner_id):

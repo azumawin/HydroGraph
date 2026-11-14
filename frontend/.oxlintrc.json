@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": ["EXAMPLE_OLD_PROJ/**"],
+  "plugins": ["react", "typescript", "oxc"],
+  "jsPlugins": ["./.oxlint-rules.js"],
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "project/require-arrow-functions": "error",
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}

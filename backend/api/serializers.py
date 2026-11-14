@@ -12,6 +12,7 @@ from hydrograph_core import (
     CHANNELS,
     ENVIRONMENTS,
     FINDINGS,
+    EnvironmentInfo,
     Evaluation,
     FindingResult,
     evaluate_reading,
@@ -25,7 +26,7 @@ class ReadingIn(TypedDict):
     """``validated_data`` of :class:`ReadingInSerializer`."""
 
     channel: str
-    value: float | bool
+    value: float | bool | str
     unit: str
     measured_at: datetime
 
@@ -55,7 +56,9 @@ class ReadingInSerializer(serializers.Serializer[None]):
         if attrs["unit"] != info["unit"]:
             errors["unit"] = [f'Expected "{info["unit"]}" for {channel}.']
         value = attrs["value"]
-        if info["value_type"] == "boolean":
+        if info["value_type"] == "enum":
+            valid = value in ("ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE")
+        elif info["value_type"] == "boolean":
             valid = isinstance(value, bool)
         else:
             valid = (
@@ -78,23 +81,26 @@ class ReadingPayload(TypedDict):
     """A reading for the frontend (docs/json-shape.md, section 2)."""
 
     channel: str
-    value: float | bool
+    value: float | bool | str
     unit: str
     evaluation: Evaluation
     measured_at: str
     scope: Literal["crew", "environment"]
 
 
-def reading_payload(reading: Reading) -> ReadingPayload:
-    """The frontend shape of one reading, as sent by POST and the stream."""
+def reading_payload(reading: Reading, environment: EnvironmentInfo) -> ReadingPayload:
+    """The frontend shape of one reading, as sent by POST and the stream.
+
+    ``environment`` is the one in effect; the dose rate is graded against it.
+    """
     info = CHANNELS[reading.channel]
-    value = cast("float | bool", reading.value)
+    value = cast("float | bool | str", reading.value)
     measured_at = reading.measured_at.astimezone(UTC).isoformat()
     return {
         "channel": reading.channel,
         "value": value,
         "unit": info["unit"],
-        "evaluation": evaluate_reading(reading.channel, value),
+        "evaluation": evaluate_reading(reading.channel, value, environment=environment),
         "measured_at": measured_at.replace("+00:00", "Z"),
         "scope": info["scope"],
     }
@@ -161,3 +167,9 @@ def finding_payload(finding: str, result: FindingResult) -> dict[str, object]:
     """A finding for the frontend (docs/json-shape.md, section 3): core's result
     plus which finding it is."""
     return {"id": finding, **result}
+
+
+class EnvironmentSelectionSerializer(serializers.Serializer[None]):
+    """The body of ``PUT /api/environment/``."""
+
+    id: serializers.ChoiceField = serializers.ChoiceField(choices=list(ENVIRONMENTS))

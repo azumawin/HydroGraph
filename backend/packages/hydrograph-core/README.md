@@ -24,7 +24,7 @@ A self-contained flat module in `src/hydrograph_core/` (Python >= 3.14, no
 runtime dependencies). `import hydrograph_core` exports the 10 finding
 functions, named `<finding>_D_S` (D = hazard domain, S = place in it;
 map to plan finding numbers in the `findings.py` docstring),
-`CHANNELS` + `evaluate_reading(channel, value)`, `FINDINGS` +
+`CHANNELS` + `evaluate_reading(channel, value, environment=...)`, `FINDINGS` +
 `evaluate_findings(latest, ...)` (findings from the latest readings), and
 `ENVIRONMENTS`. Conventions: `STYLE.md`.
 
@@ -50,15 +50,19 @@ and who is subscribed. Every function takes plain values and returns a plain
 It is already a workspace dependency of `backend/pyproject.toml`, so `uv sync`
 installs it editable. The backend (`backend/api/`) uses it in two places:
 
-1. Each reading: `evaluate_reading(channel, value)` gives its `evaluation`.
-2. Findings: `evaluate_findings(latest, body_mass_first_kg, body_mass_week_before_kg)`
+1. Each reading: `evaluate_reading(channel, value, environment=...)` gives its
+   `evaluation`; only the dose rate depends on the environment (graded above its
+   `baseline_dose_rate_usv_h`).
+2. Findings: `evaluate_findings(latest, body_mass_first_kg, body_mass_week_before_kg,
+   environment)`
    takes one crew member's latest reading per channel (plus the latest cabin
    readings) in SI wire units, and the body-mass history the baselines need:
 
    ```python
-   from hydrograph_core import evaluate_findings
+   from hydrograph_core import ENVIRONMENTS, evaluate_findings
 
-   results = evaluate_findings({"spo2": 0.89, "ambient_ppco2": 260.0}, None, None)
+   latest = {"spo2": 0.89, "ambient_ppco2": 260.0}
+   results = evaluate_findings(latest, None, None, ENVIRONMENTS["iss_leo"])
    results["hypoxia_co2_2_2"]["status"]  # "critical"
    ```
 

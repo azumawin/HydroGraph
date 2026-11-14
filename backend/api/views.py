@@ -14,9 +14,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from api.broadcast import publish
+from api.environment import current_environment, current_environment_id
 from api.findings import affected_findings, crew_findings
-from api.models import Reading
+from api.models import EnvironmentSelection, Reading
 from api.serializers import (
+    EnvironmentSelectionSerializer,
     ReadingIn,
     ReadingInSerializer,
     environments_payload,
@@ -82,6 +84,53 @@ def environments(_request: Request) -> Response:
     return Response({"environments": environments_payload()})
 
 
+ENVIRONMENT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "id": {"type": "string", "enum": list(hydrograph_core.ENVIRONMENTS)}
+    },
+}
+
+
+@extend_schema(
+    methods=["GET"],
+    summary="The mission environment in effect",
+    responses={200: ENVIRONMENT_SCHEMA},
+)
+@extend_schema(
+    methods=["PUT"],
+    summary="Switch the mission environment",
+    request=EnvironmentSelectionSerializer,
+    responses={200: ENVIRONMENT_SCHEMA},
+)
+@api_view(["GET", "PUT"])
+def environment(request: Request) -> Response:
+    """The environment in effect; PUT switches it for every dashboard and simulator.
+
+    A switch is pushed to every stream, with the latest dose-rate reading and
+    the radiation finding re-graded, since both depend on the environment.
+    """
+    if request.method == "PUT":
+        serializer = EnvironmentSelectionSerializer(data=request.data)
+        _ = serializer.is_valid(raise_exception=True)
+        environment_id = cast("dict[str, str]", serializer.validated_data)["id"]
+        _ = EnvironmentSelection.objects.create(environment_id=environment_id)
+        selected = hydrograph_core.ENVIRONMENTS[environment_id]
+        publish(sse_event("environment", {"id": environment_id}))
+        dose_rate = (
+            Reading.objects.filter(channel="ambient_dose_rate")
+            .order_by("-measured_at", "-id")
+            .first()
+        )
+        if dose_rate is not None:
+            publish(sse_event("reading", reading_payload(dose_rate, selected)))
+        for finding, result in crew_findings(
+            selected, ["radiation_exposure_3_2"]
+        ).items():
+            publish(sse_event("finding", finding_payload(finding, result)))
+    return Response({"id": current_environment_id()})
+
+
 @extend_schema(
     summary="The health conditions the crew member may have",
     responses={
@@ -131,12 +180,16 @@ def health_conditions(_request: Request) -> Response:
     are exactly the stream's `finding` events, so the dashboard can fetch the
     conditions once instead of opening the stream, or re-sync after a drop.
 
+    Graded against the environment in effect (`GET /api/environment/`), which
+    sets the radiation baseline, so the same readings can give a different
+    finding after a switch.
+
     A finding whose input channels have no reading yet is left out rather than
     reported absent, so an empty array means "nothing evaluated", not "all
     clear". Three of the ten are never present: the simulator does not send
     postural BP, sleep or EEG/PVT channels at all.
     """
-    results = crew_findings()
+    results = crew_findings(current_environment())
     return Response({"findings": [finding_payload(f, r) for f, r in results.items()]})
 
 
@@ -181,9 +234,10 @@ def readings(request: Request) -> Response:
         value=data["value"],
         measured_at=data["measured_at"],
     )
-    payload = reading_payload(reading)
+    environment = current_environment()
+    payload = reading_payload(reading, environment)
     publish(sse_event("reading", payload))
-    for finding, result in affected_findings(reading.channel).items():
+    for finding, result in affected_findings(reading.channel, environment).items():
         publish(sse_event("finding", finding_payload(finding, result)))
     return Response(payload, status=status.HTTP_201_CREATED)
 

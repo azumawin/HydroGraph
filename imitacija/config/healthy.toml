@@ -4,6 +4,8 @@ seed = 42
 speed = 1.0
 base_url = "http://127.0.0.1:8000"
 data_route = "/api/readings/"
+# Dose rate, gravity and comm delay follow the dashboard's environment.
+follow_backend_environment = true
 lab_delay_s = 3600
 queue_capacity = 512
 max_age_s = 604800

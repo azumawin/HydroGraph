@@ -6,10 +6,11 @@ channel rather than a measurement (`name`, `explanation`, `body_regions`) lives
 in the dictionary, so readings stay small.
 
 Endpoints: the device sends `POST /api/readings/`; the frontend opens
-`GET /api/stream/` (server-sent events), which sends the dictionary first, then
-readings and findings. `GET /api/environments/` serves the dictionary's
-`environments` list on its own, and `GET /api/health-conditions/` the current
-`finding` set, each for a client that wants it without the stream.
+`GET /api/stream/` (server-sent events), which sends the dictionary first, then the
+environment in effect, then readings and findings; the frontend switches the
+environment with `PUT /api/environment/`. `GET /api/environments/` serves the
+dictionary's `environments` list on its own, and `GET /api/health-conditions/` the
+current `finding` set, each for a client that wants it without the stream.
 Details: `backend/README.md`.
 
 ## 1. Device → backend: reading body
@@ -139,10 +140,29 @@ join it to readings by `channel` and to findings by `id`.
   is `true` for all four habitat interiors, and would be `false` for an EVA.
 - `day_length_h` is the natural light-dark cycle (1.52 h in LEO, 24.66 h on Mars,
   708.7 h on the Moon; 24 h in transit, where the crew sets its own schedule).
-- No finding takes an environment input, so the selection is display and simulation
-  metadata: it changes nothing about how a reading is graded.
-- `body_regions` makes the clickable body figure data-driven instead of a
-  hardcoded SVG switch statement.
+- The selection is display and simulation metadata, with one exception: the dose rate
+  (`ambient_dose_rate` and finding 10) is graded as a spike of more than 50 µSv/h above
+  the selected environment's `baseline_dose_rate_usv_h`, since the lunar and
+  Mars-transit backgrounds alone exceed the plan's absolute 50 µSv/h.
+- `body_regions` makes the 3D body figure data-driven: each id is a region of the
+  frontend's body model (`frontend/src/components/model/ModelConstants.ts`:
+  `head`, `neck`, `chest`, `abdomen`, `pelvis`, limbs) or `heart`; empty when a
+  value has no place on the body (blood markers, cabin readings).
+
+## 5. The environment in effect
+
+`event: environment`, sent right after the dictionary and again on every switch, to
+every open stream:
+
+```json
+{ "id": "mars_transit" }
+```
+
+`GET /api/environment/` returns the same object; `PUT /api/environment/` with
+`{"id": "mars_transit"}` switches it (`400` for an id not in `environments`). The
+default is `iss_leo`. A switch also re-sends the latest `ambient_dose_rate` reading and
+the radiation finding, re-graded against the new baseline. The simulator follows the
+switch (see `backend-integration.md`, "Following the backend environment").
 
 ## Not in scope for the demo
 

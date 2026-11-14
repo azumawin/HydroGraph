@@ -20,9 +20,24 @@ class Reading(FrozenModel):
     """The exact four-field body; acquisition time survives delays and retries."""
 
     channel: str
-    value: float | bool
+    value: float | bool | str
     unit: str = Field(min_length=1)
     measured_at: datetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def strict_value(cls, data: object) -> object:
+        if isinstance(data, dict):
+            name, value = data.get("channel"), data.get("value")
+            if name == "consciousness_level":
+                if value not in ("ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE"):
+                    raise ValueError("invalid ACVPU state")
+            elif data.get("unit") == "boolean":
+                if not isinstance(value, bool):
+                    raise ValueError("boolean channel requires a boolean")
+            elif not isinstance(value, (float, int)) or isinstance(value, bool):
+                raise ValueError("numeric channel requires a number")
+        return data
 
     @field_validator("measured_at")
     @classmethod
@@ -66,8 +81,11 @@ class Environment(FrozenModel):
     gravity_g: float = Field(default=0, ge=0, le=2)
     comm_delay_s: float = Field(default=0, ge=0, le=3600)
     pressure_pa: float = Field(default=101325, gt=0)
-    dose_rate_usv_h: float = Field(default=18, ge=0, le=35)
+    dose_rate_usv_h: float = Field(default=18, ge=0, le=200)
     initial_monitor_dose_msv: float = Field(default=0, ge=0)
+    # Set only by a mid-run environment switch, so the integrated monitor dose
+    # stays continuous when the dose rate changes; never configured.
+    dose_offset_msv: float = 0
 
 
 class SansScenario(FrozenModel):
@@ -180,6 +198,46 @@ class EvaDehydrationScenario(FrozenModel):
         return self
 
 
+class AcuteInfectionScenario(FrozenModel):
+    """Synthetic infection trajectory and explicit context fixtures."""
+
+    id: Literal["FAULT_04_ACUTE_INFECTION"] = "FAULT_04_ACUTE_INFECTION"
+    owner_id: str = "crew-1"
+    onset_s: float = Field(default=600, ge=0)
+    affected_at_s: float = Field(default=1800, gt=0)
+    baseline_temp_c: float = Field(default=36.8, gt=36, le=38)
+    affected_temp_c: float = Field(default=38.7, ge=38.4, le=39.2)
+    baseline_respiratory_rate_br_min: float = Field(default=14, ge=12, le=20)
+    affected_respiratory_rate_br_min: float = Field(default=23, ge=22, le=25)
+    affected_heart_rate_bpm: float = Field(default=116, ge=108, le=125)
+    affected_sbp_mmhg: float = Field(default=96, ge=94, le=99)
+    baseline_spo2_pct: float = Field(default=97, ge=96, le=100)
+    affected_spo2_pct: float = Field(default=94, ge=91, le=95)
+    baseline_il6_pg_ml: float = Field(default=1.4, ge=0, le=3)
+    affected_il6_pg_ml: float = Field(default=8.4, ge=6.8, le=12)
+    reactivation_at_s: float = Field(default=1800, ge=0)
+    reactivated_virus: Literal["EBV", "VZV"] = "EBV"
+    serum_il6_event_times_s: tuple[float, ...] = (1860,)
+    saliva_pcr_event_times_s: tuple[float, ...] = (1860,)
+    affected_consciousness_level: Literal["ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE"] = (
+        "ALERT"
+    )
+    affected_supplemental_o2: bool = False
+    affected_post_ared_exercise_window: bool = False
+
+    @model_validator(mode="after")
+    def coherent(self) -> AcuteInfectionScenario:
+        if self.onset_s >= self.affected_at_s:
+            raise ValueError("infection ramp must have positive duration")
+        for times in (self.serum_il6_event_times_s, self.saliva_pcr_event_times_s):
+            if (
+                any(not math.isfinite(t) or t <= 0 for t in times)
+                or tuple(sorted(set(times))) != times
+            ):
+                raise ValueError("specimen times must be finite, positive, sorted and unique")
+        return self
+
+
 class Settings(FrozenModel):
     """All timing is simulation seconds except explicitly named wall-clock fields."""
 
@@ -189,11 +247,18 @@ class Settings(FrozenModel):
     sans_scenario: SansScenario | None = None
     hypercapnia_scenario: HypercapniaScenario | None = None
     eva_dehydration_scenario: EvaDehydrationScenario | None = None
+    acute_infection_scenario: AcuteInfectionScenario | None = None
     seed: int = 42
     crew: tuple[AstronautProfile, ...] = (AstronautProfile(),)
     environment: Environment = Environment()
     base_url: str = "http://127.0.0.1:8000"
     data_route: str = "/api/readings/"
+    # Follow the mission environment selected on the HydroGraph backend: its dose
+    # rate, gravity and comm delay replace [environment] while the run continues.
+    follow_backend_environment: bool = False
+    environment_route: str = "/api/environment/"
+    environments_route: str = "/api/environments/"
+    environment_poll_wall_s: float = Field(default=2, gt=0, le=60)
     enabled_channels: tuple[str, ...] | None = None
     lab_delay_s: float = Field(default=3600, ge=0, le=30 * 86400)
     bp_session_start_s: float = Field(default=8 * 3600, ge=0)
@@ -233,6 +298,28 @@ class Settings(FrozenModel):
         """Prevent duplicate crew streams and route errors before any network activity."""
         if len({p.id for p in self.crew}) != len(self.crew):
             raise ValueError("crew IDs must be unique")
+        faults = (
+            self.sans_scenario,
+            self.hypercapnia_scenario,
+            self.eva_dehydration_scenario,
+            self.acute_infection_scenario,
+        )
+        if sum(f is not None for f in faults) > 1:
+            raise ValueError("combined faults are unsupported")
+        if self.acute_infection_scenario:
+            infection = self.acute_infection_scenario
+            profiles = {p.id: p for p in self.crew}
+            if infection.owner_id not in profiles:
+                raise ValueError("infection requires an existing owner")
+            profile = profiles[infection.owner_id]
+            if infection.affected_sbp_mmhg <= profile.dbp_mmhg:
+                raise ValueError("systolic target must exceed diastolic pressure")
+            if (
+                self.stand_test_start_s is not None
+                or self.bp_session_duration_s is not None
+                or self.il6_event_times_s != (0,)
+            ):
+                raise ValueError("infection target uses scenario BP and specimen schedules")
         if self.eva_dehydration_scenario is not None:
             eva = self.eva_dehydration_scenario
             if self.sans_scenario or self.hypercapnia_scenario:

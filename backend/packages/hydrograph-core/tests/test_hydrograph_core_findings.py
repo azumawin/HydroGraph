@@ -37,8 +37,11 @@ def _bone(litres: float) -> findings.BoneResult:
     return findings.bone_demineralization_1_2(0.0, litres)
 
 
-def _rad(cum: float, rate: float, spe: bool) -> findings.RadiationResult:
-    return findings.radiation_exposure_3_2(cum, rate, spe)
+def _rad(
+    cum: float, rate: float, spe: bool, baseline: float = 0.0
+) -> findings.RadiationResult:
+    """Baseline 0 reproduces the plan's absolute 50 uSv/h cutoff."""
+    return findings.radiation_exposure_3_2(cum, rate, spe, baseline)
 
 
 class TestHydrogfnFindings(unittest.TestCase):
@@ -269,6 +272,11 @@ class TestHydrogfnFindings(unittest.TestCase):
     def test_radiation_dose_rate_above_50_warning(self) -> None:
         """Source: master plan p.4, acute SPE dose-rate spike > 50 uSv/h warning."""
         self.assertEqual(_rad(300.0, 60.0, False)["status"], "warning")
+
+    def test_radiation_dose_rate_is_a_spike_above_the_baseline(self) -> None:
+        """Lunar surface baseline 57.1 uSv/h (Zhang et al. 2020, Chang'e-4 LND)."""
+        self.assertEqual(_rad(300.0, 57.1, False, baseline=57.1)["status"], "nominal")
+        self.assertEqual(_rad(300.0, 107.2, False, baseline=57.1)["status"], "warning")
 
     def test_radiation_cumulative_601_not_nominal(self) -> None:
         """Source: career effective dose limit 600 mSv, NASA-STD-3001 https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf"""

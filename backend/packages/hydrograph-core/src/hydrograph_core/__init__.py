@@ -15,9 +15,10 @@ from .assessment import (
     News2Result,
     evaluate_findings,
     news2,
+    qsofa,
 )
 from .channels import CHANNELS, ChannelInfo, Evaluation, evaluate_reading
-from .environments import ENVIRONMENTS, EnvironmentInfo
+from .environments import DEFAULT_ENVIRONMENT, ENVIRONMENTS, EnvironmentInfo
 from .findings import (
     Severity,
     acute_infection_3_1,
@@ -34,6 +35,7 @@ from .findings import (
 
 __all__ = [
     "CHANNELS",
+    "DEFAULT_ENVIRONMENT",
     "ENVIRONMENTS",
     "FINDINGS",
     "ChannelInfo",
@@ -54,6 +56,7 @@ __all__ = [
     "negative_energy_balance_2_3",
     "news2",
     "orthostatic_intolerance_1_1",
+    "qsofa",
     "radiation_exposure_3_2",
     "sans_fluid_shift_1_3",
     "sleep_deficiency_4_1",

@@ -130,7 +130,7 @@ def test_ownership_selection_and_metadata():
     cfg = Settings(hypercapnia_scenario=HypercapniaScenario())
     assert len(effective_channels(cfg)) == 30
     info = dictionary(cfg.environment, 0, cfg)
-    assert len(info.channels) == 36 and info.hypercapnia_scenario["onset_s"] == 120
+    assert len(info.channels) == 40 and info.hypercapnia_scenario["onset_s"] == 120
     eeg = next(c for c in info.channels if c.channel == "eeg_cfe_ratio")
     assert eeg.raw_acquisition_hz is None and eeg.window_s == 60
     only = acquire(s.model_copy(update={"enabled_channels": ("spo2",)}), 300)
