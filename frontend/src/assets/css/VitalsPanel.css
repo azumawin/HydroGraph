@@ -212,22 +212,6 @@
   width: 16px;
   height: 16px;
   stroke-width: 1.75;
-
-  &.is-vitals {
-    color: var(--color-chart-heart-rate);
-  }
-
-  &.is-measurements {
-    color: var(--color-chart-diastolic);
-  }
-
-  &.is-trends {
-    color: var(--color-chart-blood-sugar);
-  }
-
-  &.is-advice {
-    color: var(--color-chart-systolic);
-  }
 }
 
 .vitals-dashboard .vitals-dashboard-panel-tab-content {
