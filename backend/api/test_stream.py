@@ -6,7 +6,7 @@ from typing import cast
 import pytest
 from asgiref.sync import async_to_sync
 from django.urls import reverse
-from hydrograph_core import CHANNELS
+from hydrograph_core import CHANNELS, ENVIRONMENTS
 from rest_framework.test import APIClient
 
 from api import broadcast, stream, views
@@ -32,11 +32,13 @@ def test_connect_sends_dictionary_then_latest_per_channel() -> None:
 
     async def run() -> list[str]:
         try:
-            return [await anext(messages) for _ in range(3)]
+            return [await anext(messages) for _ in range(4)]
         finally:
             await messages.aclose()
 
-    dictionary, *latest = async_to_sync(run)()
+    dictionary, environment, *latest = async_to_sync(run)()
+
+    assert environment == 'event: environment\ndata: {"id": "iss_leo"}\n\n'
 
     assert dictionary.startswith("event: dictionary\ndata: ")
     payload = cast("DictionaryPayload", json.loads(dictionary.split("data: ", 1)[1]))
@@ -57,7 +59,9 @@ def test_connect_sends_dictionary_then_latest_per_channel() -> None:
     }
     assert sorted(latest) == sorted(
         [
-            stream.sse_event("reading", reading_payload(reading))
+            stream.sse_event(
+                "reading", reading_payload(reading, ENVIRONMENTS["iss_leo"])
+            )
             for reading in Reading.objects.filter(value__in=[1.2, 0.97])
         ]
     )
@@ -70,6 +74,7 @@ def test_published_message_reaches_open_stream_and_close_unsubscribes() -> None:
     async def run() -> str:
         try:
             _ = await anext(messages)  # dictionary
+            _ = await anext(messages)  # environment
             pending = asyncio.ensure_future(anext(messages))
             while not broadcast._queues:  # pyright: ignore[reportPrivateUsage]
                 await asyncio.sleep(0)

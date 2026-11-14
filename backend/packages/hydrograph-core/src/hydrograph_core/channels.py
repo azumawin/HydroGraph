@@ -20,6 +20,8 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Final, Literal, TypedDict
 
+from .environments import EnvironmentInfo
+
 Evaluation = Literal["nominal", "warning", "critical", "unspecified"]
 """Grade of one reading. ``unspecified``: the specs give no cutoff for it."""
 
@@ -361,13 +363,17 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
 )
 
 
-def evaluate_reading(channel: str, value: float | bool) -> Evaluation:
+def evaluate_reading(
+    channel: str, value: float | bool, *, environment: EnvironmentInfo
+) -> Evaluation:
     """Grade one reading of one channel on its own.
 
     Args:
         channel: A key of :data:`CHANNELS`.
         value: The reading in the channel's SI wire ``unit``; ``True`` /
             ``False`` for boolean channels.
+        environment: The mission environment in effect; only the dose rate
+            depends on it (graded above its ``baseline_dose_rate_usv_h``).
 
     Returns:
         The reading's grade. Sources, unit conversions and boundary choices
@@ -472,10 +478,12 @@ def evaluate_reading(channel: str, value: float | bool) -> Evaluation:
             mmhg = value / 133.322
             return "warning" if mmhg > 3.0 else "nominal"
         case "ambient_dose_rate":
-            # Master plan Finding 10: dose-rate spike > 50 uSv/h warning.
-            # 1 Sv/s = 3.6e9 uSv/h.
+            # Master plan Finding 10: dose-rate spike > 50 uSv/h warning, applied
+            # above the environment's own background: the lunar and Mars-transit
+            # baselines alone exceed 50 uSv/h. 1 Sv/s = 3.6e9 uSv/h.
             usv_h = value * 3.6e9
-            return "warning" if usv_h > 50.0 else "nominal"
+            spike = usv_h - environment["baseline_dose_rate_usv_h"]
+            return "warning" if spike > 50.0 else "nominal"
         case "ambient_integrated_dose":
             # Master plan Finding 10: cumulative dose > 600 mSv career limit.
             msv = value * 1000.0

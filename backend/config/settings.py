@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     # third party
     "rest_framework",
     "drf_spectacular",
+    "corsheaders",
     # local
     "api",
 ]
@@ -65,6 +66,7 @@ SPECTACULAR_SETTINGS = {
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -141,3 +143,8 @@ LOGGING = {
     "disable_existing_loggers": False,
     "loggers": {"django.channels.server": {"level": "WARNING"}},
 }
+
+# The frontend dev server is another origin, and proxying it buffers the stream,
+# so the API answers any origin. There is no auth to protect.
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_URLS_REGEX = r"^/api/.*$"

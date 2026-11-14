@@ -7,8 +7,10 @@ import unittest
 from typing import get_args
 
 from hydrograph_core.channels import CHANNELS, Evaluation, evaluate_reading
+from hydrograph_core.environments import ENVIRONMENTS
 
 MMHG = 133.322  # Pa
+ISS = ENVIRONMENTS["iss_leo"]  # 14.6 uSv/h baseline
 USV_H = 1e-6 / 3600  # Sv/s
 
 
@@ -45,8 +47,8 @@ class TestEvaluateReading(unittest.TestCase):
             ("urine_volume_24h", 1.9e-3, "warning"),
             ("ambient_ppco2", 3.0 * MMHG, "nominal"),
             ("ambient_ppco2", 3.1 * MMHG, "warning"),
-            ("ambient_dose_rate", 50 * USV_H, "nominal"),
-            ("ambient_dose_rate", 51 * USV_H, "warning"),
+            ("ambient_dose_rate", 64.6 * USV_H, "nominal"),
+            ("ambient_dose_rate", 64.7 * USV_H, "warning"),
             ("ambient_integrated_dose", 0.600, "nominal"),
             ("ambient_integrated_dose", 0.601, "warning"),
             ("spe_flag", False, "nominal"),
@@ -68,14 +70,39 @@ class TestEvaluateReading(unittest.TestCase):
         ]
         for channel, value, expected in cases:
             with self.subTest(channel=channel, value=value):
-                self.assertEqual(evaluate_reading(channel, value), expected)
+                self.assertEqual(
+                    evaluate_reading(channel, value, environment=ISS), expected
+                )
 
     def test_every_channel_is_graded(self) -> None:
         for channel, info in CHANNELS.items():
             value: float | bool = True if info["value_type"] == "boolean" else 1.0
             with self.subTest(channel=channel):
-                self.assertIn(evaluate_reading(channel, value), get_args(Evaluation))
+                self.assertIn(
+                    evaluate_reading(channel, value, environment=ISS),
+                    get_args(Evaluation),
+                )
 
     def test_unknown_channel_raises(self) -> None:
         with self.assertRaisesRegex(ValueError, 'Unknown channel "heartrate"'):
-            _ = evaluate_reading("heartrate", 72)
+            _ = evaluate_reading("heartrate", 72, environment=ISS)
+
+    def test_dose_rate_is_graded_above_the_environment_baseline(self) -> None:
+        cases = [
+            ("lunar_surface", 57.1, "nominal"),
+            ("lunar_surface", 107.1, "nominal"),
+            ("lunar_surface", 107.2, "warning"),
+            ("mars_transit", 76.7, "nominal"),
+            ("mars_transit", 126.8, "warning"),
+            ("mars_surface", 76.8, "warning"),
+        ]
+        for environment, usv_h, expected in cases:
+            with self.subTest(environment=environment, usv_h=usv_h):
+                self.assertEqual(
+                    evaluate_reading(
+                        "ambient_dose_rate",
+                        usv_h * USV_H,
+                        environment=ENVIRONMENTS[environment],
+                    ),
+                    expected,
+                )

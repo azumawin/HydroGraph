@@ -5,9 +5,11 @@ from typing import cast
 
 from hydrograph_core.assessment import FINDINGS, evaluate_findings, news2
 from hydrograph_core.channels import CHANNELS
+from hydrograph_core.environments import ENVIRONMENTS
 from hydrograph_core.findings import EnergyBalanceResult
 
 MMHG = 133.322  # Pa
+ISS = ENVIRONMENTS["iss_leo"]
 
 HEALTHY: dict[str, float | bool] = {
     "heart_rate": 70 / 60,
@@ -26,7 +28,7 @@ HEALTHY: dict[str, float | bool] = {
     "urine_specific_gravity": 1.010,
     "urine_volume_24h": 2.7e-3,
     "ambient_ppco2": 2.0 * MMHG,
-    "ambient_dose_rate": 18e-6 / 3600,
+    "ambient_dose_rate": 14.6e-6 / 3600,
     "ambient_integrated_dose": 0.001,
     "spe_flag": False,
     "jugular_strain_pct": 0.0065,
@@ -71,7 +73,7 @@ class TestEvaluateFindings(unittest.TestCase):
                 self.assertTrue(set(info["channels"]) <= set(CHANNELS))
 
     def test_healthy_crew_member_has_no_findings(self) -> None:
-        results = evaluate_findings(HEALTHY, 75.0, None)
+        results = evaluate_findings(HEALTHY, 75.0, None, ISS)
         monitored = {f for f, info in FINDINGS.items() if info["channels"]}
         self.assertEqual(set(results), monitored)
         for finding, result in results.items():
@@ -82,9 +84,9 @@ class TestEvaluateFindings(unittest.TestCase):
     def test_missing_input_leaves_finding_out(self) -> None:
         latest = {k: v for k, v in HEALTHY.items() if k != "urine_volume_24h"}
         self.assertNotIn(
-            "bone_demineralization_1_2", evaluate_findings(latest, 75.0, None)
+            "bone_demineralization_1_2", evaluate_findings(latest, 75.0, None, ISS)
         )
-        self.assertNotIn("dehydration_2_1", evaluate_findings(HEALTHY, None, None))
+        self.assertNotIn("dehydration_2_1", evaluate_findings(HEALTHY, None, None, ISS))
 
     def test_si_inputs_are_converted(self) -> None:
         sick = {
@@ -96,7 +98,7 @@ class TestEvaluateFindings(unittest.TestCase):
             "viral_cmv_detected": True,
             "jugular_strain_pct": 0.0155,
         }
-        results = evaluate_findings(sick, 75.0, None)
+        results = evaluate_findings(sick, 75.0, None, ISS)
         self.assertIn(
             "NTx > +25% from baseline", results["bone_demineralization_1_2"]["triggers"]
         )
@@ -107,16 +109,27 @@ class TestEvaluateFindings(unittest.TestCase):
         self.assertEqual(results["sans_fluid_shift_1_3"]["status"], "warning")
 
     def test_jugular_strain_boundary_survives_float_noise(self) -> None:
-        results = evaluate_findings({"jugular_strain_pct": 0.011}, None, None)
+        results = evaluate_findings({"jugular_strain_pct": 0.011}, None, None, ISS)
         self.assertEqual(results["sans_fluid_shift_1_3"]["status"], "warning")
 
     def test_weekly_loss_prefers_week_before(self) -> None:
         latest = {**HEALTHY, "body_mass": 74.0}
 
         def loss(week_before: float | None) -> float:
-            result = evaluate_findings(latest, 80.0, week_before)
+            result = evaluate_findings(latest, 80.0, week_before, ISS)
             energy = cast("EnergyBalanceResult", result["negative_energy_balance_2_3"])
             return energy["body_mass_loss_pct_week"]
 
         self.assertGreater(loss(None), 7.0)
         self.assertLess(loss(74.5), 1.0)
+
+    def test_radiation_dose_rate_is_relative_to_the_environment(self) -> None:
+        transit = ENVIRONMENTS["mars_transit"]
+        background = {**HEALTHY, "ambient_dose_rate": 76.7e-6 / 3600}
+        spike = {**HEALTHY, "ambient_dose_rate": 127.0e-6 / 3600}
+        calm = evaluate_findings(background, 75.0, None, transit)[
+            "radiation_exposure_3_2"
+        ]
+        alarm = evaluate_findings(spike, 75.0, None, transit)["radiation_exposure_3_2"]
+        self.assertEqual(calm["status"], "nominal")
+        self.assertEqual(alarm["triggers"], ["dose rate > 50 µSv/h above baseline"])
