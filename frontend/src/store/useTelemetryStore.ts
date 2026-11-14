@@ -3,6 +3,7 @@ import { fetchReadingHistory, openTelemetryStream, putEnvironment } from "../api
 import type {
   ChannelInfo,
   Evaluation,
+  ReadingValue,
   TelemetryDictionary,
   TelemetryFinding,
   TelemetryReading,
@@ -10,10 +11,10 @@ import type {
 import { TELEMETRY, VITALS_HISTORY } from "../Constants.ts";
 
 // a reading in its channel's display unit; everything static about the channel
-// stays in the dictionary
+// stays in the dictionary. Only numbers are scaled and charted.
 export type VitalReading = {
   channel: string;
-  value: TelemetryReading["value"];
+  value: ReadingValue;
   unit: string;
   evaluation: Evaluation;
   measured_at: string;

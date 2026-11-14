@@ -62,6 +62,15 @@ export const VITALS_FORMAT = {
   VALUE: new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }),
 };
 
+// a reading for display: numbers formatted, text codes such as "UNRESPONSIVE"
+// or "NOT_SET" in sentence case ("Unresponsive", "Not set")
+export const formatReadingValue = (value: number | boolean | string): string => {
+  if (typeof value === "number") return VITALS_FORMAT.VALUE.format(value);
+  if (typeof value === "boolean") return String(value);
+  const words = value.replaceAll("_", " ").trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
 export const VITALS_EVALUATION_LABELS = {
   nominal: "Nominal",
   warning: "Warning",
@@ -183,10 +192,12 @@ export const VITALS_BACKGROUND = {
   SOFTNESS: 0.65,
   SHINE: 0.35,
   BRIGHTNESS: 0.7,
-  OPACITY: 0.55,
+  // capped so the plasma core stays dark enough behind the panel material
+  OPACITY: 0.4,
   QUALITY: 0.5,
   MAX_PIXEL_RATIO: 1.5,
   MAX_VOLUME_PIXELS: 900000,
   MAX_FRAME_DELTA_SECONDS: 0.05,
   FALLBACK_MESSAGE: "Animated background unavailable. Showing the static background.",
+  REDUCED_MOTION_QUERY: "(prefers-reduced-motion: reduce)",
 };

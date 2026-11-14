@@ -7,9 +7,12 @@ export type FindingSeverity = "nominal" | "warning" | "critical";
 
 export type ConsciousnessLevel = "ALERT" | "CONFUSION" | "VOICE" | "PAIN" | "UNRESPONSIVE";
 
+// Text readings are validated against the supported ACVPU states.
+export type ReadingValue = number | boolean | ConsciousnessLevel;
+
 export type TelemetryReading = {
   channel: string;
-  value: number | boolean | ConsciousnessLevel;
+  value: ReadingValue;
   measured_at: string;
   evaluation: Evaluation;
 };

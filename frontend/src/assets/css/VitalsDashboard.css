@@ -1,8 +1,8 @@
 .vitals-dashboard {
   position: relative;
   isolation: isolate;
-  font-size: 14px;
-  line-height: 21px;
+  font-size: var(--text-body);
+  line-height: 1.3125rem;
   background:
     radial-gradient(ellipse at 0% 40%, var(--color-backdrop-silver), transparent 55%),
     radial-gradient(ellipse at 100% 0%, var(--color-backdrop-mist), transparent 50%),
@@ -41,13 +41,24 @@
   }
 }
 
+/* the header sits straight on the animated backdrop, so it gets the panels'
+   material too */
+.vitals-dashboard .vitals-dashboard-header {
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background: var(--color-surface-opaque);
+  box-shadow:
+    inset 0 1px 0 var(--color-edge-highlight),
+    0 18px 48px var(--color-shadow);
+}
+
 .vitals-dashboard .vitals-dashboard-environment {
   display: flex;
   align-items: center;
   gap: 24px;
   margin-left: auto;
   padding: 8px 16px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-divider);
   border-radius: 16px;
   background: var(--color-glass-fill);
 }
@@ -60,26 +71,32 @@
 
 .vitals-dashboard .vitals-dashboard-environment-select-caption {
   color: var(--color-text-secondary);
-  font-size: 12px;
+  font-size: var(--text-caption1);
 }
 
 .vitals-dashboard .vitals-dashboard-environment-select {
-  padding: 4px 8px;
+  min-height: 44px;
+  padding: 0 12px;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--color-text);
   background: var(--color-surface-opaque);
   font-weight: 500;
   cursor: pointer;
 
+  &:hover:not(:disabled) {
+    border-color: var(--color-accent);
+  }
+
   &:disabled {
+    opacity: 0.6;
     cursor: progress;
   }
 }
 
 .vitals-dashboard .vitals-dashboard-environment-facts {
   display: flex;
-  gap: 20px;
+  gap: 24px;
   margin: 0;
 }
 
@@ -89,8 +106,8 @@
 
 .vitals-dashboard .vitals-dashboard-environment-fact-label {
   color: var(--color-text-secondary);
-  font-size: 11px;
-  line-height: 14px;
+  font-size: var(--text-caption2);
+  line-height: 0.875rem;
 }
 
 .vitals-dashboard .vitals-dashboard-environment-fact-value {
@@ -128,15 +145,15 @@
   border-radius: 12px;
   background: var(--color-surface-opaque);
   color: var(--color-text-secondary);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--text-caption1);
+  line-height: 1rem;
 }
 
 .vitals-dashboard .vitals-dashboard-title {
-  font-size: 22px;
+  font-size: var(--text-title2);
   font-weight: 600;
-  line-height: 28px;
-  letter-spacing: -0.03em;
+  line-height: 1.75rem;
+  letter-spacing: -0.012em;
 }
 
 .vitals-dashboard .vitals-dashboard-panel {
@@ -166,10 +183,10 @@
 }
 
 .vitals-dashboard .vitals-dashboard-panel-title {
-  font-size: 17px;
+  font-size: var(--text-headline);
   font-weight: 600;
-  line-height: 24px;
-  letter-spacing: -0.015em;
+  line-height: 1.375rem;
+  letter-spacing: -0.025em;
 }
 
 .vitals-dashboard .vitals-dashboard-icon {
@@ -201,13 +218,29 @@
   margin: 0;
 }
 
+/* 44 px target; the negative margin keeps the icon where it was */
 .vitals-dashboard .vitals-dashboard-error-toast-dismiss {
   display: flex;
-  padding: 2px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: -12px -12px -12px 0;
   border: 0;
+  border-radius: 12px;
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
+
+  &:hover {
+    color: var(--color-text);
+    background: var(--color-glass-fill);
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
 }
 
 .vitals-dashboard .vitals-dashboard-error-toast-dismiss-icon {
@@ -215,16 +248,30 @@
   height: 18px;
 }
 
-@supports (backdrop-filter: blur(20px)) {
+@supports (backdrop-filter: blur(24px)) {
+  .vitals-dashboard .vitals-dashboard-header,
   .vitals-dashboard .vitals-dashboard-panel {
     background:
-      linear-gradient(
-        135deg,
-        var(--color-glass-reflection),
-        transparent 42%,
-        var(--color-glass-fill)
-      ),
-      var(--color-glass-fill);
-    backdrop-filter: blur(20px);
+      linear-gradient(135deg, var(--color-glass-sheen), transparent 42%), var(--color-material);
+    backdrop-filter: blur(24px);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .vitals-dashboard .vitals-dashboard-header,
+  .vitals-dashboard .vitals-dashboard-panel {
+    background: var(--color-material-opaque);
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vitals-dashboard *,
+  .vitals-dashboard *::before,
+  .vitals-dashboard *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
 }
