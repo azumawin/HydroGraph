@@ -48,19 +48,7 @@
   --color-edge-highlight: color-mix(in srgb, var(--color-surface) 65%, transparent);
   --color-shadow: color-mix(in srgb, var(--color-background) 30%, transparent);
 
-  /* Apple's type ramp, in rem so it follows the browser's text size;
-     11 px is the smallest text anywhere */
-  --text-caption2: 0.6875rem;
-  --text-caption1: 0.75rem;
-  --text-footnote: 0.8125rem;
-  --text-body: 0.875rem;
-  --text-headline: 1.0625rem;
-  --text-title2: 1.375rem;
-  --text-display: 2rem;
-
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Helvetica Neue", "Segoe UI",
-    Roboto, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
   color: var(--color-text);
   background-color: var(--color-background);

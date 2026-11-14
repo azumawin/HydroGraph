@@ -1,8 +1,8 @@
 .vitals-dashboard {
   position: relative;
   isolation: isolate;
-  font-size: var(--text-body);
-  line-height: 1.3125rem;
+  font-size: 14px;
+  line-height: 21px;
   background:
     radial-gradient(ellipse at 0% 40%, var(--color-backdrop-silver), transparent 55%),
     radial-gradient(ellipse at 100% 0%, var(--color-backdrop-mist), transparent 50%),
@@ -71,7 +71,7 @@
 
 .vitals-dashboard .vitals-dashboard-environment-select-caption {
   color: var(--color-text-secondary);
-  font-size: var(--text-caption1);
+  font-size: 12px;
 }
 
 .vitals-dashboard .vitals-dashboard-environment-select {
@@ -100,8 +100,8 @@
 
 .vitals-dashboard .vitals-dashboard-environment-fact-label {
   color: var(--color-text-secondary);
-  font-size: var(--text-caption2);
-  line-height: 0.875rem;
+  font-size: 11px;
+  line-height: 14px;
 }
 
 .vitals-dashboard .vitals-dashboard-environment-fact-value {
@@ -139,15 +139,15 @@
   border-radius: 12px;
   background: var(--color-surface-opaque);
   color: var(--color-text-secondary);
-  font-size: var(--text-caption1);
-  line-height: 1rem;
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .vitals-dashboard .vitals-dashboard-title {
-  font-size: var(--text-title2);
+  font-size: 22px;
   font-weight: 600;
-  line-height: 1.75rem;
-  letter-spacing: -0.012em;
+  line-height: 28px;
+  letter-spacing: -0.03em;
 }
 
 .vitals-dashboard .vitals-dashboard-panel {
@@ -177,10 +177,10 @@
 }
 
 .vitals-dashboard .vitals-dashboard-panel-title {
-  font-size: var(--text-headline);
+  font-size: 17px;
   font-weight: 600;
-  line-height: 1.375rem;
-  letter-spacing: -0.025em;
+  line-height: 24px;
+  letter-spacing: -0.015em;
 }
 
 .vitals-dashboard .vitals-dashboard-icon {
