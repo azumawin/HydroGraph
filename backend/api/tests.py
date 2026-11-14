@@ -9,7 +9,7 @@ from rest_framework.test import APIClient
 from api.environment import current_environment
 from api.findings import crew_findings
 from api.models import Reading
-from api.serializers import dictionary_payload, finding_payload
+from api.serializers import ACVPU, dictionary_payload, finding_payload
 
 TICK = "2026-11-14T08:00:00Z"
 SHELTER = "Move to shielded storm shelter zone immediately and confirm hatch closure"
@@ -143,6 +143,39 @@ def test_post_rejects_number_for_boolean_channel(client: APIClient) -> None:
     assert cast("dict[str, object]", response.json()) == {
         "value": ["Expected a boolean for viral_ebv_detected."]
     }
+
+
+@pytest.mark.django_db
+def test_post_accepts_acvpu_and_rejects_other_text(client: APIClient) -> None:
+    body = {
+        "channel": "consciousness_level",
+        "value": "CONFUSION",
+        "unit": "ACVPU",
+        "measured_at": TICK,
+    }
+    response = client.post(reverse("readings"), body, format="json", headers=CREW)
+    assert response.status_code == 201
+    assert cast("dict[str, object]", response.json())["value"] == "CONFUSION"
+
+    body["value"] = "SLEEPY"
+    response = client.post(reverse("readings"), body, format="json", headers=CREW)
+    assert response.status_code == 400
+    assert cast("dict[str, object]", response.json()) == {
+        "value": [f"Expected one of {', '.join(ACVPU)} for consciousness_level."]
+    }
+
+
+@pytest.mark.django_db
+def test_post_accepts_the_scenario_channels(client: APIClient) -> None:
+    for channel, value, unit in (
+        ("whole_body_sweat_rate", 3e-7, "m^3/s"),
+        ("il6_pg_mL", 1e-8, "kg/m^3"),
+        ("supplemental_o2", False, "boolean"),
+        ("post_ared_exercise_window", True, "boolean"),
+    ):
+        body = {"channel": channel, "value": value, "unit": unit, "measured_at": TICK}
+        response = client.post(reverse("readings"), body, format="json", headers=CREW)
+        assert response.status_code == 201, channel
 
 
 @pytest.mark.django_db

@@ -101,17 +101,13 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
             "Explicit oxygen context",
         ),
         "post_ared_exercise_window": _crew(
-            "Post-ARED window",
-            "boolean",
-            _display(""),
-            ("chest",),
-            "Explicit exercise context",
+            "Post-ARED window", "boolean", _display(""), (), "Explicit exercise context"
         ),
         "il6_pg_mL": _crew(
             "Synthetic GFET IL-6",
             "kg/m^3",
             _display("pg/mL", 1e9),
-            ("skin",),
+            (),
             "Synthetic interstitial concentration; provisional threshold",
         ),
         "heart_rate": _crew(
@@ -291,7 +287,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
             "Whole-body sweat fixture",
             "m^3/s",
             _display("L/h", 3.6e6),
-            ("skin",),
+            (),
             "Synthetic whole-body flow; not a local patch measurement or graded threshold.",
         ),
         "sweat_rate": _crew(

@@ -31,6 +31,8 @@ retries and the full channel registry: `backend-integration.md`.
 - Exactly these four fields.
 - `unit` is the SI wire unit of `value` (here 114 mmHg sent as Pa). Booleans use
   `"boolean"` and a JSON `true`/`false` value; dimensionless ratios use `"1"`.
+  `consciousness_level` is the one text channel: unit `"ACVPU"`, value one of
+  `"ALERT"`, `"CONFUSION"`, `"VOICE"`, `"PAIN"`, `"UNRESPONSIVE"`.
 - `measured_at` is UTC acquisition time, or the end of the observation window.
   Readings can arrive late and out of order; never overwrite a newer reading with
   an older one.
