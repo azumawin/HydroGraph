@@ -85,7 +85,6 @@ join it to readings by `channel`.
 
 ## Not in scope for the demo
 
-- Auth: the user id will come from a request header.
 - `Idempotency-Key` deduplication: realistic, since microcontrollers retry, but
   not needed for the demo.
 - Uploading a health-history baseline.

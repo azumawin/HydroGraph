@@ -9,12 +9,7 @@ from drf_spectacular.utils import (
     extend_schema,  # pyright: ignore[reportUnknownVariableType]  # stubs: Serializer[Unknown]
 )
 from rest_framework import status
-from rest_framework.decorators import (
-    api_view,
-    authentication_classes,
-    permission_classes,
-)
-from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -37,7 +32,6 @@ from api.stream import events, sse_event
     },
 )
 @api_view(["GET"])
-@permission_classes([AllowAny])
 def health(_request: Request) -> Response:
     """Liveness probe, also proves the core package is wired in."""
     return Response({"status": "ok", "core_version": hydrograph_core.__version__})
@@ -75,8 +69,6 @@ def health(_request: Request) -> Response:
     },
 )
 @api_view(["POST"])
-@authentication_classes([])  # no auth yet
-@permission_classes([AllowAny])
 def readings(request: Request) -> Response:
     """Store the reading and push it to every open stream."""
     owner_id = request.headers.get("X-Owner-ID", "")
@@ -99,10 +91,7 @@ def readings(request: Request) -> Response:
 
 @require_GET
 async def stream(_request: HttpRequest) -> HttpResponseBase:
-    """SSE stream of the dictionary and readings; plain Django, since DRF is sync.
-
-    No auth yet.
-    """
+    """SSE stream of the dictionary and readings; plain Django, since DRF is sync."""
     response = StreamingHttpResponse(events(), content_type="text/event-stream")
     response["Cache-Control"] = "no-cache"
     response["X-Accel-Buffering"] = "no"  # stop nginx-style proxies buffering

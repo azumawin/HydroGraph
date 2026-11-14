@@ -31,7 +31,6 @@ if u use nix:
 cd backend
 nix develop # entering the shell runs uv sync automatically
 python manage.py migrate
-python manage.py createsuperuser
 python manage.py runserver
 ```
 
@@ -40,7 +39,6 @@ if u dont use nix:
 cd backend
 uv sync
 python manage.py migrate
-python manage.py createsuperuser
 python manage.py runserver
 ```
 
@@ -48,17 +46,14 @@ Useful URLs once `runserver` is up:
 
 | URL | What |
 | --- | --- |
-| http://localhost:8000/api/health/ | liveness probe, public |
-| http://localhost:8000/api/readings/ | `POST` sensor readings, public for now |
-| http://localhost:8000/api/stream/ | SSE stream for the frontend, public for now |
+| http://localhost:8000/api/health/ | liveness probe |
+| http://localhost:8000/api/readings/ | `POST` sensor readings |
+| http://localhost:8000/api/stream/ | SSE stream for the frontend |
+| http://localhost:8000/static/demo/index.html | live demo of the stream |
 | http://localhost:8000/api/docs/ | Swagger UI |
 | http://localhost:8000/api/schema/ | raw OpenAPI 3 schema (YAML) |
-| http://localhost:8000/admin/ | Django admin |
-| http://localhost:8000/api-auth/login/ | session login for the DRF browsable API |
 
-DRF defaults to `IsAuthenticated`, so every endpoint except `health`, `readings` and
-`stream` needs a logged-in session (or a token) — log in via `/api-auth/login/` to
-browse the API in your browser.
+There is no auth: every endpoint is public.
 
 `runserver` is daphne's (ASGI), so it can hold the SSE stream open. Under a WSGI server
 the stream never sends anything.
