@@ -45,6 +45,42 @@ export const ASSISTANT = {
   FALLBACK_ERROR: "The assistant could not answer. Try again.",
 };
 
+export const MAIN_PANEL_TABS = [
+  { ID: "vitals", LABEL: "Vitals" },
+  { ID: "measurements", LABEL: "All measurements" },
+] as const;
+
+export type MainPanelTabId = (typeof MAIN_PANEL_TABS)[number]["ID"];
+
+export const MEASUREMENTS = {
+  SCOPE_LABELS: { crew: "Crew", environment: "Habitat" },
+  COLUMNS: ["Measurement", "Latest", "Status", "Measured", "Change"],
+  NO_READING: "No reading",
+  NOW_REFRESH_MS: 30000,
+  CHANGE_PRECISION: 10,
+  CHANGE_FORMAT: new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 1,
+    signDisplay: "exceptZero",
+  }),
+};
+
+const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+
+const RELATIVE_TIME_UNITS = [
+  { UNIT: "day", SECONDS: 86400 },
+  { UNIT: "hour", SECONDS: 3600 },
+  { UNIT: "minute", SECONDS: 60 },
+  { UNIT: "second", SECONDS: 1 },
+] as const;
+
+export const formatTimeAgo = (timestamp: number, now: number): string => {
+  const elapsedSeconds = Math.max(0, (now - timestamp) / 1000);
+  const { UNIT, SECONDS } =
+    RELATIVE_TIME_UNITS.find((unit) => elapsedSeconds >= unit.SECONDS) ??
+    RELATIVE_TIME_UNITS[RELATIVE_TIME_UNITS.length - 1];
+  return RELATIVE_TIME.format(-Math.floor(elapsedSeconds / SECONDS), UNIT);
+};
+
 export const VITALS_HISTORY = {
   MAX_POINTS_PER_CHANNEL: 120,
 };

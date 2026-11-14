@@ -175,3 +175,151 @@
   gap: 16px;
   font-variant-numeric: tabular-nums;
 }
+
+.vitals-dashboard .vitals-dashboard-panel-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 60px;
+  flex-shrink: 0;
+  margin: 0 24px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.vitals-dashboard .vitals-dashboard-panel-tab {
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-text);
+  }
+
+  &.is-active {
+    border-color: var(--color-border);
+    color: var(--color-text);
+    background: var(--color-accent-wash);
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-panel-tab-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.vitals-dashboard .vitals-dashboard-tab-message {
+  margin: 0;
+  padding: 24px;
+  color: var(--color-text-secondary);
+}
+
+.vitals-dashboard .vitals-dashboard-measurements {
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 24px 24px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-caption {
+  padding-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-heading {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+
+  &:nth-child(1) {
+    width: 30%;
+  }
+
+  &:nth-child(2) {
+    width: 17%;
+  }
+
+  &:nth-child(3) {
+    width: 15%;
+  }
+
+  &:nth-child(4) {
+    width: 15%;
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-row {
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-name,
+.vitals-dashboard .vitals-dashboard-measurements-value,
+.vitals-dashboard .vitals-dashboard-measurements-cell {
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-name {
+  font-weight: 500;
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-summary {
+  cursor: pointer;
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-explanation {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-unit {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-cell {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
