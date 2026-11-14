@@ -253,7 +253,7 @@
   .vitals-dashboard .vitals-dashboard-panel {
     background:
       linear-gradient(135deg, var(--color-glass-sheen), transparent 42%), var(--color-material);
-    backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px) saturate(180%);
   }
 }
 
