@@ -5,8 +5,10 @@ export type Evaluation = "nominal" | "warning" | "critical" | "unspecified";
 
 export type FindingSeverity = "nominal" | "warning" | "critical";
 
-// text channels (e.g. consciousness_level, ACVPU) send an upper-case code
-export type ReadingValue = number | boolean | string;
+export type ConsciousnessLevel = "ALERT" | "CONFUSION" | "VOICE" | "PAIN" | "UNRESPONSIVE";
+
+// Text readings are validated against the supported ACVPU states.
+export type ReadingValue = number | boolean | ConsciousnessLevel;
 
 export type TelemetryReading = {
   channel: string;
@@ -122,11 +124,17 @@ const parseData = (event: MessageEvent<unknown>): Record<string, unknown> => {
   return data;
 };
 
+const isConsciousness = (value: unknown): value is ConsciousnessLevel =>
+  typeof value === "string" &&
+  ["ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE"].includes(value);
+
 const parseReading = (data: Record<string, unknown>): TelemetryReading => {
   const { channel, value, measured_at, evaluation } = data;
   if (
     typeof channel !== "string" ||
-    (typeof value !== "number" && typeof value !== "boolean" && typeof value !== "string") ||
+    (typeof value !== "number" &&
+      typeof value !== "boolean" &&
+      !(channel === "consciousness_level" && isConsciousness(value))) ||
     typeof measured_at !== "string" ||
     !isEvaluation(evaluation)
   ) {
