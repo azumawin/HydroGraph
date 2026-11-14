@@ -29,13 +29,13 @@ retries and the full channel registry: `backend-integration.md`.
 - `measured_at` is UTC acquisition time, or the end of the observation window.
   Readings can arrive late and out of order; never overwrite a newer reading with
   an older one.
-- Owner and scope come from headers (`X-Owner-ID`, `X-Simulation-Scope`), not the
-  body.
+- Scope comes from the `X-Simulation-Scope` header, not the body. The backend
+  monitors one astronaut and ignores `X-Owner-ID`.
 
 ## 2. Backend → frontend: reading
 
 `event: reading` on the stream, and the `201` body of the POST. It is the device
-body plus the backend's evaluation and the owner and scope headers:
+body plus the backend's evaluation and the scope header:
 
 ```json
 {
@@ -44,12 +44,11 @@ body plus the backend's evaluation and the owner and scope headers:
   "unit": "Pa",
   "evaluation": "unspecified",
   "measured_at": "2026-11-14T08:00:00Z",
-  "owner_id": "crew-1",
   "scope": "crew"
 }
 ```
 
-On connect the stream sends the latest reading per `owner_id` and `channel`,
+On connect the stream sends the latest reading per `channel`,
 then every new one. Late readings are sent too; keep whichever has the newer
 `measured_at`.
 
@@ -60,14 +59,12 @@ this value; it is not "normal".
 ## 3. Backend → frontend: finding
 
 `event: finding` on the stream: one of the master plan's 10 Tier 1 health
-findings for one crew member. Sent for every crew member on connect, then
-again whenever a reading arrives on one of the finding's input channels (a
-cabin reading updates every crew member).
+findings. Sent on connect, then again whenever a reading arrives on one of the
+finding's input channels.
 
 ```json
 {
   "id": "radiation_exposure_3_2",
-  "owner_id": "crew-1",
   "cumulative_dose_msv": 2.8,
   "dose_rate_usv_h": 19.4,
   "triggers": ["solar particle event"],
@@ -77,7 +74,7 @@ cabin reading updates every crew member).
 ```
 
 - `id` is the finding (a key of the dictionary's `findings`); the keys between
-  `owner_id` and `triggers` are that finding's evaluated values.
+  `id` and `triggers` are that finding's evaluated values.
 - `triggers` names each criterion that fired; empty when none did.
 - `status` is `true` / `false` (finding present or not) for findings with one
   severity (dehydration, energy balance, bone), otherwise

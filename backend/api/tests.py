@@ -44,10 +44,9 @@ def test_post_reading_returns_doc_shape(client: APIClient) -> None:
         "unit": "1",
         "evaluation": "critical",
         "measured_at": TICK,
-        "owner_id": "crew-1",
         "scope": "crew",
     }
-    assert Reading.objects.get().owner_id == "crew-1"
+    assert Reading.objects.count() == 1
 
 
 @pytest.mark.django_db
@@ -81,7 +80,7 @@ def test_post_rejects_unknown_channel(client: APIClient) -> None:
 
 
 @pytest.mark.django_db
-def test_post_rejects_wrong_unit_type_and_headers(client: APIClient) -> None:
+def test_post_rejects_wrong_unit_type_and_scope(client: APIClient) -> None:
     body = {"channel": "heart_rate", "value": True, "unit": "bpm", "measured_at": TICK}
     headers = {"X-Simulation-Scope": "environment"}
     response = client.post(reverse("readings"), body, format="json", headers=headers)
@@ -90,7 +89,6 @@ def test_post_rejects_wrong_unit_type_and_headers(client: APIClient) -> None:
     assert cast("dict[str, object]", response.json()) == {
         "unit": ['Expected "s^-1" for heart_rate.'],
         "value": ["Expected a number for heart_rate."],
-        "X-Owner-ID": ["This header is required."],
         "X-Simulation-Scope": ['Expected "crew" for heart_rate.'],
     }
     assert Reading.objects.count() == 0

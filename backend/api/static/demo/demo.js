@@ -1,26 +1,26 @@
-// Live view of /api/stream/: crew findings, then one table per owner with one
+// Live view of /api/stream/: findings, then a crew and a cabin table with one
 // row per channel.
 // Shapes: docs/json-shape.md.
 
 const statusLine = document.getElementById("status");
-const ownersDiv = document.getElementById("owners");
+const tablesDiv = document.getElementById("tables");
 
 let channels = {}; // channel id -> {name, body_regions, explanation}
 let findings = {}; // finding id -> {name, channels}
-const latest = new Map(); // "owner/channel" -> reading
+const latest = new Map(); // channel -> reading
 let received = 0;
 
 function render(reading) {
-  const tableId = `owner-${reading.owner_id}`;
+  const tableId = `scope-${reading.scope}`;
   let tbody = document.getElementById(tableId);
   if (!tbody) {
     const section = document.createElement("section");
     section.innerHTML =
       `<h2></h2><table><thead><tr><th>Channel</th><th>Value</th><th>Unit</th>` +
       `<th>Evaluation</th><th>Measured at</th></tr></thead><tbody></tbody></table>`;
-    section.querySelector("h2").textContent = `${reading.owner_id} (${reading.scope})`;
+    section.querySelector("h2").textContent = reading.scope === "crew" ? "Crew" : "Cabin";
     section.querySelector("tbody").id = tableId;
-    ownersDiv.append(section);
+    tablesDiv.append(section);
     tbody = section.querySelector("tbody");
   }
 
@@ -60,16 +60,15 @@ function statusLabel(status) {
 }
 
 function renderFinding(finding) {
-  const rowId = `finding-${finding.owner_id}-${finding.id}`;
+  const rowId = `finding-${finding.id}`;
   let row = document.getElementById(rowId);
   if (!row) {
     row = document.createElement("tr");
     row.id = rowId;
-    row.innerHTML = "<td></td><td></td><td></td><td></td><td class='action'></td>";
+    row.innerHTML = "<td></td><td></td><td></td><td class='action'></td>";
     document.getElementById("findings").append(row);
   }
-  const [owner, name, status, triggers, action] = row.children;
-  owner.textContent = finding.owner_id;
+  const [name, status, triggers, action] = row.children;
   name.textContent = findings[finding.id]?.name ?? finding.id;
   const [label, level] = statusLabel(finding.status);
   status.textContent = label;
@@ -91,11 +90,10 @@ stream.addEventListener("dictionary", (event) => {
 stream.addEventListener("reading", (event) => {
   const reading = JSON.parse(event.data);
   received += 1;
-  const key = `${reading.owner_id}/${reading.channel}`;
-  const previous = latest.get(key);
+  const previous = latest.get(reading.channel);
   // Late lab results arrive out of order: keep the newer measurement.
   if (!previous || Date.parse(reading.measured_at) >= Date.parse(previous.measured_at)) {
-    latest.set(key, reading);
+    latest.set(reading.channel, reading);
     render(reading);
   }
   statusLine.textContent = `Connected · ${received} readings received · last ${reading.channel}`;

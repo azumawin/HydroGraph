@@ -14,20 +14,13 @@ from api.findings import crew_findings
 from api.models import Reading
 
 AT = datetime(2026, 11, 14, 8, 0, tzinfo=UTC)
-CABIN = {"X-Owner-ID": "iss_cabin", "X-Simulation-Scope": "environment"}
-CREW = {"X-Owner-ID": "crew-1", "X-Simulation-Scope": "crew"}
+CABIN = {"X-Simulation-Scope": "environment"}
+CREW = {"X-Simulation-Scope": "crew"}
 
 
-def create(owner_id: str, channel: str, value: float | bool, day: int = 0) -> None:
+def create(channel: str, value: float | bool, day: int = 0) -> None:
     measured_at = AT.replace(day=AT.day + day)
-    _ = Reading.objects.create(
-        owner_id=owner_id, channel=channel, value=value, measured_at=measured_at
-    )
-
-
-def cabin_radiation() -> None:
-    create("iss_cabin", "ambient_integrated_dose", 0.001)
-    create("iss_cabin", "ambient_dose_rate", 5e-9)
+    _ = Reading.objects.create(channel=channel, value=value, measured_at=measured_at)
 
 
 def post(
@@ -48,10 +41,9 @@ def post(
 
 
 @pytest.mark.django_db
-def test_cabin_reading_publishes_finding_for_every_crew_member() -> None:
-    create("crew-1", "heart_rate", 1.1)
-    create("crew-2", "heart_rate", 1.1)
-    cabin_radiation()
+def test_cabin_reading_publishes_the_finding_it_feeds() -> None:
+    create("ambient_integrated_dose", 0.001)
+    create("ambient_dose_rate", 5e-9)
     body = {
         "channel": "spe_flag",
         "value": True,
@@ -59,19 +51,16 @@ def test_cabin_reading_publishes_finding_for_every_crew_member() -> None:
         "measured_at": "2026-11-14T09:00:00Z",
     }
 
-    reading, *findings = post(body, CABIN)
+    reading, finding = post(body, CABIN)
 
     assert reading["channel"] == "spe_flag"
-    assert [(f["id"], f["owner_id"], f["status"]) for f in findings] == [
-        ("radiation_exposure_3_2", "crew-1", "critical"),
-        ("radiation_exposure_3_2", "crew-2", "critical"),
-    ]
-    assert findings[0]["triggers"] == ["solar particle event"]
+    assert (finding["id"], finding["status"]) == ("radiation_exposure_3_2", "critical")
+    assert finding["triggers"] == ["solar particle event"]
 
 
 @pytest.mark.django_db
-def test_crew_reading_publishes_only_findings_that_use_it() -> None:
-    create("crew-1", "bone_ntx_pct_baseline", 0.03)
+def test_reading_publishes_only_findings_that_use_it() -> None:
+    create("bone_ntx_pct_baseline", 0.03)
     body = {
         "channel": "urine_volume_24h",
         "value": 1.5e-3,
@@ -79,11 +68,7 @@ def test_crew_reading_publishes_only_findings_that_use_it() -> None:
         "measured_at": "2026-11-14T09:00:00Z",
     }
     _, finding = post(body, CREW)
-    assert (finding["id"], finding["owner_id"], finding["status"]) == (
-        "bone_demineralization_1_2",
-        "crew-1",
-        True,
-    )
+    assert (finding["id"], finding["status"]) == ("bone_demineralization_1_2", True)
 
     body = {
         "channel": "hrv_rmssd",
@@ -96,14 +81,14 @@ def test_crew_reading_publishes_only_findings_that_use_it() -> None:
 
 @pytest.mark.django_db
 def test_body_mass_baseline_and_week_before_come_from_history() -> None:
-    create("crew-1", "urine_specific_gravity", 1.010)
-    create("crew-1", "glucose", 5.0)
-    create("crew-1", "lactate", 1.0)
-    create("crew-1", "body_mass", 80.0, day=0)
-    create("crew-1", "body_mass", 76.0, day=1)
-    create("crew-1", "body_mass", 75.0, day=8)
+    create("urine_specific_gravity", 1.010)
+    create("glucose", 5.0)
+    create("lactate", 1.0)
+    create("body_mass", 80.0, day=0)
+    create("body_mass", 76.0, day=1)
+    create("body_mass", 75.0, day=8)
 
-    results = crew_findings("crew-1")
+    results = crew_findings()
 
     dehydration = cast("DehydrationResult", results["dehydration_2_1"])
     energy = cast("EnergyBalanceResult", results["negative_energy_balance_2_3"])
@@ -113,14 +98,14 @@ def test_body_mass_baseline_and_week_before_come_from_history() -> None:
 
 @pytest.mark.django_db(transaction=True)
 def test_stream_snapshot_includes_findings() -> None:
-    create("crew-1", "heart_rate", 1.1)
-    cabin_radiation()
-    create("iss_cabin", "spe_flag", False)
+    create("ambient_integrated_dose", 0.001)
+    create("ambient_dose_rate", 5e-9)
+    create("spe_flag", False)
     messages = stream.events()
 
     async def run() -> list[str]:
         try:
-            return [await anext(messages) for _ in range(6)]
+            return [await anext(messages) for _ in range(5)]
         finally:
             await messages.aclose()
 
@@ -128,8 +113,4 @@ def test_stream_snapshot_includes_findings() -> None:
 
     assert finding.startswith("event: finding\ndata: ")
     payload = cast("dict[str, object]", json.loads(finding.split("data: ", 1)[1]))
-    assert (payload["id"], payload["owner_id"], payload["status"]) == (
-        "radiation_exposure_3_2",
-        "crew-1",
-        "nominal",
-    )
+    assert (payload["id"], payload["status"]) == ("radiation_exposure_3_2", "nominal")

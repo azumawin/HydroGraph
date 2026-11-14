@@ -33,7 +33,7 @@ class ReadingIn(TypedDict):
 class ReadingInSerializer(serializers.Serializer[None]):
     """The device body (docs/json-shape.md, section 1).
 
-    Owner and scope arrive as headers; pass them as ``context``.
+    The ``X-Simulation-Scope`` header arrives as ``context["scope"]``.
     """
 
     channel: serializers.CharField = serializers.CharField()
@@ -65,8 +65,6 @@ class ReadingInSerializer(serializers.Serializer[None]):
             )
         if not valid:
             errors["value"] = [f"Expected a {info['value_type']} for {channel}."]
-        if not context["owner_id"]:
-            errors["X-Owner-ID"] = ["This header is required."]
         if context["scope"] != info["scope"]:
             errors["X-Simulation-Scope"] = [
                 f'Expected "{info["scope"]}" for {channel}.'
@@ -84,7 +82,6 @@ class ReadingPayload(TypedDict):
     unit: str
     evaluation: Evaluation
     measured_at: str
-    owner_id: str
     scope: Literal["crew", "environment"]
 
 
@@ -99,7 +96,6 @@ def reading_payload(reading: Reading) -> ReadingPayload:
         "unit": info["unit"],
         "evaluation": evaluate_reading(reading.channel, value),
         "measured_at": measured_at.replace("+00:00", "Z"),
-        "owner_id": reading.owner_id,
         "scope": info["scope"],
     }
 
@@ -148,9 +144,7 @@ def dictionary_payload() -> DictionaryPayload:
     }
 
 
-def finding_payload(
-    owner_id: str, finding: str, result: FindingResult
-) -> dict[str, object]:
+def finding_payload(finding: str, result: FindingResult) -> dict[str, object]:
     """A finding for the frontend (docs/json-shape.md, section 3): core's result
-    plus which finding and whose."""
-    return {"id": finding, "owner_id": owner_id, **result}
+    plus which finding it is."""
+    return {"id": finding, **result}

@@ -1,42 +1,33 @@
 """Feed core's findings from stored readings.
 
-Findings are per crew member. Their crew channels come from that member's own
-readings; cabin (environment) channels from the latest reading of any
-compartment, since every crew member shares the one simulated cabin.
+The backend monitors one astronaut: findings use the latest reading of every
+channel, crew and cabin alike.
 """
 
 from datetime import timedelta
 from typing import cast
 
-from hydrograph_core import CHANNELS, FINDINGS, FindingResult, evaluate_findings
+from hydrograph_core import FINDINGS, FindingResult, evaluate_findings
 
 from api.models import Reading
 
 INPUTS = sorted({c for info in FINDINGS.values() for c in info["channels"]})
-CREW_CHANNELS = [c for c, info in CHANNELS.items() if info["scope"] == "crew"]
 WEEK = timedelta(days=7)
 
 
-def crew_owners() -> list[str]:
-    """Every owner that has sent a crew reading."""
-    owners = Reading.objects.filter(channel__in=CREW_CHANNELS).order_by()
-    return sorted(
-        cast("list[str]", list(owners.values_list("owner_id", flat=True).distinct()))
-    )
-
-
-def crew_findings(owner_id: str) -> dict[str, FindingResult]:
-    """Every monitored finding for one crew member, from their latest readings."""
+def crew_findings() -> dict[str, FindingResult]:
+    """Every monitored finding, from the latest readings."""
     latest: dict[str, float | bool] = {}
     for channel in INPUTS:
-        readings = Reading.objects.filter(channel=channel)
-        if CHANNELS[channel]["scope"] == "crew":
-            readings = readings.filter(owner_id=owner_id)
-        reading = readings.order_by("-measured_at", "-id").first()
+        reading = (
+            Reading.objects.filter(channel=channel)
+            .order_by("-measured_at", "-id")
+            .first()
+        )
         if reading is not None:
             latest[channel] = cast("float | bool", reading.value)
 
-    body_mass = Reading.objects.filter(owner_id=owner_id, channel="body_mass")
+    body_mass = Reading.objects.filter(channel="body_mass")
     first = body_mass.order_by("measured_at", "id").first()
     last = body_mass.order_by("-measured_at", "-id").first()
     week_before = (
@@ -53,20 +44,12 @@ def crew_findings(owner_id: str) -> dict[str, FindingResult]:
     )
 
 
-def affected_findings(
-    owner_id: str, channel: str
-) -> list[tuple[str, str, FindingResult]]:
-    """(owner, finding, result) for every finding that uses a new reading's channel.
-
-    A crew reading affects its own owner; a cabin reading affects every crew
-    member.
-    """
+def affected_findings(channel: str) -> dict[str, FindingResult]:
+    """Every finding that uses a new reading's channel."""
     if channel not in INPUTS:
-        return []
-    owners = [owner_id] if CHANNELS[channel]["scope"] == "crew" else crew_owners()
-    return [
-        (owner, finding, result)
-        for owner in owners
-        for finding, result in crew_findings(owner).items()
+        return {}
+    return {
+        finding: result
+        for finding, result in crew_findings().items()
         if channel in FINDINGS[finding]["channels"]
-    ]
+    }

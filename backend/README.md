@@ -70,20 +70,24 @@ only stores and ships readings. `evaluation` is a `hydrograph_core.Evaluation` v
 
 Request and message shapes follow `docs/json-shape.md`.
 
-`POST /api/readings/` takes one reading in SI wire units, with owner and scope as
-headers, the way the simulator (`imitacija`) sends it:
+`POST /api/readings/` takes one reading in SI wire units, with its scope as a header,
+the way the simulator (`imitacija`) sends it:
 
 ```sh
 curl -X POST localhost:8000/api/readings/ -H 'Content-Type: application/json' \
-  -H 'X-Owner-ID: crew-1' -H 'X-Simulation-Scope: crew' \
+  -H 'X-Simulation-Scope: crew' \
   -d '{"channel": "spo2", "value": 0.89, "unit": "1", "measured_at": "2026-11-14T08:00:00Z"}'
 ```
 
-`201` returns the reading with `evaluation`, `owner_id` and `scope` added, and pushes
-the same object to every open stream. `400` returns field errors: an unknown
-`channel`, a `unit` other than the channel's wire unit, a `value` of the wrong type,
-a missing `X-Owner-ID`, or an `X-Simulation-Scope` that doesn't match the channel.
-Other simulator headers (`Idempotency-Key`, ...) are ignored for now.
+`201` returns the reading with `evaluation` and `scope` added, and pushes the same
+object to every open stream. `400` returns field errors: an unknown `channel`, a
+`unit` other than the channel's wire unit, a `value` of the wrong type, or an
+`X-Simulation-Scope` that doesn't match the channel. Other simulator headers
+(`X-Owner-ID`, `Idempotency-Key`, ...) are ignored.
+
+The backend monitors **one astronaut**: every crew reading is theirs, and findings use
+the latest reading of each channel. A simulator config with several `[[crew]]`
+members would mix their readings.
 
 To feed it from the simulator, set `base_url = "http://127.0.0.1:8000"` and
 `data_route = "/api/readings/"` in its config.
@@ -92,15 +96,12 @@ To feed it from the simulator, set `base_url = "http://127.0.0.1:8000"` and
 
 - one `dictionary` event: environments, each channel's `name`, `body_regions` and
   `explanation`, and each finding's `name` and input `channels`;
-- then the latest `reading` per owner and channel, and every crew member's current
-  `finding`s;
+- then the latest `reading` per channel, and the current `finding`s;
 - then, the moment a reading is POSTed, its `reading` event and a `finding` event
-  for each finding that uses its channel (for every crew member, if it is a cabin
-  reading).
+  for each finding that uses its channel.
 
 Findings come from core (`hydrograph_core.assessment`): six of the master plan's ten
-are monitored, from each crew member's latest readings plus the latest cabin readings
-(`api/findings.py`). The other four need inputs the simulator does not send.
+are monitored, from the latest crew and cabin readings (`api/findings.py`). The other four need inputs the simulator does not send.
 
 Delivery is an in-memory queue per open stream (`api/broadcast.py`), so it needs a
 single server process, which `runserver` is. A reconnect (`EventSource`'s automatic

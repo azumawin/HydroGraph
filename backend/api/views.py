@@ -46,7 +46,6 @@ def health(_request: Request) -> Response:
 @extend_schema(
     summary="Ingest one sensor reading",
     parameters=[
-        OpenApiParameter("X-Owner-ID", str, OpenApiParameter.HEADER, required=True),
         OpenApiParameter(
             "X-Simulation-Scope",
             str,
@@ -68,7 +67,6 @@ def health(_request: Request) -> Response:
                     "enum": list(get_args(hydrograph_core.Evaluation)),
                 },
                 "measured_at": {"type": "string", "format": "date-time"},
-                "owner_id": {"type": "string"},
                 "scope": {"type": "string", "enum": ["crew", "environment"]},
             },
         }
@@ -77,23 +75,19 @@ def health(_request: Request) -> Response:
 @api_view(["POST"])
 def readings(request: Request) -> Response:
     """Store the reading and push it, and the findings it changes, to every stream."""
-    owner_id = request.headers.get("X-Owner-ID", "")
     scope = request.headers.get("X-Simulation-Scope", "")
-    serializer = ReadingInSerializer(
-        data=request.data, context={"owner_id": owner_id, "scope": scope}
-    )
+    serializer = ReadingInSerializer(data=request.data, context={"scope": scope})
     _ = serializer.is_valid(raise_exception=True)
     data = cast(ReadingIn, serializer.validated_data)
     reading = Reading.objects.create(
-        owner_id=owner_id,
         channel=data["channel"],
         value=data["value"],
         measured_at=data["measured_at"],
     )
     payload = reading_payload(reading)
     publish(sse_event("reading", payload))
-    for owner, finding, result in affected_findings(owner_id, reading.channel):
-        publish(sse_event("finding", finding_payload(owner, finding, result)))
+    for finding, result in affected_findings(reading.channel).items():
+        publish(sse_event("finding", finding_payload(finding, result)))
     return Response(payload, status=status.HTTP_201_CREATED)
 
 
