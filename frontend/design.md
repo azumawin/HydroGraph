@@ -39,7 +39,7 @@ NASA  HydroGraph
 - Preserve the existing `3fr / 2fr` columns, `0.9fr / 1.1fr` right-hand rows, and left panel spanning both rows.
 - Preserve the desktop minimum footprint of 1000 × 720 px. Use one desktop composition without breakpoint or device-specific variants.
 - Use a 4 px spacing unit. Set outer horizontal and bottom padding to 20 px, panel gaps to 16 px, panel content padding to 24 px, and small related-item gaps to 8 px.
-- Keep the application header at least 96 px tall and panel headers at 60 px. Align panel icons, titles, and content to the same inset.
+- Keep the application header at least 96 px tall. The main panel's tab bar is 60 px tall; the body-scan and assistant panels have no header. Align tabs and content to the same inset.
 - Keep the NASA asset and product identity. Use a 96 px logo height and a 12 px brand gap. Keep the header free of a subtitle and a prominent divider.
 - Left-align titles, labels, and prose. Right-align comparable numeric columns when future vitals rows are implemented. Center only the body visualization within its own region.
 - Use 24 px radii for the three primary panels, 12 px for fields and contained controls, and capsule shapes only for compact statuses or segmented controls.
@@ -112,7 +112,7 @@ The improvement comes from size, weight, spacing, and contrast. Avoid introducin
 | Supporting label                | 13 / 18 px         | 400                   | Normal     |
 | Timestamp or compact metadata   | 12 / 16 px         | 400                   | Normal     |
 
-Use sentence case: “Vitals,” “Biometric body scan,” and “Health assistant.” Remove uppercase and wide tracking utilities. Use secondary text tokens instead of lowering opacity on whole text groups. Set numeric readings to tabular numerals so updates retain their alignment; units stay smaller and secondary.
+Use sentence case for tab labels: “Vitals,” “All measurements,” “Trends,” and “Advice.” Remove uppercase and wide tracking utilities. Use secondary text tokens instead of lowering opacity on whole text groups. Set numeric readings to tabular numerals so updates retain their alignment; units stay smaller and secondary.
 
 ## Component treatment
 
@@ -122,11 +122,11 @@ The [vitals panel](./src/components/VitalsPanel.tsx) is the primary reading surf
 
 Use aligned rows with light separators and generous space around each measurement. Show heart rate, blood pressure, blood sugar, body temperature, and daily sleep from their existing stores. Keep labels, units, timestamps, and status meanings distinct. Pair systolic and diastolic measurements in one row and label both history series. Show actual measurement dates separately from history timestamps; the service's current samples do not all share a measurement date.
 
-Use fine Recharts strokes with restrained fills and hover details. The history store owns the requested interval, shared history, loading state, and error state. Keep the Vitals header free of time-range buttons. Distinguish unavailable readings from normal evaluations. Do not add decorative footer copy such as “Sample data” or “Recorded history · Times shown locally.” Avoid a separate glowing card, colored icon disc, and circular gauge for every reading. Those additions would compete with the data.
+Use fine Recharts strokes with restrained fills and hover details. The history store owns the requested interval, shared history, loading state, and error state. Keep the Vitals tab free of time-range buttons; period selection belongs to the Trends tab. Distinguish unavailable readings from normal evaluations. Do not add decorative footer copy such as “Sample data” or “Recorded history · Times shown locally.” Avoid a separate glowing card, colored icon disc, and circular gauge for every reading. Those additions would compete with the data.
 
 ### Biometric body scan
 
-The [body-scan panel](./src/components/BodyScan.tsx) contains a procedural faceless human with soft mineral shading and a relaxed stance. It retains the same neutral header and glass material as the vitals panel. Dragging rotates the figure; there is no automatic animation.
+The [body-scan panel](./src/components/BodyScan.tsx) contains a procedural faceless human with soft mineral shading and a relaxed stance. It has no header and uses the same glass material as the main panel. Dragging rotates the figure; there is no automatic animation.
 
 The body uses `--color-body-neutral` (`#A6A6A6`). Explicit unusual evaluations use `--color-status-unusual` (`#EDB65B`) and critical evaluations use `--color-status-critical` (`#FF9C9C`) on their named surface regions. Normal, optimal, and unmeasured regions remain grey; grey alone does not establish that a measurement exists. The current service supplies sample readings. Define all palette values in the theme stylesheet, and keep region geometry and lighting settings in [ModelConstants.ts](./src/components/model/ModelConstants.ts).
 
@@ -134,7 +134,7 @@ Keep labels on a stable reading surface beside the model. Group supplied evaluat
 
 ### Health assistant
 
-The [assistant panel](./src/components/HealthAssistant.tsx) should feel like a calm conversation surface. Match the other panel headers with a 20 px neutral icon and a single title.
+The [assistant panel](./src/components/HealthAssistant.tsx) should feel like a calm conversation surface. It has no header.
 
 Leave the assistant unchanged unless explicitly requested. Keep its original empty body; do not add connection badges, explanatory copy, or disabled messaging controls as part of the vitals work. If chat content is explicitly requested later, use smoke-grey assistant messages, a faint accent wash for user messages, a 40 px composer with a clear border, and a platinum send action with charcoal text. Do not add demonstration conversations or unsupported health claims as part of a visual restyle.
 
@@ -158,7 +158,7 @@ Selected controls use the accent wash and accent text; primary actions use solid
 
 - The original three-panel arrangement is immediately recognizable.
 - The first impression is transparent glass over a neutral charcoal and silver-grey backdrop, with crisp white text.
-- Every panel title uses the same sentence case, scale, inset, and icon treatment.
+- Every tab label uses the same sentence case, scale, and inset.
 - Text and numeric readings remain crisp over the lightest and darkest parts of the backdrop.
 - Backdrop light bands remain visible through the panel interiors; panels must not resemble opaque painted cards.
 - Bright upper edges and softer lower edges make the material thickness apparent without a neon glow.
