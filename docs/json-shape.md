@@ -14,7 +14,6 @@
 "evaluation": "optimal" | "normal" | "unusual" | "critical",
 "measured_at": "2026-11-08T07:12:00Z",
 "name": "Blood pressure (systolic)",
-"domain": "cardiovascular",
 "body_regions": ["heart", "chest"],
 "explanation": "Why this is measured, what it means…",
 }                                                                                                                                                
@@ -49,7 +48,6 @@ for demo we will just fake it wiht a fake client
 {                                                                     
 "channel": "bp_systolic",
 "value": 118,
-"evaluation": "optimal" | "normal" | "unusual" | "critical"
 "measured_at": "2026-11-08T07:12:00Z",
 }                                                                                                                                                
 ```
