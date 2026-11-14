@@ -81,7 +81,7 @@ const VitalReadingRow = ({
           <span className="vitals-dashboard-reading-timestamp">
             {measurementTimes.map((measuredAt) => (
               <time key={measuredAt} dateTime={measuredAt}>
-                Measured {VITALS_FORMAT.MEASURED_AT.format(new Date(measuredAt))}
+                {VITALS_FORMAT.MEASURED_AT.format(new Date(measuredAt))}
               </time>
             ))}
           </span>
