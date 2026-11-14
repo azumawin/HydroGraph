@@ -107,3 +107,12 @@ round-trip `comm_delay_rt_s` as the one-way result delay. The integrated monitor
 stays continuous across the switch. A failed poll is reported once and retried; the
 run never stops for it. Scenario validation (SANS needs 0 g) applies only at load, so
 a SANS run keeps its fault after a switch to a gravity environment.
+## Scenario 3 EVA balance
+
+`whole_body_sweat_rate` is a synthetic crew-owned whole-body fixture in `m^3/s`,
+accepted by the backend catalog without a single-reading threshold. Existing
+`sweat_rate` remains local patch flow. The default EVA integrates 2.050 L sweat
+minus 0.250 L intake to 1.800 L net deficit, 73.2 kg mass and 2.4% loss from 75 kg.
+Finding 2 uses mass and USG and returns a boolean status; red severity and shock
+index are separate presentation/policy work. Isolate run baselines in HTTP tests:
+the current backend uses the earliest stored mass, not the simulation run header.

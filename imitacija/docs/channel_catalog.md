@@ -83,3 +83,12 @@ indicator targets are declared engineering assumptions in `config/badscenario1.t
 synthetic ratio fixture. It has no raw EEG acquisition or spectral processing.
 The full registry has 35 channels; healthy defaults enable 29, SANS defaults 34,
 and hypercapnia defaults 30. Explicit channel selection can narrow these sets.
+
+## Scenario 3 whole-body sweat
+
+`whole_body_sweat_rate` uses source L/h and wire `m^3/s` (factor 1/3,600,000).
+It is a separate synthetic whole-body fixture; `sweat_rate` retains local patch
+meaning. A configurable multiplier (default 1800) relates whole-body and patch
+flow. The registry now has 36 entries; EVA enables 30 by default (25 crew, five
+environment), healthy 29, SANS 34 and hypercapnia 30. The new channel requires
+explicit EVA settings and belongs only to the EVA target.

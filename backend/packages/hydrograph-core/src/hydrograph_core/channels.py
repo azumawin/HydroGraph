@@ -217,6 +217,12 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
                 "baseline. The specs give no cutoff."
             ),
         ),
+        "whole_body_sweat_rate": _crew(
+            "Whole-body sweat fixture",
+            "m^3/s",
+            ("skin",),
+            "Synthetic whole-body flow; not a local patch measurement or graded threshold.",
+        ),
         "sweat_rate": _crew(
             "Sweat rate",
             "m^3/s",
@@ -502,6 +508,7 @@ def evaluate_reading(
             | "sweat_sodium_concentration"
             | "sweat_sodium_flux"
             | "sweat_rate"
+            | "whole_body_sweat_rate"
             | "body_mass"
             | "ambient_light_lux"
             | "delta_R_over_R0"
