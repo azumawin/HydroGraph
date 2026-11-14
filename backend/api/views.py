@@ -1,7 +1,9 @@
 import hydrograph_core
 from django.http import HttpRequest, StreamingHttpResponse
 from django.http.response import HttpResponseBase
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import (
+    extend_schema,  # pyright: ignore[reportUnknownVariableType]  # stubs: Serializer[Unknown]
+)
 from rest_framework import status
 from rest_framework.decorators import (
     api_view,
@@ -13,7 +15,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from api.broadcast import publish
-from api.serializers import ReadingInSerializer, ReadingOutSerializer, reading_payload
+from api.serializers import ReadingInSerializer, reading_payload
 from api.stream import events, sse_event
 
 
@@ -31,7 +33,7 @@ from api.stream import events, sse_event
 )
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def health(request: Request) -> Response:
+def health(_request: Request) -> Response:
     """Liveness probe, also proves the core package is wired in."""
     return Response({"status": "ok", "core_version": hydrograph_core.__version__})
 
@@ -39,7 +41,24 @@ def health(request: Request) -> Response:
 @extend_schema(
     summary="Ingest one sensor reading",
     request=ReadingInSerializer,
-    responses={201: ReadingOutSerializer},
+    responses={
+        201: {
+            "type": "object",
+            "properties": {
+                "channel": {"type": "string"},
+                "value": {"type": "number"},
+                "unit": {"type": "string"},
+                "evaluation": {
+                    "type": "string",
+                    "enum": [s.value for s in hydrograph_core.Status],
+                },
+                "measured_at": {"type": "string", "format": "date-time"},
+                "name": {"type": "string"},
+                "body_regions": {"type": "array", "items": {"type": "string"}},
+                "explanation": {"type": "string"},
+            },
+        }
+    },
 )
 @api_view(["POST"])
 @authentication_classes([])  # no auth yet

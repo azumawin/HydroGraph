@@ -1,3 +1,5 @@
+from typing import cast
+
 import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -35,7 +37,7 @@ def test_post_reading_returns_doc_shape(client: APIClient) -> None:
     response = client.post(reverse("readings"), body, format="json")
 
     assert response.status_code == 201
-    reading = response.json()
+    reading = cast("dict[str, object]", response.json())
     assert reading == {
         "channel": "heart_rate",
         "value": 104.0,

@@ -4,7 +4,8 @@ Keep these thin: validation and shaping only. Domain logic belongs in
 `hydrograph_core` (or another package under `packages/`).
 """
 
-from typing import Any
+from datetime import UTC
+from typing import TypedDict
 
 from hydrograph_core import CHANNELS, evaluate_reading
 from rest_framework import serializers
@@ -16,8 +17,8 @@ class ReadingInSerializer(serializers.ModelSerializer[Reading]):
     """What the device sends (docs/json-shape.md, "backend receives this")."""
 
     class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]  # DRF stubs
-        model = Reading
-        fields = ("channel", "value", "measured_at")
+        model: type[Reading] = Reading
+        fields: tuple[str, ...] = ("channel", "value", "measured_at")
 
     def validate_channel(self, value: str) -> str:
         if value not in CHANNELS:
@@ -25,44 +26,30 @@ class ReadingInSerializer(serializers.ModelSerializer[Reading]):
         return value
 
 
-class ReadingOutSerializer(serializers.ModelSerializer[Reading]):
+class ReadingPayload(TypedDict):
     """What the frontend gets (docs/json-shape.md, reading shape)."""
 
-    unit = serializers.SerializerMethodField()
-    evaluation = serializers.SerializerMethodField()
-    name = serializers.SerializerMethodField()
-    body_regions = serializers.SerializerMethodField()
-    explanation = serializers.SerializerMethodField()
-
-    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]  # DRF stubs
-        model = Reading
-        fields = (
-            "channel",
-            "value",
-            "unit",
-            "evaluation",
-            "measured_at",
-            "name",
-            "body_regions",
-            "explanation",
-        )
-
-    def get_unit(self, obj: Reading) -> str:
-        return CHANNELS[obj.channel]["unit"]
-
-    def get_evaluation(self, obj: Reading) -> str:
-        return evaluate_reading(obj.channel, obj.value).value
-
-    def get_name(self, obj: Reading) -> str:
-        return CHANNELS[obj.channel]["name"]
-
-    def get_body_regions(self, obj: Reading) -> list[str]:
-        return list(CHANNELS[obj.channel]["body_regions"])
-
-    def get_explanation(self, obj: Reading) -> str:
-        return CHANNELS[obj.channel]["explanation"]
+    channel: str
+    value: float
+    unit: str
+    evaluation: str
+    measured_at: str
+    name: str
+    body_regions: list[str]
+    explanation: str
 
 
-def reading_payload(reading: Reading) -> dict[str, Any]:
+def reading_payload(reading: Reading) -> ReadingPayload:
     """The frontend shape of one reading, as sent by POST and the stream."""
-    return dict(ReadingOutSerializer(reading).data)
+    info = CHANNELS[reading.channel]
+    measured_at = reading.measured_at.astimezone(UTC).isoformat()
+    return {
+        "channel": reading.channel,
+        "value": reading.value,
+        "unit": info["unit"],
+        "evaluation": evaluate_reading(reading.channel, reading.value).value,
+        "measured_at": measured_at.replace("+00:00", "Z"),
+        "name": info["name"],
+        "body_regions": list(info["body_regions"]),
+        "explanation": info["explanation"],
+    }

@@ -5,14 +5,14 @@ Works only while the server runs as a single process (``runserver``, the demo).
 """
 
 import asyncio
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 
 _queues: set[tuple[asyncio.AbstractEventLoop, asyncio.Queue[str]]] = set()
 
 
 @contextmanager
-def subscribe() -> Iterator[asyncio.Queue[str]]:
+def subscribe() -> Generator[asyncio.Queue[str]]:
     """A queue that receives every message published while the block is open."""
     entry = (asyncio.get_running_loop(), asyncio.Queue[str]())
     _queues.add(entry)

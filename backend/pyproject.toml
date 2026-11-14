@@ -38,3 +38,7 @@ python_files = ["test_*.py", "tests.py"]
 
 [tool.ruff]
 extend-exclude = ["**/migrations/*"]
+
+[tool.basedpyright]
+# generated code, as for ruff; the rest are basedpyright's defaults
+exclude = ["**/migrations", "**/node_modules", "**/__pycache__", "**/.*"]
