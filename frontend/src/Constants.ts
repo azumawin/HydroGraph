@@ -5,6 +5,7 @@ export const TELEMETRY = {
   STREAM_URL: `${import.meta.env.VITE_BACKEND_URL ?? "http://127.0.0.1:8000"}/api/stream/`,
   EVENTS: { DICTIONARY: "dictionary", READING: "reading", FINDING: "finding" },
   CONNECTION_LABEL: "live telemetry",
+  FLUSH_INTERVAL_MS: 250,
   MALFORMED_MESSAGE: "Received a telemetry message that does not match the backend contract.",
   DISCONNECTED_MESSAGE: "Lost the connection to the telemetry stream.",
 };
