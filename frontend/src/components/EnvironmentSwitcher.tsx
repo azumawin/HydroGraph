@@ -1,12 +1,7 @@
 import { Globe } from "lucide-react";
 import type { ChangeEvent } from "react";
-import { ENVIRONMENT_FORMAT, ENVIRONMENT_LABELS } from "../Constants.ts";
+import { ENVIRONMENT_FORMAT, ENVIRONMENT_LABELS, formatCommDelay } from "../Constants.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
-
-const formatCommDelay = (seconds: number) =>
-  seconds < ENVIRONMENT_FORMAT.SECONDS_PER_MINUTE
-    ? `${ENVIRONMENT_FORMAT.NUMBER.format(seconds)} s`
-    : `${ENVIRONMENT_FORMAT.NUMBER.format(seconds / ENVIRONMENT_FORMAT.SECONDS_PER_MINUTE)} min`;
 
 const formatDayLength = (hours: number) =>
   hours <= ENVIRONMENT_FORMAT.MAX_HOURS_SHOWN

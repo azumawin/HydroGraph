@@ -37,6 +37,30 @@ export const ENVIRONMENT_FORMAT = {
   MAX_HOURS_SHOWN: 48,
 };
 
+export const formatCommDelay = (seconds: number) =>
+  seconds < ENVIRONMENT_FORMAT.SECONDS_PER_MINUTE
+    ? `${ENVIRONMENT_FORMAT.NUMBER.format(seconds)} s`
+    : `${ENVIRONMENT_FORMAT.NUMBER.format(seconds / ENVIRONMENT_FORMAT.SECONDS_PER_MINUTE)} min`;
+
+// a round trip short enough to talk to the ground while acting
+export const ADVICE = {
+  REALTIME_GROUND_MAX_RT_S: 10,
+  GROUND_AVAILABLE_TITLE: "Ground available",
+  AUTONOMOUS_TITLE: "Act on your own",
+  NO_FINDINGS: "No findings evaluated yet.",
+  ALL_CLEAR: "No active findings. No action needed.",
+  ESCALATION: {
+    ground: {
+      critical: "Start the action now and call the flight surgeon.",
+      warning: "Report this to the flight surgeon and follow their guidance.",
+    },
+    autonomous: {
+      critical: "Start the action now. Send a report; do not wait for the reply.",
+      warning: "Start the action and log it for the next ground report.",
+    },
+  },
+};
+
 export const ASSISTANT = {
   PLACEHOLDER: "Ask about the findings…",
   SEND_LABEL: "Send",
@@ -49,6 +73,7 @@ export const MAIN_PANEL_TABS = [
   { ID: "vitals", LABEL: "Vitals" },
   { ID: "measurements", LABEL: "All measurements" },
   { ID: "trends", LABEL: "Trends" },
+  { ID: "advice", LABEL: "Advice" },
 ] as const;
 
 export type MainPanelTabId = (typeof MAIN_PANEL_TABS)[number]["ID"];
