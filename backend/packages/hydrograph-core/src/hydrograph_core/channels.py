@@ -46,7 +46,7 @@ class ChannelInfo(TypedDict):
     name: str
     unit: str
     display: Display
-    value_type: Literal["number", "boolean"]
+    value_type: Literal["number", "boolean", "enum"]
     scope: Literal["crew", "environment"]
     body_regions: tuple[str, ...]
     explanation: str
@@ -63,7 +63,9 @@ def _crew(
         "name": name,
         "unit": unit,
         "display": display,
-        "value_type": "boolean" if unit == "boolean" else "number",
+        "value_type": (
+            "enum" if unit == "ACVPU" else "boolean" if unit == "boolean" else "number"
+        ),
         "scope": "crew",
         "body_regions": body_regions,
         "explanation": explanation,
@@ -77,7 +79,9 @@ def _environment(
         "name": name,
         "unit": unit,
         "display": display,
-        "value_type": "boolean" if unit == "boolean" else "number",
+        "value_type": (
+            "enum" if unit == "ACVPU" else "boolean" if unit == "boolean" else "number"
+        ),
         "scope": "environment",
         "body_regions": (),
         "explanation": explanation,
@@ -86,6 +90,26 @@ def _environment(
 
 CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
     {
+        "consciousness_level": _crew(
+            "Consciousness", "ACVPU", _display(""), ("head",), "Configured ACVPU state"
+        ),
+        "supplemental_o2": _crew(
+            "Supplemental oxygen",
+            "boolean",
+            _display(""),
+            ("chest",),
+            "Explicit oxygen context",
+        ),
+        "post_ared_exercise_window": _crew(
+            "Post-ARED window", "boolean", _display(""), (), "Explicit exercise context"
+        ),
+        "il6_pg_mL": _crew(
+            "Synthetic GFET IL-6",
+            "kg/m^3",
+            _display("pg/mL", 1e9),
+            (),
+            "Synthetic interstitial concentration; provisional threshold",
+        ),
         "heart_rate": _crew(
             "Heart rate",
             "s^-1",
@@ -259,6 +283,13 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
                 "baseline. The specs give no cutoff."
             ),
         ),
+        "whole_body_sweat_rate": _crew(
+            "Whole-body sweat fixture",
+            "m^3/s",
+            _display("L/h", 3.6e6),
+            (),
+            "Synthetic whole-body flow; not a local patch measurement or graded threshold.",
+        ),
         "sweat_rate": _crew(
             "Sweat rate",
             "m^3/s",
@@ -424,7 +455,7 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
 
 
 def evaluate_reading(
-    channel: str, value: float | bool, *, environment: EnvironmentInfo
+    channel: str, value: float | bool | str, *, environment: EnvironmentInfo
 ) -> Evaluation:
     """Grade one reading of one channel on its own.
 
@@ -442,6 +473,14 @@ def evaluate_reading(
     Raises:
         ValueError: ``channel`` is not in :data:`CHANNELS`.
     """
+    if channel == "consciousness_level":
+        if value not in ("ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE"):
+            raise ValueError("invalid ACVPU state")
+        return "unspecified"
+    if isinstance(value, str):
+        raise TypeError("numeric/boolean channel cannot contain text")
+    if channel in {"supplemental_o2", "post_ared_exercise_window", "il6_pg_mL"}:
+        return "unspecified"
     match channel:
         case "heart_rate":
             # NSA 1.3: nominal 50-90 bpm, warning 100-120; 90-100 and > 120
@@ -562,6 +601,7 @@ def evaluate_reading(
             | "sweat_sodium_concentration"
             | "sweat_sodium_flux"
             | "sweat_rate"
+            | "whole_body_sweat_rate"
             | "body_mass"
             | "ambient_light_lux"
             | "delta_R_over_R0"

@@ -15,6 +15,7 @@ from .assessment import (
     News2Result,
     evaluate_findings,
     news2,
+    qsofa,
 )
 from .channels import CHANNELS, ChannelInfo, Display, Evaluation, evaluate_reading
 from .environments import DEFAULT_ENVIRONMENT, ENVIRONMENTS, EnvironmentInfo
@@ -22,6 +23,7 @@ from .findings import (
     Severity,
     acute_infection_3_1,
     behavioral_health_decline_4_2,
+    blood_pressure_1_4,
     bone_demineralization_1_2,
     dehydration_2_1,
     hypoxia_co2_2_2,
@@ -48,6 +50,7 @@ __all__ = [
     "__version__",
     "acute_infection_3_1",
     "behavioral_health_decline_4_2",
+    "blood_pressure_1_4",
     "bone_demineralization_1_2",
     "dehydration_2_1",
     "evaluate_findings",
@@ -56,6 +59,7 @@ __all__ = [
     "negative_energy_balance_2_3",
     "news2",
     "orthostatic_intolerance_1_1",
+    "qsofa",
     "radiation_exposure_3_2",
     "sans_fluid_shift_1_3",
     "sleep_deficiency_4_1",
