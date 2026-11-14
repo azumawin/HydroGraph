@@ -52,6 +52,7 @@ Useful URLs once `runserver` is up:
 | --- | --- |
 | http://localhost:8000/api/health/ | liveness probe |
 | http://localhost:8000/api/environments/ | the predefined mission environments |
+| http://localhost:8000/api/health-conditions/ | the findings the crew member may have |
 | http://localhost:8000/api/readings/ | `POST` sensor readings |
 | http://localhost:8000/api/stream/ | SSE stream for the frontend |
 | http://localhost:8000/static/demo/index.html | live demo of the stream |
@@ -107,6 +108,38 @@ Static, so one fetch is enough. The stream `dictionary` event carries the same l
 this endpoint nor a second fetch. Nothing in the backend reads the selection yet: no
 finding takes an environment input, so switching changes only what the frontend shows
 and what a simulator generates.
+
+## Health conditions endpoint
+
+`GET /api/health-conditions/` takes the latest reading of every channel, runs the
+Tier 1 findings over them, and returns the conditions those readings support:
+
+```json
+{
+  "findings": [
+    {
+      "id": "radiation_exposure_3_2",
+      "cumulative_dose_msv": 1.0,
+      "dose_rate_usv_h": 18.0,
+      "triggers": ["solar particle event"],
+      "status": "critical",
+      "action": "Move to shielded storm shelter zone immediately and confirm hatch closure"
+    }
+  ]
+}
+```
+
+Each entry is exactly a stream `finding` event — both call `finding_payload()` over
+`crew_findings()` — so the frontend can fetch the conditions once instead of opening
+the stream, or re-sync after a dropped connection. A test asserts that equality.
+
+A finding whose input channels have no reading yet is **left out**, not reported as
+absent: an empty `findings` array means "nothing evaluated", not "all clear". Three of
+the ten are never in the response at all, because the simulator sends none of their
+channels (orthostatic, sleep, behavioral). The dictionary's `findings` lists all ten
+with their input channels, empty for those three.
+
+Entry shape and `status` semantics: `docs/json-shape.md`, section 3.
 
 ## Readings endpoints
 
