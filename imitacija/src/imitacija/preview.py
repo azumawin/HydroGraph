@@ -68,6 +68,14 @@ class PreviewState:
 
     def baseline(self, observation: Observation) -> float | None:
         """Configured synthetic references; never infer total body water or edema."""
+        eva = self.settings.eva_dehydration_scenario
+        if eva and observation.owner == eva.owner_id:
+            from .scenarios import eva_sweat_values
+
+            references = eva_sweat_values(0, eva, startup=True)
+            references["urine_specific_gravity"] = eva.baseline_usg
+            if observation.reading.channel in references:
+                return references[observation.reading.channel]
         fault = self.settings.hypercapnia_scenario
         if fault is not None:
             if observation.reading.channel == "ambient_ppco2":
