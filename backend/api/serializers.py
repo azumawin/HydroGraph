@@ -23,12 +23,15 @@ from rest_framework import serializers
 
 from api.models import Reading
 
+# The one enum channel, consciousness_level; core rejects anything else.
+ACVPU = ("ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE")
+
 
 class ReadingIn(TypedDict):
     """``validated_data`` of :class:`ReadingInSerializer`."""
 
     channel: str
-    value: float | bool
+    value: float | bool | str
     unit: str
     measured_at: datetime
 
@@ -58,7 +61,9 @@ class ReadingInSerializer(serializers.Serializer[None]):
         if attrs["unit"] != info["unit"]:
             errors["unit"] = [f'Expected "{info["unit"]}" for {channel}.']
         value = attrs["value"]
-        if info["value_type"] == "boolean":
+        if info["value_type"] == "enum":
+            valid = value in ACVPU
+        elif info["value_type"] == "boolean":
             valid = isinstance(value, bool)
         else:
             valid = (
@@ -67,7 +72,12 @@ class ReadingInSerializer(serializers.Serializer[None]):
                 and math.isfinite(value)
             )
         if not valid:
-            errors["value"] = [f"Expected a {info['value_type']} for {channel}."]
+            expected = (
+                f"one of {', '.join(ACVPU)}"
+                if info["value_type"] == "enum"
+                else f"a {info['value_type']}"
+            )
+            errors["value"] = [f"Expected {expected} for {channel}."]
         if context["scope"] != info["scope"]:
             errors["X-Simulation-Scope"] = [
                 f'Expected "{info["scope"]}" for {channel}.'
@@ -103,7 +113,7 @@ class ReadingPayload(TypedDict):
     """
 
     channel: str
-    value: float | bool
+    value: float | bool | str
     measured_at: str
     evaluation: Evaluation
 
@@ -113,7 +123,7 @@ def reading_payload(reading: Reading, environment: EnvironmentInfo) -> ReadingPa
 
     ``environment`` is the one in effect; the dose rate is graded against it.
     """
-    value = cast("float | bool", reading.value)
+    value = cast("float | bool | str", reading.value)
     measured_at = reading.measured_at.astimezone(UTC).isoformat()
     return {
         "channel": reading.channel,
