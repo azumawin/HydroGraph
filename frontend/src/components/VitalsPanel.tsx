@@ -15,15 +15,10 @@ const VitalsPanel = () => {
   }));
 
   return (
-    <section
-      className="vitals-dashboard-panel vitals-dashboard-vitals row-span-2"
-      aria-labelledby="vitals-dashboard-vitals-title"
-    >
+    <section className="vitals-dashboard-panel vitals-dashboard-vitals row-span-2">
       <header className="vitals-dashboard-panel-header">
         <Activity className="vitals-dashboard-icon" />
-        <h2 id="vitals-dashboard-vitals-title" className="vitals-dashboard-panel-title m-0">
-          Vitals
-        </h2>
+        <h2 className="vitals-dashboard-panel-title m-0">Vitals</h2>
       </header>
       <div className="vitals-dashboard-readings">
         {metricRows.map((row) => (

@@ -45,9 +45,9 @@
 
 .vitals-dashboard .vitals-dashboard-reading-label {
   margin: 0;
-  font-size: var(--text-footnote);
+  font-size: 13px;
   font-weight: 500;
-  line-height: 1.125rem;
+  line-height: 18px;
 }
 
 .vitals-dashboard .vitals-dashboard-reading-measurement {
@@ -57,16 +57,16 @@
 }
 
 .vitals-dashboard .vitals-dashboard-reading-value {
-  font-size: var(--text-display);
+  font-size: 32px;
   font-weight: 600;
-  line-height: 2.25rem;
-  letter-spacing: 0;
+  line-height: 36px;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 
 .vitals-dashboard .vitals-dashboard-reading-unit {
   color: var(--color-text-secondary);
-  font-size: var(--text-caption1);
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -79,9 +79,9 @@
   border-radius: 999px;
   color: var(--color-text-secondary);
   background: color-mix(in srgb, currentColor 8%, transparent);
-  font-size: var(--text-caption1);
+  font-size: 12px;
   font-weight: 500;
-  line-height: 1rem;
+  line-height: 16px;
 }
 
 .vitals-dashboard .vitals-dashboard-reading-status.is-nominal {
@@ -116,7 +116,7 @@
   align-items: center;
   justify-content: center;
   color: var(--color-text-secondary);
-  font-size: var(--text-footnote);
+  font-size: 13px;
 }
 
 .vitals-dashboard .vitals-dashboard-reading-details {
@@ -127,8 +127,8 @@
   column-gap: 12px;
   padding-left: 36px;
   color: var(--color-text-secondary);
-  font-size: var(--text-caption2);
-  line-height: 1rem;
+  font-size: 11px;
+  line-height: 16px;
 }
 
 .vitals-dashboard .vitals-dashboard-reading-series {
@@ -161,7 +161,7 @@
   border-radius: 12px;
   background: var(--color-surface-opaque);
   box-shadow: 0 8px 24px var(--color-shadow);
-  font-size: var(--text-caption1);
+  font-size: 12px;
 }
 
 .vitals-dashboard .vitals-dashboard-chart-tooltip-time {
