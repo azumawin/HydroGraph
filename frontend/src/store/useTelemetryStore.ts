@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { openTelemetryStream, putEnvironment } from "../api/Service.ts";
+import { fetchReadingHistory, openTelemetryStream, putEnvironment } from "../api/Service.ts";
 import type {
   ChannelInfo,
   Evaluation,
@@ -30,6 +30,7 @@ type TelemetryStore = {
   history: Record<string, VitalHistoryPoint[]>;
   findings: Record<string, TelemetryFinding>;
   hasTelemetryError: boolean;
+  hasHistoryError: boolean;
   environmentId: string | null;
   isSelectingEnvironment: boolean;
   hasEnvironmentSelectError: boolean;
@@ -63,6 +64,7 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
   history: {},
   findings: {},
   hasTelemetryError: false,
+  hasHistoryError: false,
   environmentId: null,
   isSelectingEnvironment: false,
   hasEnvironmentSelectError: false,
@@ -70,6 +72,7 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
     let pendingReadings: TelemetryReading[] = [];
     let pendingFindings: TelemetryFinding[] = [];
     let flushTimeoutId: number | undefined;
+    let isClosed = false;
 
     // one store update per interval instead of per message keeps rendering fast
     // when the simulator sends hundreds of readings a second
@@ -118,7 +121,21 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
     };
 
     const stream = openTelemetryStream({
-      onDictionary: (dictionary) => set({ dictionary, hasTelemetryError: false }),
+      onDictionary: (dictionary) => {
+        set({ dictionary, hasTelemetryError: false });
+        // after the dictionary, so every history reading can be converted; sent on each
+        // (re)connect, and the flush merges history with live readings by timestamp
+        fetchReadingHistory(VITALS_HISTORY.MAX_POINTS_PER_CHANNEL)
+          .then((readings) => {
+            if (isClosed) return;
+            pendingReadings.push(...readings);
+            set({ hasHistoryError: false });
+            scheduleFlush();
+          })
+          .catch(() => {
+            if (!isClosed) set({ hasHistoryError: true });
+          });
+      },
       onEnvironment: (environmentId) => set({ environmentId }),
       onReading: (reading) => {
         pendingReadings.push(reading);
@@ -132,6 +149,7 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
     });
 
     return () => {
+      isClosed = true;
       stream.close();
       window.clearTimeout(flushTimeoutId);
     };

@@ -192,6 +192,19 @@ export const openTelemetryStream = (handlers: TelemetryStreamHandlers): EventSou
   return stream;
 };
 
+// the latest `limit` readings per channel, oldest first
+export const fetchReadingHistory = async (limit: number): Promise<TelemetryReading[]> => {
+  const response = await axios.get<unknown>(TELEMETRY.READINGS_URL, { params: { limit } });
+  if (!isRecord(response.data) || !isRecord(response.data.readings)) throw malformed();
+  return Object.values(response.data.readings).flatMap((readings) => {
+    if (!Array.isArray(readings)) throw malformed();
+    return readings.map((reading) => {
+      if (!isRecord(reading)) throw malformed();
+      return parseReading(reading);
+    });
+  });
+};
+
 export const putEnvironment = async (environmentId: string): Promise<string> => {
   const response = await axios.put<unknown>(TELEMETRY.ENVIRONMENT_URL, { id: environmentId });
   if (!isRecord(response.data)) throw malformed();

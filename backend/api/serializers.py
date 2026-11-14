@@ -77,6 +77,24 @@ class ReadingInSerializer(serializers.Serializer[None]):
         return attrs
 
 
+class HistoryQuery(TypedDict):
+    """``validated_data`` of :class:`HistoryQuerySerializer`."""
+
+    channel: list[str]
+    limit: int
+
+
+class HistoryQuerySerializer(serializers.Serializer[None]):
+    """The query of ``GET /api/readings/``: which channels, how many readings each."""
+
+    channel: serializers.ListField = serializers.ListField(
+        child=serializers.ChoiceField(choices=list(CHANNELS)), required=False
+    )
+    limit: serializers.IntegerField = serializers.IntegerField(
+        min_value=1, max_value=1000, default=120
+    )
+
+
 class ReadingPayload(TypedDict):
     """A reading for the frontend (docs/json-shape.md, section 2).
 

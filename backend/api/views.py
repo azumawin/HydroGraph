@@ -19,8 +19,11 @@ from api.findings import affected_findings, crew_findings
 from api.models import EnvironmentSelection, Reading
 from api.serializers import (
     EnvironmentSelectionSerializer,
+    HistoryQuery,
+    HistoryQuerySerializer,
     ReadingIn,
     ReadingInSerializer,
+    ReadingPayload,
     environments_payload,
     finding_payload,
     reading_payload,
@@ -128,7 +131,53 @@ def environment(request: Request) -> Response:
     return Response({"id": current_environment_id()})
 
 
+READING_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "channel": {"type": "string"},
+        "value": {"oneOf": [{"type": "number"}, {"type": "boolean"}]},
+        "measured_at": {"type": "string", "format": "date-time"},
+        "evaluation": {
+            "type": "string",
+            "enum": list(get_args(hydrograph_core.Evaluation)),
+        },
+    },
+}
+
+
 @extend_schema(
+    methods=["GET"],
+    summary="Reading history per channel",
+    parameters=[
+        OpenApiParameter(
+            "channel",
+            str,
+            OpenApiParameter.QUERY,
+            many=True,
+            description="Repeat for several; all channels when omitted.",
+        ),
+        OpenApiParameter(
+            "limit",
+            int,
+            OpenApiParameter.QUERY,
+            description="Latest readings per channel, 1-1000 (default 120).",
+        ),
+    ],
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "readings": {
+                    "type": "object",
+                    "description": "Channel to its readings, oldest first.",
+                    "additionalProperties": {"type": "array", "items": READING_SCHEMA},
+                }
+            },
+        }
+    },
+)
+@extend_schema(
+    methods=["POST"],
     summary="Ingest one sensor reading",
     parameters=[
         OpenApiParameter(
@@ -140,24 +189,16 @@ def environment(request: Request) -> Response:
         ),
     ],
     request=ReadingInSerializer,
-    responses={
-        201: {
-            "type": "object",
-            "properties": {
-                "channel": {"type": "string"},
-                "value": {"oneOf": [{"type": "number"}, {"type": "boolean"}]},
-                "measured_at": {"type": "string", "format": "date-time"},
-                "evaluation": {
-                    "type": "string",
-                    "enum": list(get_args(hydrograph_core.Evaluation)),
-                },
-            },
-        }
-    },
+    responses={201: READING_SCHEMA},
 )
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 def readings(request: Request) -> Response:
-    """Store the reading and push it, and the findings it changes, to every stream."""
+    """GET: the latest ``limit`` readings per channel, oldest first, so a client
+    can fill its charts on load. POST: store a reading and push it, and the
+    findings it changes, to every stream.
+    """
+    if request.method == "GET":
+        return reading_history(request)
     scope = request.headers.get("X-Simulation-Scope", "")
     serializer = ReadingInSerializer(data=request.data, context={"scope": scope})
     _ = serializer.is_valid(raise_exception=True)
@@ -173,6 +214,32 @@ def readings(request: Request) -> Response:
     for finding, result in affected_findings(reading.channel, environment).items():
         publish(sse_event("finding", finding_payload(finding, result)))
     return Response(payload, status=status.HTTP_201_CREATED)
+
+
+def reading_history(request: Request) -> Response:
+    """Channels without readings are left out; grading uses the environment in
+    effect, as the stream does."""
+    query = HistoryQuerySerializer(
+        data={
+            "channel": request.query_params.getlist("channel"),
+            "limit": request.query_params.get("limit", 120),
+        }
+    )
+    _ = query.is_valid(raise_exception=True)
+    data = cast(HistoryQuery, query.validated_data)
+    environment = current_environment()
+    history: dict[str, list[ReadingPayload]] = {}
+    for channel in data["channel"] or hydrograph_core.CHANNELS:
+        latest = list(
+            Reading.objects.filter(channel=channel).order_by("-measured_at", "-id")[
+                : data["limit"]
+            ]
+        )
+        if latest:
+            history[channel] = [
+                reading_payload(r, environment) for r in reversed(latest)
+            ]
+    return Response({"readings": history})
 
 
 @require_GET

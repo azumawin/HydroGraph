@@ -8,8 +8,9 @@ changes. Every dictionary section is an object keyed by id.
 
 Endpoints: the device sends `POST /api/readings/`; the frontend opens
 `GET /api/stream/` (server-sent events), which sends the dictionary first, then the
-environment in effect, then readings and findings; the frontend switches the
-environment with `PUT /api/environment/`. Details: `backend/README.md`.
+environment in effect, then readings and findings; the frontend fills its charts
+with `GET /api/readings/` (section 2a) and switches the environment with
+`PUT /api/environment/`. Details: `backend/README.md`.
 
 ## 1. Device → backend: reading body
 
@@ -54,6 +55,21 @@ evaluation:
 On connect the stream sends the latest reading per `channel`,
 then every new one. Late readings are sent too; keep whichever has the newer
 `measured_at`.
+
+## 2a. Backend → frontend: reading history
+
+`GET /api/readings/` returns the latest `limit` readings (default 120, 1–1000) of
+each channel, oldest first, in the section 2 shape, keyed by channel; channels
+without readings are left out. `?channel=` (repeatable) narrows the channels; an
+unknown channel or out-of-range `limit` is a `400`.
+
+```json
+{ "readings": { "heart_rate": [{ "channel": "heart_rate", "value": 1.2, "measured_at": "2026-11-14T08:00:00Z", "evaluation": "nominal" }] } }
+```
+
+The stream's snapshot sends only the latest reading per channel, so the dashboard
+requests history once the dictionary arrives (on every (re)connect) and merges it
+with live readings by `measured_at`. Evaluations use the environment in effect.
 
 `evaluation` is one of `"nominal" | "warning" | "critical" | "unspecified"`
 (`hydrograph_core.Evaluation`). `unspecified` means the specs give no threshold for

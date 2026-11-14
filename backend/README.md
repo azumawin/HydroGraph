@@ -139,6 +139,10 @@ same object to every open stream. `400` returns field errors: an unknown `channe
 `X-Simulation-Scope` that doesn't match the channel. Other simulator headers
 (`X-Owner-ID`, `Idempotency-Key`, ...) are ignored.
 
+`GET /api/readings/` returns each channel's latest readings, oldest first, in the
+same shape (`?limit=`, default 120; `?channel=`, repeatable), which the dashboard
+loads into its charts on connect.
+
 The backend monitors **one astronaut**: every crew reading is theirs, and findings use
 the latest reading of each channel. A simulator config with several `[[crew]]`
 members would mix their readings.

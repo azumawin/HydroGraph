@@ -138,3 +138,50 @@ def test_post_rejects_number_for_boolean_channel(client: APIClient) -> None:
     assert cast("dict[str, object]", response.json()) == {
         "value": ["Expected a boolean for viral_ebv_detected."]
     }
+
+
+@pytest.mark.django_db
+def test_history_returns_latest_per_channel_oldest_first(client: APIClient) -> None:
+    for minute, value in [(3, 0.95), (1, 0.97), (2, 0.89)]:  # out of order
+        body = {
+            "channel": "spo2",
+            "value": value,
+            "unit": "1",
+            "measured_at": f"2026-11-14T08:0{minute}:00Z",
+        }
+        _ = client.post(reverse("readings"), body, format="json", headers=CREW)
+
+    response = client.get(reverse("readings"), {"limit": 2})
+
+    assert response.status_code == 200
+    assert cast("dict[str, object]", response.json()) == {
+        "readings": {
+            "spo2": [
+                {
+                    "channel": "spo2",
+                    "value": 0.89,
+                    "measured_at": "2026-11-14T08:02:00Z",
+                    "evaluation": "critical",
+                },
+                {
+                    "channel": "spo2",
+                    "value": 0.95,
+                    "measured_at": "2026-11-14T08:03:00Z",
+                    "evaluation": "nominal",
+                },
+            ]
+        }
+    }
+
+
+@pytest.mark.django_db
+def test_history_filters_by_channel_and_rejects_bad_query(client: APIClient) -> None:
+    body = {"channel": "spo2", "value": 0.97, "unit": "1", "measured_at": TICK}
+    _ = client.post(reverse("readings"), body, format="json", headers=CREW)
+
+    filtered = client.get(reverse("readings"), {"channel": ["heart_rate", "glucose"]})
+    assert filtered.json() == {"readings": {}}
+
+    bad = client.get(reverse("readings"), {"channel": "heartrate", "limit": 0})
+    assert bad.status_code == 400
+    assert set(cast("dict[str, object]", bad.json())) == {"channel", "limit"}
