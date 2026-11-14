@@ -13,9 +13,10 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from api.broadcast import publish
 from api.models import Reading
 from api.serializers import ReadingInSerializer, ReadingOutSerializer, reading_payload
-from api.stream import events
+from api.stream import events, sse_event
 
 DEFAULT_ENVIRONMENT = "lunar_surface"
 
@@ -54,9 +55,10 @@ def readings(request: Request) -> Response:
     created = Reading.objects.bulk_create(
         Reading(**item) for item in serializer.validated_data
     )
-    return Response(
-        [reading_payload(r) for r in created], status=status.HTTP_201_CREATED
-    )
+    payloads = [reading_payload(r) for r in created]
+    for payload in payloads:
+        publish(sse_event("reading", payload))
+    return Response(payloads, status=status.HTTP_201_CREATED)
 
 
 async def stream(request: HttpRequest) -> HttpResponseBase:
@@ -76,11 +78,8 @@ async def stream(request: HttpRequest) -> HttpResponseBase:
             },
             status=400,
         )
-    last_event_id = request.headers.get("Last-Event-ID", "")
-    after_id = int(last_event_id) if last_event_id.isdigit() else None
-
     response = StreamingHttpResponse(
-        events(environment_id, after_id), content_type="text/event-stream"
+        events(environment_id), content_type="text/event-stream"
     )
     response["Cache-Control"] = "no-cache"
     response["X-Accel-Buffering"] = "no"  # stop nginx-style proxies buffering

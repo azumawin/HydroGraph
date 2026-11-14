@@ -84,11 +84,11 @@ curl -X POST localhost:8000/api/readings/ -H 'Content-Type: application/json' \
 `text/event-stream`:
 
 - one `environment` event, then the latest `reading` per channel;
-- a `reading` event for every new reading, within about 1 s (the stream polls the DB);
-- `: keepalive` every 15 s when idle.
+- a `reading` event for every new reading, pushed the moment it is POSTed.
 
-Each `reading` carries `id:`, so a browser `EventSource` that reconnects sends
-`Last-Event-ID` and gets every reading it missed. Switch environment by reconnecting.
+Delivery is an in-memory queue per open stream (`api/broadcast.py`), so it needs a
+single server process, which `runserver` is. A reconnect (switching environment, or
+`EventSource`'s automatic retry) gets a fresh snapshot.
 
 ```js
 const es = new EventSource("/api/stream/?environment=lunar_surface");

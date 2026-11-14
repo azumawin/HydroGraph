@@ -1,86 +1,67 @@
-from collections.abc import AsyncGenerator
+import asyncio
 from datetime import UTC, datetime
 
 import pytest
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync, sync_to_async
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from api import stream
+from api import broadcast, stream
 from api.models import Reading
 
 AT = datetime(2026, 11, 8, 7, 12, tzinfo=UTC)
 
 
-def take(messages: AsyncGenerator[str], n: int) -> list[str]:
-    """The next ``n`` messages of an SSE generator, then close it."""
+@pytest.mark.django_db(transaction=True)
+def test_connect_sends_environment_then_latest_per_channel() -> None:
+    _ = Reading.objects.create(channel="heart_rate", value=72, measured_at=AT)
+    _ = Reading.objects.create(
+        channel="heart_rate", value=104, measured_at=AT.replace(minute=13)
+    )
+    _ = Reading.objects.create(channel="spo2", value=89, measured_at=AT)
+    messages = stream.events("lunar_surface")
 
     async def run() -> list[str]:
         try:
-            return [await anext(messages) for _ in range(n)]
+            return [await anext(messages) for _ in range(3)]
         finally:
             await messages.aclose()
 
-    return async_to_sync(run)()
-
-
-@pytest.fixture(autouse=True)
-def fast_poll(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(stream, "POLL_INTERVAL_S", 0.01)
-
-
-@pytest.mark.django_db(transaction=True)
-def test_fresh_connect_sends_environment_then_latest_per_channel() -> None:
-    old = Reading.objects.create(channel="heart_rate", value=72, measured_at=AT)
-    new = Reading.objects.create(
-        channel="heart_rate", value=104, measured_at=AT.replace(minute=13)
-    )
-    spo2 = Reading.objects.create(channel="spo2", value=89, measured_at=AT)
-
-    environment, first, second, marker = take(stream.events("lunar_surface", None), 4)
+    environment, heart_rate, spo2 = async_to_sync(run)()
 
     assert environment == (
         "event: environment\n"
         'data: {"id": "lunar_surface", "gravity_g": 0.166, "comm_delay_s": 2.6}\n\n'
     )
-    assert first.startswith(f"id: {new.pk}\nevent: reading\ndata: ")
-    assert '"value": 104.0' in first and '"evaluation": "warning"' in first
-    assert second.startswith(f"id: {spo2.pk}\nevent: reading\n")
-    assert marker == f"id: {spo2.pk}\n\n"
-    assert f"id: {old.pk}\n" not in first + second
+    assert heart_rate.startswith("event: reading\ndata: ")
+    assert '"value": 104.0' in heart_rate and '"evaluation": "warning"' in heart_rate
+    assert '"channel": "spo2"' in spo2 and '"evaluation": "critical"' in spo2
 
 
 @pytest.mark.django_db(transaction=True)
-def test_new_readings_are_pushed_after_the_snapshot() -> None:
-    messages = stream.events("mars_surface", None)
+def test_post_is_pushed_to_open_streams_immediately() -> None:
+    body = [{"channel": "glucose", "value": 2.9, "measured_at": "2026-11-08T07:12:00Z"}]
+    messages = stream.events("mars_surface")
 
-    async def run() -> list[str]:
+    async def run() -> tuple[str, str]:
         try:
-            head = [await anext(messages) for _ in range(2)]  # environment, marker
-            created = await Reading.objects.acreate(
-                channel="glucose", value=2.9, measured_at=AT
+            environment = await anext(messages)
+            pending = asyncio.ensure_future(anext(messages))  # now subscribed
+            await asyncio.sleep(0)
+            response = await sync_to_async(APIClient().post)(
+                reverse("readings"), body, format="json"
             )
-            pushed = await anext(messages)
-            assert pushed.startswith(f"id: {created.pk}\nevent: reading\n")
-            return [*head, pushed]
+            assert response.status_code == 201
+            return environment, await asyncio.wait_for(pending, timeout=0.5)
         finally:
             await messages.aclose()
 
-    environment, marker, pushed = async_to_sync(run)()
+    environment, pushed = async_to_sync(run)()
 
     assert '"id": "mars_surface"' in environment
-    assert marker == "id: 0\n\n"
+    assert pushed.startswith("event: reading\ndata: ")
     assert '"evaluation": "critical"' in pushed and '"unit": "mmol/L"' in pushed
-
-
-@pytest.mark.django_db(transaction=True)
-def test_reconnect_replays_readings_after_last_event_id() -> None:
-    seen = Reading.objects.create(channel="spo2", value=97, measured_at=AT)
-    missed = Reading.objects.create(channel="spo2", value=93, measured_at=AT)
-
-    _, replayed = take(stream.events("lunar_surface", seen.pk), 2)
-
-    assert replayed.startswith(f"id: {missed.pk}\nevent: reading\n")
+    assert not broadcast._queues  # pyright: ignore[reportPrivateUsage]
 
 
 @pytest.mark.django_db
