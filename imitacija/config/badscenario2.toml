@@ -3,6 +3,9 @@ speed = 10
 #duration_s = 600
 # All available channels report once at startup, then follow their normal schedules.
 
+# Dose rate, gravity and comm delay follow the dashboard's environment.
+follow_backend_environment = true
+
 [environment]
 id = "iss_cabin"
 gravity_g = 0

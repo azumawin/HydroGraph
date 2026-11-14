@@ -5,6 +5,8 @@ speed = 10
 # No enabled_channels: every channel reports from boot, with the SANS fault on top.
 base_url = "http://127.0.0.1:8000"
 data_route = "/api/readings/"
+# Dose rate, gravity and comm delay follow the dashboard's environment.
+follow_backend_environment = true
 
 [environment]
 gravity_g = 0

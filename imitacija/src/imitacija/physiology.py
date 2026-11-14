@@ -17,6 +17,18 @@ from .scenarios import hypercapnia_cabin_mmhg, hypercapnia_references, sans_rmss
 from .units import MMHG_TO_PA
 
 DAY = 86400.0
+RADIATION_OMEGA = 2 * math.pi / 5400
+
+
+def monitor_dose_msv(environment: Environment, t: float) -> float:
+    """Integrated monitor dose: the exact integral of the dose rate sampled below."""
+    base = environment.dose_rate_usv_h
+    integral = t + 0.12 * (1 - math.cos(RADIATION_OMEGA * t)) / RADIATION_OMEGA
+    return (
+        environment.initial_monitor_dose_msv
+        + environment.dose_offset_msv
+        + base * integral / 3_600_000
+    )
 
 
 @lru_cache(maxsize=4096)
@@ -299,13 +311,8 @@ def environment_values(
         case "radiation" | "radiation_dose":
             # Exact analytic integration avoids history and avoids summing noisy
             # measurements. It remains correct when intermediate polls are skipped.
-            omega = 2 * math.pi / 5400
-            base = environment.dose_rate_usv_h
-            rate = base * (1 + 0.12 * math.sin(omega * t))
-            dose = (
-                environment.initial_monitor_dose_msv
-                + base * (t + 0.12 * (1 - math.cos(omega * t)) / omega) / 3_600_000
-            )
+            rate = environment.dose_rate_usv_h * (1 + 0.12 * math.sin(RADIATION_OMEGA * t))
+            dose = monitor_dose_msv(environment, t)
             return {"ambient_dose_rate": rate, "ambient_integrated_dose": dose}
         case "spe":
             return {"spe_flag": False}

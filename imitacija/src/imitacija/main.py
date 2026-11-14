@@ -39,6 +39,44 @@ async def report(delivery: Delivery) -> None:
         print(delivery.counters.as_json(), file=sys.stderr)
 
 
+async def follow_environment(
+    client: httpx.AsyncClient, scheduler: Scheduler, settings: Settings
+) -> None:
+    """Apply the environment selected on the backend whenever it changes.
+
+    The backend's catalog gives each environment's baseline dose rate, gravity and
+    round-trip comm delay; the simulator delays results by the one-way half. A
+    failed poll is reported once and retried, never fatal to the run.
+    """
+    catalog: dict[str, dict[str, object]] = {}
+    applied: str | None = None
+    is_failing = False
+    while True:
+        try:
+            if not catalog:
+                listed = await client.get(settings.environments_route)
+                _ = listed.raise_for_status()
+                catalog = {str(e["id"]): e for e in listed.json()["environments"]}
+            current = await client.get(settings.environment_route)
+            _ = current.raise_for_status()
+            selected = str(current.json()["id"])
+            if selected != applied and selected in catalog:
+                chosen = catalog[selected]
+                scheduler.set_environment(
+                    gravity_g=float(str(chosen["gravity_g"])),
+                    comm_delay_s=float(str(chosen["comm_delay_rt_s"])) / 2,
+                    dose_rate_usv_h=float(str(chosen["baseline_dose_rate_usv_h"])),
+                )
+                applied = selected
+                print(f"environment: {selected}", file=sys.stderr)
+            is_failing = False
+        except (httpx.HTTPError, KeyError, TypeError, ValueError) as error:
+            if not is_failing:
+                print(f"environment poll failed, retrying: {error!r}", file=sys.stderr)
+            is_failing = True
+        await asyncio.sleep(settings.environment_poll_wall_s)
+
+
 async def run(settings: Settings, preview_port: int | None = None) -> None:
     """Run normal delivery, or opt into a local JSON preview without backend requests."""
     context = serve(settings, preview_port) if preview_port is not None else nullcontext(None)
@@ -84,6 +122,11 @@ async def _run_worker(settings: Settings, preview: PreviewState | None) -> None:
         sampler = asyncio.create_task(scheduler.run(settings.duration_s))
         reporter = asyncio.create_task(report(delivery))
         stopper = asyncio.create_task(stop.wait())
+        follower = (
+            asyncio.create_task(follow_environment(client, scheduler, settings))
+            if settings.follow_backend_environment and preview is None
+            else None
+        )
         try:
             done, _ = await asyncio.wait(
                 (sampler, sender, stopper), return_when=asyncio.FIRST_COMPLETED
@@ -91,9 +134,10 @@ async def _run_worker(settings: Settings, preview: PreviewState | None) -> None:
             for task in done:
                 task.result()
         finally:
-            for task in (sampler, reporter, stopper):
+            background = [sampler, reporter, stopper, *([follower] if follower else [])]
+            for task in background:
                 task.cancel()
-            await asyncio.gather(sampler, reporter, stopper, return_exceptions=True)
+            await asyncio.gather(*background, return_exceptions=True)
             await delivery.finish(sender)
             for sig in installed:
                 loop.remove_signal_handler(sig)

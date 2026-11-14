@@ -93,3 +93,17 @@ reports must not be inferred from the generated CFE or cabin signal. Registering
 the new CFE channel in the receiver, a five-second evaluation loop and a resolved
 severity policy remain prerequisites
 for the source's end-to-end Critical Red Alert. See `badscenario2.md`, section 7.
+
+
+## Following the backend environment
+
+With `follow_backend_environment = true` (set in `healthy.toml`, `badscenario1.toml`
+and `badscenario2.toml`), the simulator polls `GET environment_route`
+(`/api/environment/`, every `environment_poll_wall_s`, default 2 s) and, once,
+`GET environments_route` (`/api/environments/`) for each environment's values. When
+the dashboard switches environment, the running simulation takes that environment's
+`baseline_dose_rate_usv_h` as its cabin dose rate, its `gravity_g`, and half its
+round-trip `comm_delay_rt_s` as the one-way result delay. The integrated monitor dose
+stays continuous across the switch. A failed poll is reported once and retried; the
+run never stops for it. Scenario validation (SANS needs 0 g) applies only at load, so
+a SANS run keeps its fault after a switch to a gravity environment.
