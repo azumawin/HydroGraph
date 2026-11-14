@@ -9,7 +9,7 @@
 .vitals-dashboard .vitals-dashboard-findings-empty {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: var(--text-footnote);
 }
 
 .vitals-dashboard .vitals-dashboard-finding {
@@ -30,9 +30,9 @@
 
 .vitals-dashboard .vitals-dashboard-finding-name {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-footnote);
   font-weight: 500;
-  line-height: 18px;
+  line-height: 1.125rem;
 }
 
 .vitals-dashboard .vitals-dashboard-finding-status {
@@ -45,9 +45,9 @@
   border-radius: 999px;
   color: var(--color-text-secondary);
   background: color-mix(in srgb, currentColor 8%, transparent);
-  font-size: 12px;
+  font-size: var(--text-caption1);
   font-weight: 500;
-  line-height: 16px;
+  line-height: 1rem;
 
   &.is-nominal {
     color: var(--color-status-nominal);
@@ -62,15 +62,17 @@
   }
 }
 
-.vitals-dashboard .vitals-dashboard-finding-triggers,
-.vitals-dashboard .vitals-dashboard-finding-action {
+.vitals-dashboard .vitals-dashboard-finding-triggers {
   margin: 0;
-  font-size: 12px;
-  line-height: 16px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption1);
+  line-height: 1rem;
 }
 
-.vitals-dashboard .vitals-dashboard-finding-triggers {
-  color: var(--color-text-secondary);
+.vitals-dashboard .vitals-dashboard-finding-action {
+  margin: 0;
+  font-size: var(--text-footnote);
+  line-height: 1.125rem;
 }
 
 .vitals-dashboard .vitals-dashboard-chat {
@@ -87,7 +89,7 @@
   border-radius: 999px;
   color: var(--color-text);
   background: var(--color-accent-wash);
-  font-size: 13px;
+  font-size: var(--text-footnote);
   cursor: pointer;
 
   &:hover {
@@ -100,8 +102,8 @@
   margin: 0;
   padding: 8px 12px;
   border-radius: 12px;
-  font-size: 13px;
-  line-height: 18px;
+  font-size: var(--text-footnote);
+  line-height: 1.125rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 
@@ -143,7 +145,7 @@
   border-radius: 10px;
   color: var(--color-text);
   background: var(--color-glass-fill);
-  font-size: 13px;
+  font-size: var(--text-footnote);
   outline: none;
 
   &::placeholder {
