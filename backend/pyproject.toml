@@ -6,22 +6,12 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "django>=6.0",
-    "djangorestframework>=3.18.3",
-    "markdown>=3.11.3",
-    "hydrograph-core",
-    "drf-spectacular>=0.30.0",
     "daphne>=4.2.3",
     "django-cors-headers>=4.9.0",
 ]
 
 # Virtual root: this directory is the Django project, not an installable package,
 # so there is deliberately no [build-system] here.
-
-[tool.uv.workspace]
-members = ["packages/*"]
-
-[tool.uv.sources]
-hydrograph-core = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -30,12 +20,12 @@ dev = [
     "pytest-django>=4.11.1",
     "ruff>=0.17.5",
     "django-stubs>=5.2.2",
-    "djangorestframework-stubs>=3.16.4",
 ]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py", "tests.py"]
+pythonpath = ["."]
 
 [tool.ruff]
 extend-exclude = ["**/migrations/*"]

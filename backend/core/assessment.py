@@ -1,7 +1,7 @@
 """Tier 1 findings from the latest channel readings.
 
-:mod:`hydrograph_core.findings` takes spec-unit arguments; the device sends SI
-channel readings (:mod:`hydrograph_core.channels`). This module bridges the
+:mod:`core.findings` takes spec-unit arguments; the device sends SI
+channel readings (:mod:`core.channels`). This module bridges the
 two for one crew member: :func:`evaluate_findings` converts the latest
 readings and calls every finding whose inputs the simulator provides.
 

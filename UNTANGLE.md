@@ -15,8 +15,8 @@ Decisions taken:
 
 | Path | Role |
 | --- | --- |
-| `backend/` | Django + DRF API. Owns persistence, grading, findings, SSE. |
-| `backend/packages/hydrograph-core/` | Pure domain library. Channels, findings, environments. No Django. |
+| `backend/` | Async Django API. Owns persistence, grading, findings, SSE. |
+| `backend/core/` | Pure domain library. Channels, findings, environments. No Django. |
 | `imitacija/` | Telemetry simulator. Config TOML -> physiology -> SI readings -> HTTP POST. |
 | `frontend/` | React dashboard. EventSource + REST, Zustand store, charts, 3D body, WebGL background. |
 | `e2e/` | Playwright tests that start the real stack. |
@@ -92,8 +92,8 @@ main.tsx -> App -> VitalsDashboard
 ### 1.3 Contracts
 
 - `docs/json-shape.md` is the wire contract.
-- `hydrograph_core.CHANNELS` determines accepted channels and display conversion.
-- `hydrograph_core.FINDINGS` determines monitored findings and input channels.
+- `core.CHANNELS` determines accepted channels and display conversion.
+- `core.FINDINGS` determines monitored findings and input channels.
 - `imitacija` has its own registry and must stay compatible with core.
 - The simulator owns SI values; the backend adds `evaluation`; the frontend applies `display`.
 
@@ -127,16 +127,12 @@ Severity:
 4. Backend contract docs contradict themselves:
    - `imitacija/docs/backend_contract.md:10` says remove `environment_route`
    - `:98-109` documents and code uses it.
-5. Channel counts are wrong in docs:
-   - `docs/json-shape.md:149` and `backend/README.md:194` say 35
-   - core has 40 (35 crew + 5 environment).
+5. ~~Channel counts are wrong in docs.~~ Fixed: docs now say 40 (35 crew + 5 environment).
 
 ### P1 - duplicate sources of truth
 
-6. ACVPU tuple duplicated:
-   - `backend/api/serializers.py:27`
-   - `backend/packages/hydrograph-core/src/hydrograph_core/channels.py:477`
-   - `.../assessment.py:215` and `:403`
+6. ACVPU tuple duplicated between backend and simulator:
+   - `backend/core/channels.py` exports `ACVPU`
    - `imitacija/src/imitacija/models.py:32`
    - `imitacija/src/imitacija/registry.py:814`
 7. "Latest reading" is implemented four times:
@@ -198,7 +194,7 @@ Severity:
 
 ### 3.1 Metadata ownership
 
-- `hydrograph_core` remains the backend authority for channels, findings, environments.
+- `core` remains the backend authority for channels, findings, environments.
 - `imitacija` keeps its own runtime registry, but `FREQUENCIES` becomes the only
   schedule/window authority. `_CHANNELS` stops carrying schedule literals.
 - Calendar and event-driven rules live in one place and are rendered into the
@@ -300,8 +296,8 @@ Acceptance:
   - every enabled channel has a frequency group
   - every group has a runtime rule
   - dictionary schedule equals runtime rule
-- [ ] Export one `ACVPU` constant from `hydrograph_core`.
-- [ ] Use that constant in `serializers.py`, `channels.py`, `assessment.py`.
+- [x] Export one `ACVPU` constant from `core`.
+- [x] Use that constant in `channels.py` and `assessment.py`.
 - [ ] Add a simulator/backend contract test for ACVPU when the backend checkout exists.
 - [ ] Generate channel counts/catalog from `imitacija --dictionary`.
 
@@ -386,7 +382,7 @@ Optional focused checks:
 
 ```
 cd backend && uv run pytest api/test_stream.py -q
-cd backend && uv run pytest packages/hydrograph-core -q
+cd backend && uv run pytest core -q
 cd imitacija && uv run pytest -q
 ```
 

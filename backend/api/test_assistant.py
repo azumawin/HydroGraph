@@ -1,12 +1,19 @@
+from __future__ import annotations
+
 import json
 import urllib.request
-from typing import Self, cast
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Self, cast
 
 import pytest
 from django.core.cache import cache
-from django.test import override_settings
+from django.test import Client, override_settings
 from django.urls import reverse
-from rest_framework.test import APIClient
+
+if TYPE_CHECKING:
+    from django.test.client import (
+        _MonkeyPatchedWSGIResponse,  # pyright: ignore[reportPrivateUsage]
+    )
 
 from api.assistant import is_blocked_model
 from api.models import Reading
@@ -36,6 +43,12 @@ class FakeResponse:
         pass
 
 
+def post(body: Mapping[str, object]) -> _MonkeyPatchedWSGIResponse:
+    return Client().post(
+        reverse("assistant"), json.dumps(body), content_type="application/json"
+    )
+
+
 @pytest.mark.django_db
 @override_settings(OLLAMA_API_KEY="test-key", OLLAMA_MODEL="gpt-oss:120b")
 def test_reply_is_briefed_with_the_live_readings(
@@ -53,7 +66,7 @@ def test_reply_is_briefed_with_the_live_readings(
 
     monkeypatch.setattr(urllib.request, "urlopen", urlopen)
 
-    response = APIClient().post(reverse("assistant"), QUESTION, format="json")
+    response = post(QUESTION)
 
     assert response.status_code == 200
     assert response.json() == {"reply": "Rest."}
@@ -66,14 +79,14 @@ def test_reply_is_briefed_with_the_live_readings(
 @pytest.mark.django_db
 @override_settings(OLLAMA_API_KEY="")
 def test_missing_key_is_503() -> None:
-    response = APIClient().post(reverse("assistant"), QUESTION, format="json")
+    response = post(QUESTION)
     assert response.status_code == 503
 
 
 @pytest.mark.django_db
 @override_settings(OLLAMA_API_KEY="test-key", OLLAMA_MODEL="deepseek-v4.1-flash")
 def test_blocked_model_is_503() -> None:
-    response = APIClient().post(reverse("assistant"), QUESTION, format="json")
+    response = post(QUESTION)
     assert response.status_code == 503
     assert "not allowed" in response.json()["detail"]
 
@@ -87,7 +100,7 @@ def test_blocked_models() -> None:
 
 @pytest.mark.django_db
 def test_empty_conversation_is_400() -> None:
-    response = APIClient().post(reverse("assistant"), {"messages": []}, format="json")
+    response = post({"messages": []})
     assert response.status_code == 400
 
 
@@ -102,10 +115,12 @@ def test_eleventh_request_in_a_minute_is_429(monkeypatch: pytest.MonkeyPatch) ->
         return FakeResponse({"message": {"role": "assistant", "content": "Rest."}})
 
     monkeypatch.setattr(urllib.request, "urlopen", urlopen)
-    client = APIClient()
+    client = Client()
 
     statuses = [
-        client.post(reverse("assistant"), QUESTION, format="json").status_code
+        client.post(
+            reverse("assistant"), json.dumps(QUESTION), content_type="application/json"
+        ).status_code
         for _ in range(11)
     ]
 

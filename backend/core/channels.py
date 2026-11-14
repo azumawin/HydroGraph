@@ -10,7 +10,7 @@ plan's Tier 1 cutoffs where it gives one for that channel, otherwise from
 ``NSA_hydrograph.md``, converted from the spec's unit in each ``case``. A
 channel or side neither document addresses is ``"unspecified"``.
 
-The 10 findings in :mod:`hydrograph_core.findings` combine several channels;
+The 10 findings in :mod:`core.findings` combine several channels;
 this module grades each channel alone.
 """
 
@@ -24,6 +24,9 @@ from .environments import EnvironmentInfo
 
 Evaluation = Literal["nominal", "warning", "critical", "unspecified"]
 """Grade of one reading. ``unspecified``: the specs give no cutoff for it."""
+
+ACVPU: Final = ("ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE")
+"""The supported consciousness states, from best to worst."""
 
 
 class Display(TypedDict):
@@ -474,7 +477,7 @@ def evaluate_reading(
         ValueError: ``channel`` is not in :data:`CHANNELS`.
     """
     if channel == "consciousness_level":
-        if value not in ("ALERT", "CONFUSION", "VOICE", "PAIN", "UNRESPONSIVE"):
+        if value not in ACVPU:
             raise ValueError("invalid ACVPU state")
         return "unspecified"
     if isinstance(value, str):

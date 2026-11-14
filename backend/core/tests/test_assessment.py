@@ -1,12 +1,12 @@
-"""Tests for hydrograph_core.assessment (NEWS2 bands from RCP 2017; SI inputs)."""
+"""Tests for core.assessment (NEWS2 bands from RCP 2017; SI inputs)."""
 
 import unittest
 from typing import cast
 
-from hydrograph_core.assessment import FINDINGS, evaluate_findings, news2
-from hydrograph_core.channels import CHANNELS
-from hydrograph_core.environments import ENVIRONMENTS
-from hydrograph_core.findings import EnergyBalanceResult
+from core.assessment import FINDINGS, evaluate_findings, news2
+from core.channels import CHANNELS
+from core.environments import ENVIRONMENTS
+from core.findings import EnergyBalanceResult
 
 MMHG = 133.322  # Pa
 ISS = ENVIRONMENTS["iss_leo"]

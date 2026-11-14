@@ -1,10 +1,6 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
 from api import views
-
-router = DefaultRouter()
-# router.register("nodes", views.NodeViewSet, basename="node")
 
 urlpatterns = [
     path("health/", views.health, name="health"),
@@ -14,5 +10,4 @@ urlpatterns = [
     path("readings/", views.readings, name="readings"),
     path("assistant/", views.assistant, name="assistant"),
     path("stream/", views.stream, name="stream"),
-    path("", include(router.urls)),
 ]

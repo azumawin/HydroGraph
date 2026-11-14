@@ -2,10 +2,10 @@
 
 Each ``<finding>_D_S`` function implements one finding: D is its hazard
 domain, S its place within that domain. The numbering is ours, not the plan's;
-the mapping to plan finding numbers is in :mod:`hydrograph_core.findings`.
-:mod:`hydrograph_core.channels` grades single readings;
-:mod:`hydrograph_core.assessment` runs the findings on the latest readings;
-:mod:`hydrograph_core.environments` lists the mission environments.
+the mapping to plan finding numbers is in :mod:`core.findings`.
+:mod:`core.channels` grades single readings;
+:mod:`core.assessment` runs the findings on the latest readings;
+:mod:`core.environments` lists the mission environments.
 """
 
 from .assessment import (
@@ -17,7 +17,14 @@ from .assessment import (
     news2,
     qsofa,
 )
-from .channels import CHANNELS, ChannelInfo, Display, Evaluation, evaluate_reading
+from .channels import (
+    ACVPU,
+    CHANNELS,
+    ChannelInfo,
+    Display,
+    Evaluation,
+    evaluate_reading,
+)
 from .environments import DEFAULT_ENVIRONMENT, ENVIRONMENTS, EnvironmentInfo
 from .findings import (
     Severity,
@@ -35,6 +42,7 @@ from .findings import (
 )
 
 __all__ = [
+    "ACVPU",
     "CHANNELS",
     "DEFAULT_ENVIRONMENT",
     "ENVIRONMENTS",

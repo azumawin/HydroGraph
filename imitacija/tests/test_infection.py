@@ -53,10 +53,10 @@ def test_full_demo(monkeypatch):
     latest = {o.reading.channel: o.reading.value for o in items}
     assert latest["il6_pg_mL"] == pytest.approx(8.4e-9)
     assert latest["body_temperature"] == pytest.approx(311.85, abs=0.025)
-    core = Path(__file__).resolve().parents[2] / "backend/packages/hydrograph-core/src"
+    core = Path(__file__).resolve().parents[2] / "backend"
     monkeypatch.syspath_prepend(str(core))
-    from hydrograph_core.assessment import evaluate_findings, news2, qsofa
-    from hydrograph_core.environments import ENVIRONMENTS
+    from core.assessment import evaluate_findings, news2, qsofa
+    from core.environments import ENVIRONMENTS
 
     r = evaluate_findings(latest, None, None, ENVIRONMENTS["iss_leo"])["acute_infection_3_1"]
     assert r["news2_score"] == 8 and r["qsofa_score"] == 2 and r["status"] == "critical"

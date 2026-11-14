@@ -23,7 +23,7 @@ Four of the five required signals already exist. Reuse their identifiers and sch
 | Acquisition and startup | `scheduler.rules()`, `Scheduler.acquire()`, `Scheduler.initialize()` | Preserve existing schedules and add a minute EEG-fixture group. |
 | Metadata and channel selection | `registry.effective_channels()`, `dictionary()`, `frequency.FREQUENCIES` | Gate the new channel, describe synthetic EEG and export scenario settings. |
 | Transport and preview | `Scheduler._publish()`, `Delivery`, `PreviewState` | Reuse four-field readings, source-unit display and provenance headers. |
-| Finding 4 | `../backend/packages/hydrograph-core/src/hydrograph_core/findings.py::hypoxia_co2_2_2()` | Convert wire units and evaluate aligned cabin/crew observations. |
+| Finding 4 | `../backend/core/findings.py::hypoxia_co2_2_2()` | Convert wire units and evaluate aligned cabin/crew observations. |
 
 There are two integration gaps. EEG/CFE is currently excluded from the registry. Also, the backend API still exposes only a health endpoint: there is no telemetry receiver or five-second Finding 4 evaluation loop. The existing core function returns **WARNING**, not CRITICAL, for the specification's 4.8 mmHg / 92% example. Section 7 makes that discrepancy and the separate backend work explicit.
 

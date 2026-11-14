@@ -1,6 +1,6 @@
-# hydrograph-core style guide
+# core style guide
 
-`hydrograph_core` implements the HydroGFN health monitor from two documents in this directory:
+`core` implements the HydroGFN health monitor from two documents in this directory:
 
 - `Tiered Master System Specification & Implementation Plan.pdf` (the
   **master plan**): the Tier 1 / Tier 2 split, the 10 health findings.
@@ -12,12 +12,12 @@ function's docstring.
 
 ## Layout
 
-This package is one uv workspace member of `backend/`. `src/hydrograph_core/` is one
+`core/` is the domain package inside the backend Django project. It is one
 self-contained, flat module: no subpackages, no imports from outside its
-directory, standard library only. Its docs stay in this package directory.
+directory, standard library only. Its docs and tests stay in this directory.
 
 ```
-hydrograph_core/
+core/
   __init__.py         public API: the 10 finding functions, the channel and
                       environment catalogs, and their status types
   findings.py         Tier 1: main-window health findings 1-10
@@ -26,6 +26,7 @@ hydrograph_core/
   environments.py     mission environments (ENVIRONMENTS)
   assessment.py       findings from the latest SI channel readings
                       (evaluate_findings), the FINDINGS catalog, NEWS2
+  tests/              pytest suite for the package
 ```
 
 Tier 1 combines vitals and Tier 2 values (sensor readings turned into
@@ -52,14 +53,14 @@ Which Tier 2 parameter of the parameter spec feeds which finding:
 ## Tooling
 
 Python >= 3.14, standard library only at runtime. Dev tools come from the
-backend workspace (`backend/pyproject.toml`). From `backend/`:
+backend project (`backend/pyproject.toml`). From `backend/`:
 
 ```sh
-uv sync                                     # dev tools
-black packages/hydrograph-core              # format; commit only black-clean code
-ruff check packages/hydrograph-core         # lint
-basedpyright packages/hydrograph-core       # must report 0 errors, 0 warnings
-pytest packages/hydrograph-core             # tests
+uv sync                 # dev tools
+black core              # format; commit only black-clean code
+ruff check core         # lint
+basedpyright core       # must report 0 errors, 0 warnings
+pytest core             # tests
 ```
 
 Inside the module, always import relatively (`from .findings import Severity`)

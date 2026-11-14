@@ -1,7 +1,7 @@
-# hydrograph-core
+# core
 
 Pure domain logic for the HydroGFN health monitor: the master plan's 10 Tier 1
-health findings, the sensor channel catalog (the simulator's 35 channels, in SI
+health findings, the sensor channel catalog (the simulator's 40 channels, in SI
 wire units) with single-reading thresholds, and the mission environments. No Django imports, no I/O, no state. The backend
 consumes it; any rule about what a value means belongs here, not in `api/`.
 
@@ -15,16 +15,16 @@ confirmed ones are in `mismatches.md`.
 
 ```sh
 cd backend
-pytest packages/hydrograph-core  # this package's tests
+pytest core  # this package's tests
 ```
 
-## hydrograph_core
+## core
 
-A self-contained flat module in `src/hydrograph_core/` (Python >= 3.14, no
-runtime dependencies). `import hydrograph_core` exports the 10 finding
-functions, named `<finding>_D_S` (D = hazard domain, S = place in it;
-map to plan finding numbers in the `findings.py` docstring),
-`CHANNELS` + `evaluate_reading(channel, value, environment=...)`, `FINDINGS` +
+A self-contained flat module in `backend/core/` (Python >= 3.14, no runtime
+dependencies). `import core` exports the 10 finding functions, named
+`<finding>_D_S` (D = hazard domain, S = place in it; map to plan finding
+numbers in the `findings.py` docstring), `CHANNELS` +
+`evaluate_reading(channel, value, environment=...)`, `FINDINGS` +
 `evaluate_findings(latest, ...)` (findings from the latest readings), and
 `ENVIRONMENTS`. Conventions: `STYLE.md`.
 
@@ -35,9 +35,9 @@ returns an `Evaluation`, which adds `"unspecified"` for readings the specs give
 no cutoff for.
 
 ```python
-import hydrograph_core
+import core
 
-finding = hydrograph_core.sans_fluid_shift_1_3(1.5)
+finding = core.sans_fluid_shift_1_3(1.5)
 finding["status"], finding["triggers"]  # "warning", ["jugular distension >= 1.1%"]
 ```
 
@@ -47,8 +47,9 @@ The package is a stateless library. The backend owns all state: reading history
 and who is subscribed. Every function takes plain values and returns a plain
 `dict` of numbers, strings, booleans and lists that `json.dumps` accepts as-is.
 
-It is already a workspace dependency of `backend/pyproject.toml`, so `uv sync`
-installs it editable. The backend (`backend/api/`) uses it in two places:
+It lives inside the Django project, so `backend/` on `sys.path` is enough; no
+package install or workspace member is required. The backend (`backend/api/`)
+uses it in two places:
 
 1. Each reading: `evaluate_reading(channel, value, environment=...)` gives its
    `evaluation`; only the dose rate depends on the environment (graded above its
@@ -59,7 +60,7 @@ installs it editable. The backend (`backend/api/`) uses it in two places:
    readings) in SI wire units, and the body-mass history the baselines need:
 
    ```python
-   from hydrograph_core import ENVIRONMENTS, evaluate_findings
+   from core import ENVIRONMENTS, evaluate_findings
 
    latest = {"spo2": 0.89, "ambient_ppco2": 260.0}
    results = evaluate_findings(latest, None, None, ENVIRONMENTS["iss_leo"])

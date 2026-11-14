@@ -4,7 +4,7 @@ Things that look wrong in the master plan (`Tiered Master System Specification &
 
 ## Section 2: Tier 1 findings (p.2-4)
 
-Found while writing `hydrograph_core/findings.py`.
+Found while writing `core/findings.py`.
 
 1. **Some criteria still have no cutoff.**
    - Finding 5: the sleep duration is "anchored to flight baseline (ISS mean 6.09 hrs vs. 8.5 hrs scheduled)" but no number triggers. Code: the parameter spec's 4.3 cutoff (nominal needs > 7.5 h).

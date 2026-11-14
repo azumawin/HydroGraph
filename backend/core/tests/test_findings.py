@@ -1,8 +1,8 @@
-"""Research-based tests for hydrograph_core.findings (expected values from published sources)."""
+"""Research-based tests for core.findings (expected values from published sources)."""
 
 import unittest
 
-from hydrograph_core import findings
+from core import findings
 
 
 def _ortho(

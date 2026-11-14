@@ -76,7 +76,7 @@ requests history once the dictionary arrives (on every (re)connect) and merges i
 with live readings by `measured_at`. Evaluations use the environment in effect.
 
 `evaluation` is one of `"nominal" | "warning" | "critical" | "unspecified"`
-(`hydrograph_core.Evaluation`). `unspecified` means the specs give no threshold for
+(`core.Evaluation`). `unspecified` means the specs give no threshold for
 this value; it is not "normal".
 
 ## 3. Backend → frontend: finding
@@ -146,7 +146,7 @@ join it to readings by `channel` and to findings by `id`.
 }
 ```
 
-- `channels` has one entry per channel the backend accepts (the simulator's 35).
+- `channels` has one entry per channel the backend accepts (the simulator's 40).
   `scope` is the `X-Simulation-Scope` the device must send; `unit` is the SI wire
   unit of every reading's `value`.
 - `display` converts a numeric value for people: `value * scale + offset`, in

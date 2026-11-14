@@ -20,9 +20,9 @@ The vital channels, serum IL-6 assay, virus-specific PCR results, HTTP receiver 
 | Specimen signals | `il6_serum`, `viral_ebv_detected`, `viral_vzv_detected`, `viral_cmv_detected` | Add target assay events and explicitly select EBV reactivation for the demo. |
 | Acquisition | `Scheduler`, existing owner-specific EVA rule replacement | Add target BP/specimen rules and new context/GFET groups without duplicate acquisitions. |
 | Startup and preview | `Scheduler.initialize()`, `PreviewState` | Emit every available baseline once; support a consciousness enum value. |
-| Existing NEWS2 | `../backend/packages/hydrograph-core/src/hydrograph_core/assessment.py::news2()` | Extend its five measured parameters with explicit oxygen and consciousness inputs. |
+| Existing NEWS2 | `../backend/core/assessment.py::news2()` | Extend its five measured parameters with explicit oxygen and consciousness inputs. |
 | Existing Finding 3 | `findings.acute_infection_3_1()` | Preserve current severity thresholds; enrich the assessment result with score breakdown and qSOFA. |
-| Ingestion and SSE | Backend `channels.py`, `api/serializers.py`, `api/findings.py`, `api/views.py` | Accept new state/GFET readings and recompute the infection finding when they change. |
+| Ingestion and SSE | Backend `channels.py`, `api/contracts.py`, `api/findings.py`, `api/views.py` | Accept new state/GFET readings and recompute the infection finding when they change. |
 
 The current `news2()` assumes alertness and room air. The assessment always supplies `post_ared_window=False`; it does not receive that context. The current `Reading` value type allows only numbers and booleans, so transmitting `consciousness_level="ALERT"` needs a coordinated, narrowly validated enum extension.
 

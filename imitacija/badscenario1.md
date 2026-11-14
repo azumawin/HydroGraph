@@ -18,9 +18,9 @@ The simulator can already publish independent measurements, calculate completed 
 | Startup fixtures | `startup_crew_values()`, `Scheduler.initialize()` | Emit healthy references once at time zero for enabled new channels. |
 | Metadata and units | `registry.Channel`, `CHANNELS`, `dictionary()`, `frequency.FREQUENCIES` | Register all new channels, units, windows and schedules. |
 | Transmission | `Scheduler._publish()`, `Delivery`, `PreviewState` | Reuse four-field readings, provenance headers and normal communication delays. |
-| Finding 9 evaluation | `../backend/packages/hydrograph-core/src/hydrograph_core/findings.py::sans_fluid_shift_1_3()` | Evaluate jugular strain after converting back to percentage units. |
+| Finding 9 evaluation | `../backend/core/findings.py::sans_fluid_shift_1_3()` | Evaluate jugular strain after converting back to percentage units. |
 
-The backend finding function exists, but the current Django API only exposes a health endpoint; `api/views.py`, `api/urls.py` and `api/serializers.py` do not implement telemetry ingestion. Preview and direct evaluator tests can be completed first. End-to-end HTTP alerts additionally require a receiver and evaluator integration.
+The backend finding function exists, but the current Django API only exposes a health endpoint; `api/views.py`, `api/urls.py` and `api/contracts.py` do not implement telemetry ingestion. Preview and direct evaluator tests can be completed first. End-to-end HTTP alerts additionally require a receiver and evaluator integration.
 
 ## 2. Exact signals to change
 

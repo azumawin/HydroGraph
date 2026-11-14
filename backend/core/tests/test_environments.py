@@ -2,8 +2,8 @@
 
 import unittest
 
-from hydrograph_core import ENVIRONMENTS
-from hydrograph_core.environments import EnvironmentInfo
+from core import ENVIRONMENTS
+from core.environments import EnvironmentInfo
 
 
 class TestEnvironments(unittest.TestCase):

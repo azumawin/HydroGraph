@@ -1,337 +1,165 @@
-from typing import cast, get_args
+import json
 
-import hydrograph_core
-from django.http import HttpRequest, StreamingHttpResponse
+from django.http import HttpRequest, JsonResponse, StreamingHttpResponse
 from django.http.response import HttpResponseBase
-from django.views.decorators.http import require_GET
-from drf_spectacular.utils import (
-    OpenApiParameter,
-    extend_schema,  # pyright: ignore[reportUnknownVariableType]  # stubs: Serializer[Unknown]
-)
-from rest_framework import status
-from rest_framework.decorators import api_view, throttle_classes
-from rest_framework.request import Request
-from rest_framework.response import Response
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from api.assistant import AssistantError, ChatMessage, reply
+import core
+from api.assistant import AssistantError, is_rate_limited, reply
 from api.broadcast import publish
+from api.contracts import (
+    environments_payload,
+    finding_payload,
+    parse_chat,
+    parse_environment,
+    parse_history_query,
+    parse_reading,
+    reading_payload,
+)
 from api.environment import current_environment, current_environment_id
 from api.findings import affected_findings, crew_findings
 from api.models import EnvironmentSelection, Reading
-from api.serializers import (
-    ChatSerializer,
-    EnvironmentSelectionSerializer,
-    HistoryQuery,
-    HistoryQuerySerializer,
-    ReadingIn,
-    ReadingInSerializer,
-    ReadingPayload,
-    environments_payload,
-    finding_payload,
-    reading_payload,
-)
 from api.stream import events, sse_event
-from api.throttles import AssistantBurstThrottle, AssistantDailyThrottle
 
 
-@extend_schema(
-    summary="Liveness probe",
-    responses={
-        200: {
-            "type": "object",
-            "properties": {
-                "status": {"type": "string"},
-                "core_version": {"type": "string"},
-            },
-        }
-    },
-)
-@api_view(["GET"])
-def health(_request: Request) -> Response:
+@require_GET
+async def health(_request: HttpRequest) -> JsonResponse:
     """Liveness probe, also proves the core package is wired in."""
-    return Response({"status": "ok", "core_version": hydrograph_core.__version__})
+    return JsonResponse({"status": "ok", "core_version": core.__version__})
 
 
-@extend_schema(
-    summary="The predefined mission environments",
-    responses={
-        200: {
-            "type": "object",
-            "properties": {
-                "environments": {
-                    "type": "object",
-                    "description": "Keyed by environment id, in dropdown order.",
-                    "additionalProperties": {
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string"},
-                            "gravity_g": {"type": "number"},
-                            "comm_delay_rt_s": {"type": "number"},
-                            "baseline_dose_rate_usv_h": {"type": "number"},
-                            "storm_shelter_available": {"type": "boolean"},
-                            "day_length_h": {"type": "number"},
-                        },
-                    },
-                }
-            },
-        }
-    },
-)
-@api_view(["GET"])
-def environments(_request: Request) -> Response:
-    """The environments the dashboard offers, for the environment switcher.
-
-    Static, so one fetch is enough; the stream dictionary carries the same list
-    for clients that only open the stream.
-    """
-    return Response({"environments": environments_payload()})
+@require_GET
+async def environments(_request: HttpRequest) -> JsonResponse:
+    """The environments the dashboard offers, for the environment switcher."""
+    return JsonResponse({"environments": environments_payload()})
 
 
-ENVIRONMENT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "id": {"type": "string", "enum": list(hydrograph_core.ENVIRONMENTS)}
-    },
-}
-
-
-@extend_schema(
-    methods=["GET"],
-    summary="The mission environment in effect",
-    responses={200: ENVIRONMENT_SCHEMA},
-)
-@extend_schema(
-    methods=["PUT"],
-    summary="Switch the mission environment",
-    request=EnvironmentSelectionSerializer,
-    responses={200: ENVIRONMENT_SCHEMA},
-)
-@api_view(["GET", "PUT"])
-def environment(request: Request) -> Response:
-    """The environment in effect; PUT switches it for every dashboard and simulator.
-
-    A switch is pushed to every stream, with the latest dose-rate reading and
-    the radiation finding re-graded, since both depend on the environment.
-    """
+@csrf_exempt
+@require_http_methods(["GET", "PUT"])
+async def environment(request: HttpRequest) -> JsonResponse:
+    """The environment in effect; PUT switches it for every dashboard and simulator."""
     if request.method == "PUT":
-        serializer = EnvironmentSelectionSerializer(data=request.data)
-        _ = serializer.is_valid(raise_exception=True)
-        environment_id = cast("dict[str, str]", serializer.validated_data)["id"]
-        _ = EnvironmentSelection.objects.create(environment_id=environment_id)
-        selected = hydrograph_core.ENVIRONMENTS[environment_id]
+        payload, error = await _json_body(request)
+        if error is not None:
+            return error
+        environment_id, errors = parse_environment(payload)
+        if environment_id is None:
+            return JsonResponse(errors, status=400)
+
+        _ = await EnvironmentSelection.objects.acreate(environment_id=environment_id)
+        selected = core.ENVIRONMENTS[environment_id]
         publish(sse_event("environment", {"id": environment_id}))
-        dose_rate = (
+        dose_rate = await (
             Reading.objects.filter(channel="ambient_dose_rate")
             .order_by("-measured_at", "-id")
-            .first()
+            .afirst()
         )
         if dose_rate is not None:
             publish(sse_event("reading", reading_payload(dose_rate, selected)))
-        for finding, result in crew_findings(
-            selected, ["radiation_exposure_3_2"]
+        for finding, result in (
+            await crew_findings(selected, ["radiation_exposure_3_2"])
         ).items():
             publish(sse_event("finding", finding_payload(finding, result)))
-    return Response({"id": current_environment_id()})
+    return JsonResponse({"id": await current_environment_id()})
 
 
-@extend_schema(
-    summary="The health conditions the crew member may have",
-    responses={
-        200: {
-            "type": "object",
-            "properties": {
-                "findings": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "type": "string",
-                                "enum": list(hydrograph_core.FINDINGS),
-                            },
-                            "triggers": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                            },
-                            "status": {
-                                "type": "string",
-                                "enum": list(get_args(hydrograph_core.Severity)),
-                            },
-                            "action": {"type": "string"},
-                            "values": {"type": "object", "additionalProperties": True},
-                        },
-                    },
-                }
-            },
+@require_GET
+async def health_conditions(_request: HttpRequest) -> JsonResponse:
+    """Every finding the latest readings support, for a client without the stream."""
+    results = await crew_findings(await current_environment())
+    return JsonResponse(
+        {
+            "findings": [
+                finding_payload(finding, result) for finding, result in results.items()
+            ]
         }
-    },
-)
-@api_view(["GET"])
-def health_conditions(_request: Request) -> Response:
-    """Every finding the latest readings support, for a client without the stream.
-
-    Takes the latest reading of each channel, converts it and runs the Tier 1
-    findings over it (`api/findings.py`, `hydrograph_core.assessment`). Entries
-    are exactly the stream's `finding` events, so the dashboard can fetch the
-    conditions once instead of opening the stream, or re-sync after a drop.
-
-    Graded against the environment in effect (`GET /api/environment/`), which
-    sets the radiation baseline, so the same readings can give a different
-    finding after a switch.
-
-    A finding whose input channels have no reading yet is left out rather than
-    reported absent, so an empty array means "nothing evaluated", not "all
-    clear". Three of the ten are never present: the simulator does not send
-    postural BP, sleep or EEG/PVT channels at all.
-    """
-    results = crew_findings(current_environment())
-    return Response({"findings": [finding_payload(f, r) for f, r in results.items()]})
+    )
 
 
-READING_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "channel": {"type": "string"},
-        "value": {
-            "oneOf": [{"type": "number"}, {"type": "boolean"}, {"type": "string"}]
-        },
-        "measured_at": {"type": "string", "format": "date-time"},
-        "evaluation": {
-            "type": "string",
-            "enum": list(get_args(hydrograph_core.Evaluation)),
-        },
-    },
-}
-
-
-@extend_schema(
-    methods=["GET"],
-    summary="Reading history per channel",
-    parameters=[
-        OpenApiParameter(
-            "channel",
-            str,
-            OpenApiParameter.QUERY,
-            many=True,
-            description="Repeat for several; all channels when omitted.",
-        ),
-        OpenApiParameter(
-            "limit",
-            int,
-            OpenApiParameter.QUERY,
-            description="Latest readings per channel, 1-1000 (default 120).",
-        ),
-    ],
-    responses={
-        200: {
-            "type": "object",
-            "properties": {
-                "readings": {
-                    "type": "object",
-                    "description": "Channel to its readings, oldest first.",
-                    "additionalProperties": {"type": "array", "items": READING_SCHEMA},
-                }
-            },
-        }
-    },
-)
-@extend_schema(
-    methods=["POST"],
-    summary="Ingest one sensor reading",
-    parameters=[
-        OpenApiParameter(
-            "X-Simulation-Scope",
-            str,
-            OpenApiParameter.HEADER,
-            required=True,
-            enum=["crew", "environment"],
-        ),
-    ],
-    request=ReadingInSerializer,
-    responses={201: READING_SCHEMA},
-)
-@api_view(["GET", "POST"])
-def readings(request: Request) -> Response:
-    """GET: the latest ``limit`` readings per channel, oldest first, so a client
-    can fill its charts on load. POST: store a reading and push it, and the
-    findings it changes, to every stream.
-    """
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+async def readings(request: HttpRequest) -> JsonResponse:
+    """GET: reading history per channel. POST: store and push one reading."""
     if request.method == "GET":
-        return reading_history(request)
+        return await reading_history(request)
+
+    payload, error = await _json_body(request)
+    if error is not None:
+        return error
     scope = request.headers.get("X-Simulation-Scope", "")
-    serializer = ReadingInSerializer(data=request.data, context={"scope": scope})
-    _ = serializer.is_valid(raise_exception=True)
-    data = cast(ReadingIn, serializer.validated_data)
-    reading = Reading.objects.create(
+    data, errors = parse_reading(payload, scope)
+    if data is None:
+        return JsonResponse(errors, status=400)
+
+    reading = await Reading.objects.acreate(
         channel=data["channel"],
         value=data["value"],
         measured_at=data["measured_at"],
     )
-    environment = current_environment()
-    payload = reading_payload(reading, environment)
-    publish(sse_event("reading", payload))
-    for finding, result in affected_findings(reading.channel, environment).items():
+    environment = await current_environment()
+    response = reading_payload(reading, environment)
+    publish(sse_event("reading", response))
+    affected = await affected_findings(reading.channel, environment)
+    for finding, result in affected.items():
         publish(sse_event("finding", finding_payload(finding, result)))
-    return Response(payload, status=status.HTTP_201_CREATED)
+    return JsonResponse(response, status=201)
 
 
-def reading_history(request: Request) -> Response:
-    """Channels without readings are left out; grading uses the environment in
-    effect, as the stream does."""
-    query = HistoryQuerySerializer(
-        data={
-            "channel": request.query_params.getlist("channel"),
-            "limit": request.query_params.get("limit", 120),
-        }
-    )
-    _ = query.is_valid(raise_exception=True)
-    data = cast(HistoryQuery, query.validated_data)
-    environment = current_environment()
-    history: dict[str, list[ReadingPayload]] = {}
-    for channel in data["channel"] or hydrograph_core.CHANNELS:
-        latest = list(
-            Reading.objects.filter(channel=channel).order_by("-measured_at", "-id")[
-                : data["limit"]
-            ]
-        )
+async def reading_history(request: HttpRequest) -> JsonResponse:
+    """Skip channels without readings; grade against the environment in effect."""
+    query, errors = parse_history_query(request.GET)
+    if query is None:
+        return JsonResponse(errors, status=400)
+
+    environment = await current_environment()
+    history: dict[str, list[dict[str, object]]] = {}
+    for channel in query["channel"] or core.CHANNELS:
+        latest = [
+            reading
+            async for reading in Reading.objects.filter(channel=channel).order_by(
+                "-measured_at", "-id"
+            )[: query["limit"]]
+        ]
         if latest:
             history[channel] = [
-                reading_payload(r, environment) for r in reversed(latest)
+                dict(reading_payload(reading, environment))
+                for reading in reversed(latest)
             ]
-    return Response({"readings": history})
+    return JsonResponse({"readings": history})
 
 
-@extend_schema(
-    summary="Ask the health assistant",
-    request=ChatSerializer,
-    responses={
-        200: {"type": "object", "properties": {"reply": {"type": "string"}}},
-        429: {"type": "object", "properties": {"detail": {"type": "string"}}},
-        503: {"type": "object", "properties": {"detail": {"type": "string"}}},
-    },
-)
-@api_view(["POST"])
-@throttle_classes([AssistantBurstThrottle, AssistantDailyThrottle])
-def assistant(request: Request) -> Response:
-    """The LLM's next message, briefed with the live findings and readings.
+@csrf_exempt
+@require_POST
+async def assistant(request: HttpRequest) -> JsonResponse:
+    """The LLM's next message, briefed with the live findings and readings."""
+    if await is_rate_limited(request):
+        return JsonResponse({"detail": "Too many requests."}, status=429)
 
-    Rate-limited per client IP (``ASSISTANT_RATE``, ``ASSISTANT_DAILY_RATE``).
-    """
-    serializer = ChatSerializer(data=request.data)
-    _ = serializer.is_valid(raise_exception=True)
-    data = cast("dict[str, list[ChatMessage]]", serializer.validated_data)
+    payload, error = await _json_body(request)
+    if error is not None:
+        return error
+    messages, errors = parse_chat(payload)
+    if messages is None:
+        return JsonResponse(errors, status=400)
+
     try:
-        return Response({"reply": reply(data["messages"])})
+        return JsonResponse({"reply": await reply(messages)})
     except AssistantError as error:
-        return Response(
-            {"detail": str(error)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
-        )
+        return JsonResponse({"detail": str(error)}, status=503)
 
 
 @require_GET
 async def stream(_request: HttpRequest) -> HttpResponseBase:
-    """SSE stream of the dictionary and readings; plain Django, since DRF is sync."""
+    """SSE stream of the dictionary, the snapshot and live telemetry."""
     response = StreamingHttpResponse(events(), content_type="text/event-stream")
     response["Cache-Control"] = "no-cache"
-    response["X-Accel-Buffering"] = "no"  # stop nginx-style proxies buffering
+    response["X-Accel-Buffering"] = "no"
     return response
+
+
+async def _json_body(request: HttpRequest) -> tuple[object, JsonResponse | None]:
+    try:
+        return json.loads(request.body), None
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None, JsonResponse({"detail": "Invalid JSON body."}, status=400)

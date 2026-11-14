@@ -1,4 +1,4 @@
-"""Tests for hydrograph_core.channels (cutoffs from the master plan, else NSA_hydrograph.md).
+"""Tests for core.channels (cutoffs from the master plan, else NSA_hydrograph.md).
 
 Values are in the SI wire units the simulator sends.
 """
@@ -6,8 +6,8 @@ Values are in the SI wire units the simulator sends.
 import unittest
 from typing import get_args
 
-from hydrograph_core.channels import CHANNELS, Evaluation, evaluate_reading
-from hydrograph_core.environments import ENVIRONMENTS
+from core.channels import CHANNELS, Evaluation, evaluate_reading
+from core.environments import ENVIRONMENTS
 
 MMHG = 133.322  # Pa
 ISS = ENVIRONMENTS["iss_leo"]  # 14.6 uSv/h baseline

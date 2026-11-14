@@ -8,42 +8,41 @@ from collections.abc import Iterable
 from datetime import timedelta
 from typing import cast
 
-from hydrograph_core import FINDINGS, EnvironmentInfo, FindingResult, evaluate_findings
-
 from api.models import Reading
+from core import FINDINGS, EnvironmentInfo, FindingResult, evaluate_findings
 
 WEEK = timedelta(days=7)
 
 
-def crew_findings(
+async def crew_findings(
     environment: EnvironmentInfo, findings: Iterable[str] = FINDINGS
 ) -> dict[str, FindingResult]:
-    """The given monitored findings (default: all), from the latest readings.
-
-    Only those findings' input channels are read.
-    """
+    """The given monitored findings (default: all), from the latest readings."""
     wanted = set(findings)
-    channels = {c for f in wanted for c in FINDINGS[f]["channels"]}
+    channels = {
+        channel for finding in wanted for channel in FINDINGS[finding]["channels"]
+    }
     latest: dict[str, float | bool | str] = {}
     for channel in channels:
-        reading = (
+        reading = await (
             Reading.objects.filter(channel=channel)
             .order_by("-measured_at", "-id")
-            .first()
+            .afirst()
         )
         if reading is not None:
             latest[channel] = cast("float | bool | str", reading.value)
 
-    first = week_before = None
+    first: Reading | None = None
+    week_before: Reading | None = None
     if "body_mass" in channels:
         body_mass = Reading.objects.filter(channel="body_mass")
-        first = body_mass.order_by("measured_at", "id").first()
-        last = body_mass.order_by("-measured_at", "-id").first()
+        first = await body_mass.order_by("measured_at", "id").afirst()
+        last = await body_mass.order_by("-measured_at", "-id").afirst()
         if last is not None:
-            week_before = (
+            week_before = await (
                 body_mass.filter(measured_at__lte=last.measured_at - WEEK)
                 .order_by("-measured_at", "-id")
-                .first()
+                .afirst()
             )
     results = evaluate_findings(
         latest,
@@ -51,13 +50,14 @@ def crew_findings(
         None if week_before is None else cast("float", week_before.value),
         environment,
     )
-    return {f: r for f, r in results.items() if f in wanted}
+    return {finding: result for finding, result in results.items() if finding in wanted}
 
 
-def affected_findings(
+async def affected_findings(
     channel: str, environment: EnvironmentInfo
 ) -> dict[str, FindingResult]:
     """Every finding that uses a new reading's channel."""
-    return crew_findings(
-        environment, (f for f, info in FINDINGS.items() if channel in info["channels"])
+    return await crew_findings(
+        environment,
+        (finding for finding, info in FINDINGS.items() if channel in info["channels"]),
     )

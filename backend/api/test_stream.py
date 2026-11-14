@@ -5,13 +5,13 @@ from typing import cast
 
 import pytest
 from asgiref.sync import async_to_sync
+from django.test import Client
 from django.urls import reverse
-from hydrograph_core import CHANNELS, ENVIRONMENTS
-from rest_framework.test import APIClient
 
 from api import broadcast, stream, views
+from api.contracts import DictionaryPayload, dictionary_payload, reading_payload
 from api.models import Reading
-from api.serializers import DictionaryPayload, dictionary_payload, reading_payload
+from core import CHANNELS, ENVIRONMENTS
 
 AT = datetime(2026, 11, 14, 8, 0, tzinfo=UTC)
 CREW = {"X-Simulation-Scope": "crew"}
@@ -100,7 +100,12 @@ def test_post_publishes_the_reading_it_returns(monkeypatch: pytest.MonkeyPatch) 
         "measured_at": "2026-11-14T08:00:00Z",
     }
 
-    response = APIClient().post(reverse("readings"), body, format="json", headers=CREW)
+    response = Client().post(
+        reverse("readings"),
+        json.dumps(body),
+        content_type="application/json",
+        headers=CREW,
+    )
 
     assert response.status_code == 201
     payload = cast("dict[str, object]", response.json())
@@ -108,4 +113,4 @@ def test_post_publishes_the_reading_it_returns(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_stream_is_get_only() -> None:
-    assert APIClient().post(reverse("stream")).status_code == 405
+    assert Client().post(reverse("stream")).status_code == 405

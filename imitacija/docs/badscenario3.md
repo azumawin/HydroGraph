@@ -21,7 +21,7 @@ Most outputs already exist, but the sweat channel's physical meaning and the acq
 | Cardiovascular signals | `heart_rate()`, `crew_values("bp")`, `rmssd()` | Couple HR/BP references to deficit; keep HR windows and HRV beat generation consistent. |
 | Scheduler and initialization | `rules()`, `Rule`, `Scheduler` | Add explicit EVA acquisition, owner-specific schedule overrides and all-channel startup. |
 | Metadata and preview | `registry`, `frequency`, `PreviewState.baseline()` | Register whole-body sweat separately and show matching baseline references. |
-| Backend finding | `../backend/packages/hydrograph-core/src/hydrograph_core/findings.py::dehydration_2_1()` | Reuse mass/USG evaluation with the correct initial body mass. |
+| Backend finding | `../backend/core/findings.py::dehydration_2_1()` | Reuse mass/USG evaluation with the correct initial body mass. |
 | HTTP/SSE integration | `../backend/api/views.py`, `api/findings.py`, core `assessment.py` | Extend the existing channel catalog and verify the existing ingestion and finding stream. |
 
 The backend now has `/api/readings/` and evaluates Finding 2 when mass or USG arrives. Do not carry forward the earlier plans' historical statement that ingestion is absent. However, Finding 2 returns a **boolean finding status**, not warning/critical severity, and does not use shock index or sweat sodium as inputs.
