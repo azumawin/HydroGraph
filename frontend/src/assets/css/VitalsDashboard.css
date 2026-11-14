@@ -134,15 +134,10 @@
 }
 
 .vitals-dashboard .vitals-dashboard-title {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 32px;
-  letter-spacing: -0.035em;
-}
-
-.vitals-dashboard .vitals-dashboard-title-prefix {
-  color: var(--color-chart-diastolic);
-  font-weight: 300;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -0.03em;
 }
 
 .vitals-dashboard .vitals-dashboard-panel {

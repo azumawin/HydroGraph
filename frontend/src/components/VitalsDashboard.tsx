@@ -28,9 +28,7 @@ const VitalsDashboard = () => {
             alt="NASA"
             className="vitals-dashboard-logo h-24 w-auto shrink-0 object-contain"
           />
-          <h1 className="vitals-dashboard-title m-0">
-            <span className="vitals-dashboard-title-prefix">Hydro</span>Graph
-          </h1>
+          <h1 className="vitals-dashboard-title m-0">HydroGraph</h1>
         </div>
         <EnvironmentSwitcher />
       </header>
