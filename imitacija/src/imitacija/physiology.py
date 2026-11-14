@@ -12,8 +12,22 @@ import math
 import random
 from functools import lru_cache
 
-from .models import AstronautProfile, Environment, HypercapniaScenario, SansScenario
-from .scenarios import hypercapnia_cabin_mmhg, hypercapnia_references, sans_rmssd_reference
+from .models import (
+    AstronautProfile,
+    Environment,
+    EvaDehydrationScenario,
+    HypercapniaScenario,
+    SansScenario,
+)
+from .scenarios import (
+    eva_balance,
+    eva_sweat_values,
+    eva_usg,
+    eva_weight,
+    hypercapnia_cabin_mmhg,
+    hypercapnia_references,
+    sans_rmssd_reference,
+)
 from .units import MMHG_TO_PA
 
 DAY = 86400.0
@@ -50,8 +64,14 @@ def heart_rate(
     seed: int,
     *,
     hypercapnia: HypercapniaScenario | None = None,
+    dehydration: EvaDehydrationScenario | None = None,
 ) -> float:
     """Activity, circadian phase and low-amplitude pulse noise share a continuous context."""
+    if dehydration is not None and dehydration.owner_id == profile.id:
+        healthy = heart_rate(t, profile, seed)
+        jitter = 0.8 * noise(t, seed, profile.id, "heart_rate", 30)
+        w = eva_weight(t, profile, dehydration)
+        return (healthy - jitter) * (1 - w) + dehydration.affected_heart_rate_bpm * w + jitter
     return (
         (
             hypercapnia_references(t, profile, hypercapnia)["heart_rate"]
@@ -72,6 +92,7 @@ def rmssd(
     scenario: SansScenario | None = None,
     *,
     hypercapnia: HypercapniaScenario | None = None,
+    dehydration: EvaDehydrationScenario | None = None,
 ) -> float:
     """Compute RMSSD from a complete 60-second simulated NN-interval window.
 
@@ -87,7 +108,9 @@ def rmssd(
     squared = 0.0
     differences = 0
     while beat < t:
-        base = 60 / heart_rate(beat, profile, seed, hypercapnia=hypercapnia)
+        base = 60 / heart_rate(
+            beat, profile, seed, hypercapnia=hypercapnia, dehydration=dehydration
+        )
         target = sans_rmssd_reference(beat, profile, scenario) / 1000 * (1 - 0.5 * activity(beat))
         # Consecutive samples of a sine differ by 2*sin(pi*f*NN); normalize so
         # varying mean heart rate does not itself dictate the intended RMSSD.
@@ -119,10 +142,33 @@ def crew_values(
     scenario: SansScenario | None = None,
     *,
     hypercapnia: HypercapniaScenario | None = None,
+    dehydration: EvaDehydrationScenario | None = None,
 ) -> dict[str, float | bool]:
     """Produce one physical acquisition group in conventional source units."""
+    if dehydration is not None and dehydration.owner_id != profile.id:
+        dehydration = None
     a = activity(t)
     h = hydration(t)
+    if dehydration is not None:
+        if group == "mass":
+            return {"body_mass": eva_balance(t, profile, dehydration)["mass_kg"]}
+        if group == "usg":
+            return {"urine_specific_gravity": eva_usg(t, profile, dehydration)}
+        if group in {"sweat", "sweat_summary", "eva_sweat"}:
+            if group == "sweat_summary" and t < dehydration.onset_s + 60:
+                return {}
+            return eva_sweat_values(t, dehydration)
+        if group == "bp":
+            w = eva_weight(t, profile, dehydration)
+            n = noise(t, seed, profile.id, group)
+            return {
+                "bp_systolic": (profile.sbp_mmhg + 18 * a) * (1 - w)
+                + dehydration.affected_sbp_mmhg * w
+                + 1.2 * n,
+                "bp_diastolic": (profile.dbp_mmhg + 3 * a) * (1 - w)
+                + dehydration.affected_dbp_mmhg * w
+                + 0.8 * n,
+            }
     hour = t % DAY / 3600
     n = noise(t, seed, profile.id, group)
     match group:
@@ -131,14 +177,27 @@ def crew_values(
                 raise ValueError("HR needs a completed 60-second window")
             return {
                 "heart_rate": sum(
-                    heart_rate(t - 60 + (i + 0.5) * 5, profile, seed, hypercapnia=hypercapnia)
+                    heart_rate(
+                        t - 60 + (i + 0.5) * 5,
+                        profile,
+                        seed,
+                        hypercapnia=hypercapnia,
+                        dehydration=dehydration,
+                    )
                     for i in range(12)
                 )
                 / 12
             }
         case "hrv":
             return {
-                "hrv_rmssd": rmssd(t, profile, seed, scenario=scenario, hypercapnia=hypercapnia)
+                "hrv_rmssd": rmssd(
+                    t,
+                    profile,
+                    seed,
+                    scenario=scenario,
+                    hypercapnia=hypercapnia,
+                    dehydration=dehydration,
+                )
             }
         case "bp":
             return {
@@ -244,7 +303,9 @@ def crew_values(
                 "urinary_ntx": ntx,
                 "bone_ntx_pct_baseline": 100 * (ntx / profile.ntx_baseline - 1),
                 "urine_volume_24h": volume,
-                "urine_specific_gravity": 1.015 + 0.002 * h,
+                "urine_specific_gravity": eva_usg(t, profile, dehydration)
+                if dehydration
+                else 1.015 + 0.002 * h,
             }
         case "sweat":
             # Raw local flow and concentration at 1Hz only while active and wet.

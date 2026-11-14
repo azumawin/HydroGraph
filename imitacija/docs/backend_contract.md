@@ -93,3 +93,13 @@ reports must not be inferred from the generated CFE or cabin signal. Registering
 the new CFE channel in the receiver, a five-second evaluation loop and a resolved
 severity policy remain prerequisites
 for the source's end-to-end Critical Red Alert. See `badscenario2.md`, section 7.
+
+## Scenario 3 EVA balance
+
+`whole_body_sweat_rate` is a synthetic crew-owned whole-body fixture in `m^3/s`,
+accepted by the backend catalog without a single-reading threshold. Existing
+`sweat_rate` remains local patch flow. The default EVA integrates 2.050 L sweat
+minus 0.250 L intake to 1.800 L net deficit, 73.2 kg mass and 2.4% loss from 75 kg.
+Finding 2 uses mass and USG and returns a boolean status; red severity and shock
+index are separate presentation/policy work. Isolate run baselines in HTTP tests:
+the current backend uses the earliest stored mass, not the simulation run header.

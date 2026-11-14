@@ -12,7 +12,16 @@ from .frequency import FREQUENCIES
 from .models import AstronautProfile, Observation, Reading, Settings
 from .physiology import DAY, crew_values, environment_values, startup_crew_values
 from .registry import CHANNELS, Channel, effective_channels
-from .scenarios import SANS_CHANNELS, hypercapnia_eeg_values, hypercapnia_references, sans_values
+from .scenarios import (
+    EVA_CHANNELS,
+    SANS_CHANNELS,
+    eva_balance,
+    eva_sweat_values,
+    eva_usg,
+    hypercapnia_eeg_values,
+    hypercapnia_references,
+    sans_values,
+)
 from .units import convert
 
 
@@ -164,7 +173,10 @@ class Scheduler:
         self.sequences: dict[tuple[str, str], int] = {}
         self.generated = 0
         self.started = False
-        for rule in rules(settings):
+        for rule in (
+            *rules(settings),
+            *((Rule("eva_sweat", interval=1),) if settings.eva_dehydration_scenario else ()),
+        ):
             members = [
                 c for c in CHANNELS.values() if c.group == rule.group and c.id in self.enabled
             ]
@@ -179,9 +191,26 @@ class Scheduler:
                     and owner != settings.sans_scenario.owner_id
                 ):
                     continue
-                due = rule.next_after(0)
+                owner_rule = rule
+                eva = settings.eva_dehydration_scenario
+                if rule.group == "eva_sweat" and (eva is None or owner != eva.owner_id):
+                    continue
+                if eva and owner == eva.owner_id:
+                    if rule.group in {"sweat", "sweat_summary", "eva_sweat"}:
+                        step = 60 if rule.group == "sweat_summary" else 1
+                        owner_rule = Rule(
+                            rule.group,
+                            phase=eva.onset_s + step,
+                            interval=step,
+                            end=eva.onset_s + eva.eva_duration_s + 1,
+                        )
+                    elif rule.group in {"mass", "bp"}:
+                        owner_rule = Rule(rule.group, phase=60, interval=60)
+                    elif rule.group == "usg":
+                        owner_rule = Rule("usg", points=eva.usg_event_times_s)
+                due = owner_rule.next_after(0)
                 if due is not None:
-                    self._push(due, rule, scope, owner)
+                    self._push(due, owner_rule, scope, owner)
 
     def _push(
         self, due: float, rule: Rule, scope: Literal["crew", "environment"], owner: str
@@ -208,6 +237,7 @@ class Scheduler:
                     profile,
                     self.settings.seed,
                     self.settings.sans_scenario,
+                    dehydration=self.settings.eva_dehydration_scenario,
                     hypercapnia=self.settings.hypercapnia_scenario,
                 )
                 if profile is not None
@@ -286,6 +316,11 @@ class Scheduler:
                 values.update(
                     hypercapnia_references(0, profile, self.settings.hypercapnia_scenario)
                 )
+            eva = self.settings.eva_dehydration_scenario
+            if eva and profile.id == eva.owner_id:
+                values.update(eva_sweat_values(0, eva, startup=True))
+                values["body_mass"] = eva_balance(0, profile, eva)["mass_kg"]
+                values["urine_specific_gravity"] = eva_usg(0, profile, eva)
             scenario = self.settings.sans_scenario
             if scenario and profile.id == scenario.owner_id:
                 values.update(sans_values("cephalic", 0, scenario, startup=True))
@@ -294,6 +329,8 @@ class Scheduler:
                 if channel.id in SANS_CHANNELS and (
                     not scenario or profile.id != scenario.owner_id
                 ):
+                    continue
+                if channel.id in EVA_CHANNELS and (not eva or profile.id != eva.owner_id):
                     continue
                 if channel.scope == "crew" and channel.id in self.enabled:
                     self._publish(channel, values[channel.id], profile.id, "crew", 0, startup=True)
