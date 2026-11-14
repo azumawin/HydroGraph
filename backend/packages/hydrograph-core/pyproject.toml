@@ -1,0 +1,11 @@
+[project]
+name = "hydrograph-core"
+version = "0.1.0"
+description = "Core HydroGraph domain logic, independent of Django"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"
