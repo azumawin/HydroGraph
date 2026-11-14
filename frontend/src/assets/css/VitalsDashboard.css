@@ -175,6 +175,10 @@
   flex-shrink: 0;
   color: var(--color-text);
   stroke-width: 1.75;
+
+  &.is-environment {
+    color: var(--color-chart-oxygen);
+  }
 }
 
 .vitals-dashboard .vitals-dashboard-error-toast {

@@ -48,7 +48,7 @@ const EnvironmentSwitcher = () => {
   return (
     <div className="vitals-dashboard-environment">
       <label className="vitals-dashboard-environment-select-label">
-        <Globe className="vitals-dashboard-icon" />
+        <Globe className="vitals-dashboard-icon is-environment" />
         <span className="vitals-dashboard-environment-select-caption">
           {ENVIRONMENT_LABELS.SELECT}
         </span>

@@ -54,7 +54,7 @@ const VitalReadingRow = ({
     <article className="vitals-dashboard-reading">
       <div className="vitals-dashboard-reading-summary">
         <div className="vitals-dashboard-reading-heading">
-          <Icon className="vitals-dashboard-reading-icon" />
+          <Icon className="vitals-dashboard-reading-icon" color={metric.SERIES[0].COLOR} />
           <h3 className="vitals-dashboard-reading-label">{metric.LABEL}</h3>
         </div>
         <div className="vitals-dashboard-reading-measurement">
