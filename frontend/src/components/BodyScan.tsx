@@ -42,15 +42,10 @@ const BodyScan = () => {
   }
 
   return (
-    <section
-      className="vitals-dashboard-panel vitals-dashboard-body-scan"
-      aria-labelledby="vitals-dashboard-body-scan-title"
-    >
+    <section className="vitals-dashboard-panel vitals-dashboard-body-scan">
       <header className="vitals-dashboard-panel-header">
         <ScanLine className="vitals-dashboard-icon" />
-        <h2 id="vitals-dashboard-body-scan-title" className="vitals-dashboard-panel-title m-0">
-          Biometric body scan
-        </h2>
+        <h2 className="vitals-dashboard-panel-title m-0">Biometric body scan</h2>
       </header>
       <div className="vitals-dashboard-body-scan-content">
         <div className="vitals-dashboard-panel-content vitals-dashboard-body-scan-viewer min-h-0 flex-1">
@@ -64,8 +59,6 @@ const BodyScan = () => {
             >
               <Canvas
                 orthographic
-                role="img"
-                aria-label={BODY_SCAN_VIEW.ARIA_LABEL}
                 frameloop="demand"
                 camera={{
                   position: BODY_SCAN_VIEW.CAMERA_POSITION,

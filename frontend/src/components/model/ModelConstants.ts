@@ -1,8 +1,6 @@
 import type { Evaluation } from "../../api/Service.ts";
 
 export const BODY_SCAN_VIEW = {
-  ARIA_LABEL:
-    "3D body model coloured by each region's worst evaluation; drag to rotate. The region list beside it gives the same evaluations as text.",
   CAMERA_POSITION: [0, 0, 100] as [number, number, number],
   CAMERA_ZOOM: 50,
   MODEL_ROTATION_Y: -Math.PI / 8,

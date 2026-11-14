@@ -49,15 +49,10 @@ const HealthAssistant = () => {
   };
 
   return (
-    <section
-      className="vitals-dashboard-panel vitals-dashboard-health-assistant"
-      aria-labelledby="vitals-dashboard-assistant-title"
-    >
+    <section className="vitals-dashboard-panel vitals-dashboard-health-assistant">
       <header className="vitals-dashboard-panel-header">
         <MessageSquare className="vitals-dashboard-icon" />
-        <h2 id="vitals-dashboard-assistant-title" className="vitals-dashboard-panel-title m-0">
-          Health assistant
-        </h2>
+        <h2 className="vitals-dashboard-panel-title m-0">Health assistant</h2>
       </header>
       <div className="vitals-dashboard-panel-content min-h-0 flex-1 overflow-y-auto p-6">
         {!hasFindings && <p className="vitals-dashboard-findings-empty">No findings yet.</p>}
@@ -90,7 +85,7 @@ const HealthAssistant = () => {
             );
           })}
         </ul>
-        <div className="vitals-dashboard-chat" role="log" aria-live="polite">
+        <div className="vitals-dashboard-chat" aria-live="polite">
           {messages.length === 0 && !isSending && (
             <button
               type="button"
