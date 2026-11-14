@@ -23,13 +23,13 @@ const ChatFindingMessage = ({ finding }: ChatFindingMessageProps) => {
       <span className="vitals-dashboard-chat-finding-badge">
         <StatusIcon className="vitals-dashboard-chat-finding-badge-icon" />
       </span>
+      <div className="vitals-dashboard-chat-finding-title">
+        <span className="vitals-dashboard-chat-finding-status">
+          {FINDING_STATUS_LABELS[finding.status]}
+        </span>
+        <strong className="vitals-dashboard-chat-finding-name">{finding.name}</strong>
+      </div>
       <div className="vitals-dashboard-chat-finding-content">
-        <p className="vitals-dashboard-chat-finding-title">
-          <strong className="vitals-dashboard-chat-finding-name">{finding.name}</strong>
-          <span className="vitals-dashboard-chat-finding-status">
-            {FINDING_STATUS_LABELS[finding.status]}
-          </span>
-        </p>
         {finding.triggers.length > 0 && (
           <p className="vitals-dashboard-chat-finding-triggers">{finding.triggers.join(", ")}</p>
         )}
