@@ -256,22 +256,3 @@
     backdrop-filter: blur(24px) saturate(180%);
   }
 }
-
-@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  .vitals-dashboard .vitals-dashboard-header,
-  .vitals-dashboard .vitals-dashboard-panel {
-    background: var(--color-material-opaque);
-    backdrop-filter: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vitals-dashboard *,
-  .vitals-dashboard *::before,
-  .vitals-dashboard *::after {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-  }
-}

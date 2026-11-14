@@ -44,7 +44,6 @@
   /* dark translucent material: text stays legible over every backdrop, the
      plasma at its brightest included */
   --color-material: color-mix(in srgb, #1c1c1e 90%, transparent);
-  --color-material-opaque: #1c1c1e;
   --color-glass-reflection: color-mix(in srgb, var(--color-surface) 16%, transparent);
   --color-edge-highlight: color-mix(in srgb, var(--color-surface) 65%, transparent);
   --color-shadow: color-mix(in srgb, var(--color-background) 30%, transparent);
@@ -98,18 +97,4 @@ textarea {
 input:focus-visible,
 select:focus-visible {
   outline-offset: 0;
-}
-
-/* Increase contrast: Apple's high-contrast dark colours, firmer edges, and
-   opaque panels (VitalsDashboard.css) */
-@media (prefers-contrast: more) {
-  :root {
-    --color-text-secondary: #d1d1d6;
-    --color-status-warning: #ffb340;
-    --color-status-critical: #ff9f99;
-    --color-status-nominal: #30db5b;
-    --color-focus-ring: #70b4ff;
-    --color-border: color-mix(in srgb, var(--color-surface) 55%, transparent);
-    --color-divider: color-mix(in srgb, var(--color-surface) 35%, transparent);
-  }
 }
