@@ -5,8 +5,8 @@ Generate synthetic sensor telemetry and send it to a separate backend for analys
 simple:
 1) supply the .toml files in /config/, specifically the base_url
 base_url = "http://127.0.0.1:8000" <-change to your backend,
-route is also can be changed, by default it sends to:
-data_route = "/data"
+route is also can be changed, by default it sends to the HydroGraph backend:
+data_route = "/api/readings/"
 
 2)run
 
