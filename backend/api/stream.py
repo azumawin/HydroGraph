@@ -1,16 +1,17 @@
-"""Server-sent events for the frontend: environments, then readings as they arrive.
+"""Server-sent events for the frontend: the dictionary, then readings as they arrive.
 
 Message data follows docs/json-shape.md.
 """
 
 import json
 from collections.abc import AsyncGenerator, Mapping
+from typing import cast
 
-from hydrograph_core import CHANNELS, ENVIRONMENTS
+from django.db.models import QuerySet
 
 from api import broadcast
 from api.models import Reading
-from api.serializers import reading_payload
+from api.serializers import dictionary_payload, reading_payload
 
 
 def sse_event(event: str, data: Mapping[str, object]) -> str:
@@ -19,19 +20,20 @@ def sse_event(event: str, data: Mapping[str, object]) -> str:
 
 
 async def events() -> AsyncGenerator[str]:
-    """Yield the environments, the latest reading per channel, then live readings.
+    """Yield the dictionary, the latest reading per owner and channel, then live ones.
 
     Subscribes before reading the snapshot, so a reading posted in between is
     sent twice at worst, never lost. A reconnect gets a fresh snapshot.
     """
-    yield sse_event(
-        "environments",
-        {"environments": [{"id": k, **v} for k, v in ENVIRONMENTS.items()]},
-    )
+    yield sse_event("dictionary", dictionary_payload())
     with broadcast.subscribe() as queue:
-        for channel in CHANNELS:
+        pairs = cast(
+            "QuerySet[Reading, tuple[str, str]]",
+            Reading.objects.order_by().values_list("owner_id", "channel").distinct(),
+        )
+        for owner_id, channel in [pair async for pair in pairs]:
             latest = await (
-                Reading.objects.filter(channel=channel)
+                Reading.objects.filter(owner_id=owner_id, channel=channel)
                 .order_by("-measured_at", "-id")
                 .afirst()
             )

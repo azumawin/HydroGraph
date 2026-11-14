@@ -222,5 +222,8 @@ inputs.
 
 - `evaluate_reading` returns a bare `Status`, no result dict or action: the
   channel's `explanation` in `CHANNELS` carries the text.
-- Each `case` comments the document and band its cutoffs come from.
+- Values arrive in SI wire units (the simulator's registry). Each `case`
+  converts to the spec's unit first (`bpm = value * 60.0`), so cutoffs read
+  exactly as in the document, and comments the document and band they come from.
+- Boolean channels take `True` / `False`.
 - An unknown channel raises `ValueError`.

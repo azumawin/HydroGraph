@@ -71,21 +71,29 @@ only stores and ships readings. `evaluation` is a `hydrograph_core.Status` value
 
 Request and message shapes follow `docs/json-shape.md`.
 
-`POST /api/readings/` takes one reading:
+`POST /api/readings/` takes one reading in SI wire units, with owner and scope as
+headers, the way the simulator (`imitacija`) sends it:
 
 ```sh
 curl -X POST localhost:8000/api/readings/ -H 'Content-Type: application/json' \
-  -d '{"channel": "spo2", "value": 89, "measured_at": "2026-11-08T07:12:00Z"}'
+  -H 'X-Owner-ID: crew-1' -H 'X-Simulation-Scope: crew' \
+  -d '{"channel": "spo2", "value": 0.89, "unit": "1", "measured_at": "2026-11-14T08:00:00Z"}'
 ```
 
-`201` returns it enriched with `unit`, `evaluation`, `name`, `body_regions` and
-`explanation`, and pushes the same object to every open stream. `400` returns
-field errors, e.g. `{"channel": ["Unknown channel \"heartrate\"."]}`.
+`201` returns the reading with `evaluation`, `owner_id` and `scope` added, and pushes
+the same object to every open stream. `400` returns field errors: an unknown
+`channel`, a `unit` other than the channel's wire unit, a `value` of the wrong type,
+a missing `X-Owner-ID`, or an `X-Simulation-Scope` that doesn't match the channel.
+Other simulator headers (`Idempotency-Key`, ...) are ignored for now.
+
+To feed it from the simulator, set `base_url = "http://127.0.0.1:8000"` and
+`data_route = "/api/readings/"` in its config.
 
 `GET /api/stream/` is a `text/event-stream`:
 
-- one `environments` event, `{"environments": [{"id", "gravity_g", "comm_delay_s"}, ...]}`;
-- then the latest `reading` per channel;
+- one `dictionary` event: environments and each channel's `name`, `body_regions`
+  and `explanation`;
+- then the latest `reading` per owner and channel;
 - then a `reading` event for every new reading, pushed the moment it is POSTed.
 
 Delivery is an in-memory queue per open stream (`api/broadcast.py`), so it needs a
@@ -94,7 +102,7 @@ retry) gets a fresh snapshot.
 
 ```js
 const es = new EventSource("/api/stream/");
-es.addEventListener("environments", (e) => setEnvironments(JSON.parse(e.data).environments));
+es.addEventListener("dictionary", (e) => setDictionary(JSON.parse(e.data)));
 es.addEventListener("reading", (e) => upsertReading(JSON.parse(e.data)));
 ```
 

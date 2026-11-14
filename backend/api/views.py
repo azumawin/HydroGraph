@@ -1,8 +1,11 @@
+from typing import cast
+
 import hydrograph_core
 from django.http import HttpRequest, StreamingHttpResponse
 from django.http.response import HttpResponseBase
 from django.views.decorators.http import require_GET
 from drf_spectacular.utils import (
+    OpenApiParameter,
     extend_schema,  # pyright: ignore[reportUnknownVariableType]  # stubs: Serializer[Unknown]
 )
 from rest_framework import status
@@ -16,7 +19,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from api.broadcast import publish
-from api.serializers import ReadingInSerializer, reading_payload
+from api.models import Reading
+from api.serializers import ReadingIn, ReadingInSerializer, reading_payload
 from api.stream import events, sse_event
 
 
@@ -41,22 +45,31 @@ def health(_request: Request) -> Response:
 
 @extend_schema(
     summary="Ingest one sensor reading",
+    parameters=[
+        OpenApiParameter("X-Owner-ID", str, OpenApiParameter.HEADER, required=True),
+        OpenApiParameter(
+            "X-Simulation-Scope",
+            str,
+            OpenApiParameter.HEADER,
+            required=True,
+            enum=["crew", "environment"],
+        ),
+    ],
     request=ReadingInSerializer,
     responses={
         201: {
             "type": "object",
             "properties": {
                 "channel": {"type": "string"},
-                "value": {"type": "number"},
+                "value": {"oneOf": [{"type": "number"}, {"type": "boolean"}]},
                 "unit": {"type": "string"},
                 "evaluation": {
                     "type": "string",
                     "enum": [s.value for s in hydrograph_core.Status],
                 },
                 "measured_at": {"type": "string", "format": "date-time"},
-                "name": {"type": "string"},
-                "body_regions": {"type": "array", "items": {"type": "string"}},
-                "explanation": {"type": "string"},
+                "owner_id": {"type": "string"},
+                "scope": {"type": "string", "enum": ["crew", "environment"]},
             },
         }
     },
@@ -66,16 +79,27 @@ def health(_request: Request) -> Response:
 @permission_classes([AllowAny])
 def readings(request: Request) -> Response:
     """Store the reading and push it to every open stream."""
-    serializer = ReadingInSerializer(data=request.data)
+    owner_id = request.headers.get("X-Owner-ID", "")
+    scope = request.headers.get("X-Simulation-Scope", "")
+    serializer = ReadingInSerializer(
+        data=request.data, context={"owner_id": owner_id, "scope": scope}
+    )
     _ = serializer.is_valid(raise_exception=True)
-    payload = reading_payload(serializer.save())
+    data = cast(ReadingIn, serializer.validated_data)
+    reading = Reading.objects.create(
+        owner_id=owner_id,
+        channel=data["channel"],
+        value=data["value"],
+        measured_at=data["measured_at"],
+    )
+    payload = reading_payload(reading)
     publish(sse_event("reading", payload))
     return Response(payload, status=status.HTTP_201_CREATED)
 
 
 @require_GET
 async def stream(_request: HttpRequest) -> HttpResponseBase:
-    """SSE stream of the environments and readings; plain Django, since DRF is sync.
+    """SSE stream of the dictionary and readings; plain Django, since DRF is sync.
 
     No auth yet.
     """
