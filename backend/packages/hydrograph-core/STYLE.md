@@ -76,7 +76,6 @@ Severity = Literal["nominal", "warning", "critical"]
 
 
 class SansResult(TypedDict):
-    finding: str
     jugular_distension_pct: float
     triggers: list[str]
     status: Severity
@@ -136,7 +135,7 @@ Args:
     name: Description [unit], e.g. from Parameter N.M.
 
 Returns:
-    ``finding``, ``<value keys>``, ``triggers``, ``status``, ``action``.
+    ``<value keys>``, ``triggers``, ``status``, ``action``.
     <How status is derived; every boundary choice or spec gap you resolved.>
 """
 ```
@@ -148,7 +147,6 @@ e.g. why a value is rounded before classification.
 
 ```python
 return {
-    "finding": "N",
     "<value>_<unit>": round(value, k),
     ...
     "triggers": triggers,
@@ -157,9 +155,9 @@ return {
 }
 ```
 
-- Keys: `finding` (`"1"`-`"10"`), then the evaluated values in the order they
-  are derived, then `triggers` (a `list[str]` naming each criterion that
-  fired, for the dashboard's `primary_hazard`), `status`, `action`.
+- Keys: the evaluated values in the order they are derived, then `triggers`
+  (a `list[str]` naming each criterion that fired, for the dashboard's
+  `primary_hazard`), `status`, `action`.
 - Round returned values to a display precision suited to the quantity
   (usually 1-3 decimals). Classify on the **unrounded** value; if rounding first
   is necessary (floating-point noise exactly at a threshold), say so in a comment.
