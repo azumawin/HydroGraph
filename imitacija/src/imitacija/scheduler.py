@@ -18,7 +18,19 @@ from .physiology import (
     startup_crew_values,
 )
 from .registry import CHANNELS, Channel, effective_channels
-from .scenarios import SANS_CHANNELS, hypercapnia_eeg_values, hypercapnia_references, sans_values
+from .scenarios import (
+    EVA_CHANNELS,
+    INFECTION_CHANNELS,
+    SANS_CHANNELS,
+    eva_balance,
+    eva_sweat_values,
+    eva_usg,
+    hypercapnia_eeg_values,
+    hypercapnia_references,
+    infection_context_values,
+    infection_references,
+    sans_values,
+)
 from .units import convert
 
 
@@ -170,7 +182,18 @@ class Scheduler:
         self.sequences: dict[tuple[str, str], int] = {}
         self.generated = 0
         self.started = False
-        for rule in rules(settings):
+        for rule in (
+            *rules(settings),
+            *(
+                (
+                    Rule("infection_context", phase=60, interval=60),
+                    Rule("infection_gfet", phase=60, interval=60),
+                )
+                if settings.acute_infection_scenario
+                else ()
+            ),
+            *((Rule("eva_sweat", interval=1),) if settings.eva_dehydration_scenario else ()),
+        ):
             members = [
                 c for c in CHANNELS.values() if c.group == rule.group and c.id in self.enabled
             ]
@@ -185,9 +208,38 @@ class Scheduler:
                     and owner != settings.sans_scenario.owner_id
                 ):
                     continue
-                due = rule.next_after(0)
+                owner_rule = rule
+                eva = settings.eva_dehydration_scenario
+                if rule.group == "eva_sweat" and (eva is None or owner != eva.owner_id):
+                    continue
+                if eva and owner == eva.owner_id:
+                    if rule.group in {"sweat", "sweat_summary", "eva_sweat"}:
+                        step = 60 if rule.group == "sweat_summary" else 1
+                        owner_rule = Rule(
+                            rule.group,
+                            phase=eva.onset_s + step,
+                            interval=step,
+                            end=eva.onset_s + eva.eva_duration_s + 1,
+                        )
+                    elif rule.group in {"mass", "bp"}:
+                        owner_rule = Rule(rule.group, phase=60, interval=60)
+                    elif rule.group == "usg":
+                        owner_rule = Rule("usg", points=eva.usg_event_times_s)
+                infection = settings.acute_infection_scenario
+                if rule.group in {"infection_context", "infection_gfet"} and (
+                    not infection or owner != infection.owner_id
+                ):
+                    continue
+                if infection and owner == infection.owner_id:
+                    if rule.group == "bp":
+                        owner_rule = Rule("bp", phase=60, interval=60)
+                    elif rule.group == "il6":
+                        owner_rule = Rule("il6", points=infection.serum_il6_event_times_s)
+                    elif rule.group == "saliva_pcr":
+                        owner_rule = Rule("saliva_pcr", points=infection.saliva_pcr_event_times_s)
+                due = owner_rule.next_after(0)
                 if due is not None:
-                    self._push(due, rule, scope, owner)
+                    self._push(due, owner_rule, scope, owner)
 
     def set_environment(
         self, *, gravity_g: float, comm_delay_s: float, dose_rate_usv_h: float
@@ -223,9 +275,10 @@ class Scheduler:
         profile: AstronautProfile | None = (
             self.profiles.get(event.owner) if event.scope == "crew" else None
         )
+        values: dict[str, float | bool | str]
         scenario = self.settings.sans_scenario
         if event.rule.group == "eeg_cfe" and self.settings.hypercapnia_scenario is not None:
-            values = hypercapnia_eeg_values(instant, self.settings.hypercapnia_scenario)
+            values = dict(hypercapnia_eeg_values(instant, self.settings.hypercapnia_scenario))
         elif event.rule.group in {"cephalic", "eye_screen"} and scenario is not None:
             values = sans_values(event.rule.group, instant, scenario)
         else:
@@ -236,6 +289,8 @@ class Scheduler:
                     profile,
                     self.settings.seed,
                     self.settings.sans_scenario,
+                    dehydration=self.settings.eva_dehydration_scenario,
+                    infection=self.settings.acute_infection_scenario,
                     hypercapnia=self.settings.hypercapnia_scenario,
                 )
                 if profile is not None
@@ -260,7 +315,7 @@ class Scheduler:
     def _publish(
         self,
         channel: Channel,
-        value: float | bool,
+        value: float | bool | str,
         owner: str,
         scope: Literal["crew", "environment"],
         instant: float,
@@ -272,7 +327,9 @@ class Scheduler:
         sequence = self.sequences.get(key, 0) + 1
         self.sequences[key] = sequence
         wire_value = (
-            value if isinstance(value, bool) else convert(value, channel.factor, channel.offset)
+            value
+            if isinstance(value, (bool, str))
+            else convert(value, channel.factor, channel.offset)
         )
         reading = Reading(
             channel=channel.id,
@@ -314,6 +371,16 @@ class Scheduler:
                 values.update(
                     hypercapnia_references(0, profile, self.settings.hypercapnia_scenario)
                 )
+            infection = self.settings.acute_infection_scenario
+            if infection and profile.id == infection.owner_id:
+                values.update(infection_references(0, profile, infection))
+                values["il6_serum"] = infection.baseline_il6_pg_ml
+                values.update(infection_context_values(0, infection))
+            eva = self.settings.eva_dehydration_scenario
+            if eva and profile.id == eva.owner_id:
+                values.update(eva_sweat_values(0, eva, startup=True))
+                values["body_mass"] = eva_balance(0, profile, eva)["mass_kg"]
+                values["urine_specific_gravity"] = eva_usg(0, profile, eva)
             scenario = self.settings.sans_scenario
             if scenario and profile.id == scenario.owner_id:
                 values.update(sans_values("cephalic", 0, scenario, startup=True))
@@ -322,6 +389,12 @@ class Scheduler:
                 if channel.id in SANS_CHANNELS and (
                     not scenario or profile.id != scenario.owner_id
                 ):
+                    continue
+                if channel.id in INFECTION_CHANNELS and (
+                    not infection or profile.id != infection.owner_id
+                ):
+                    continue
+                if channel.id in EVA_CHANNELS and (not eva or profile.id != eva.owner_id):
                     continue
                 if channel.scope == "crew" and channel.id in self.enabled:
                     self._publish(channel, values[channel.id], profile.id, "crew", 0, startup=True)

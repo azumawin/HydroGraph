@@ -1,4 +1,7 @@
-"""Tier 1: the 10 personal health findings (master plan, section 2).
+"""Tier 1: the 10 personal health findings and blood pressure telemetry.
+
+The ten findings follow master plan section 2; the supplementary blood
+pressure evaluator follows ``message.md``.
 
 Each function evaluates one finding for the main window and returns its
 immediate action card. Criteria the master plan quantifies are computed here.
@@ -16,6 +19,7 @@ D     Domain              Function                                 Plan finding
 1     Gravity             ``orthostatic_intolerance_1_1``          1
 1     Gravity             ``bone_demineralization_1_2``            8
 1     Gravity             ``sans_fluid_shift_1_3``                 9
+1     Gravity             ``blood_pressure_1_4``                  Telemetry guide
 2     Closed environment  ``dehydration_2_1``                      2
 2     Closed environment  ``hypoxia_co2_2_2``                      4
 2     Closed environment  ``negative_energy_balance_2_3``          7
@@ -29,7 +33,7 @@ D     Domain              Function                                 Plan finding
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 Severity = Literal["nominal", "warning", "critical"]
 """``status`` of a finding with several severities."""
@@ -46,6 +50,16 @@ class OrthostaticResult(TypedDict):
     action: str
 
 
+class BloodPressureResult(TypedDict):
+    sbp_mmhg: float
+    dbp_mmhg: float
+    map_mmhg: float
+    shock_index: float | None
+    triggers: list[str]
+    status: Severity
+    action: str
+
+
 class DehydrationResult(TypedDict):
     body_mass_loss_pct: float
     fluid_deficit_ml: float
@@ -56,9 +70,15 @@ class DehydrationResult(TypedDict):
 
 
 class InfectionResult(TypedDict):
+    context_values: NotRequired[dict[str, float | bool | str]]
+    qsofa_score: NotRequired[int]
+    news2_components: NotRequired[dict[str, int]]
+    il6_source_channel: NotRequired[str | None]
+    context_provenance: NotRequired[dict[str, str]]
+    unavailable_assays: NotRequired[list[str]]
     news2_score: int
     core_temp_c: float
-    il6_pg_ml: float
+    il6_pg_ml: float | None
     triggers: list[str]
     status: Severity
     action: str
@@ -212,6 +232,91 @@ def orthostatic_intolerance_1_1(
     }
 
 
+def blood_pressure_1_4(
+    sbp_mmhg: float,
+    dbp_mmhg: float,
+    heart_rate_bpm: float | None,
+) -> BloodPressureResult:
+    r"""
+    Blood pressure telemetry (gravity / cardiovascular).
+
+    Mean arterial pressure and shock index:
+        \text{MAP} = \text{DBP} + (\text{SBP} - \text{DBP}) / 3
+        \text{SI} = \text{HR} / \text{SBP}
+
+    References:
+        message.md: Blood Pressure Telemetry Guide, sections 1-3.
+        This supplementary evaluator uses the guide's absolute BP bands and
+        critical SI alert; Finding 1 retains its postural-test criteria.
+
+    Args:
+        sbp_mmhg: Systolic pressure (``blood_pressure_sys_mmHg``) [mmHg].
+        dbp_mmhg: Diastolic pressure (``blood_pressure_dia_mmHg``) [mmHg].
+        heart_rate_bpm: Concurrent heart rate [BPM]; ``None`` when unavailable.
+
+    Returns:
+        ``sbp_mmhg``, ``dbp_mmhg``, ``map_mmhg``, ``shock_index``,
+        ``triggers``, ``status``, ``action``. The worst metric wins.
+        CRITICAL when SBP <= 90 or >= 140, DBP >= 90, or SI > 0.9;
+        otherwise WARNING when SBP <= 100 or > 120, or DBP < 60 or > 80.
+        Explicit low-SBP alerts override the guide's overlapping nominal
+        band. DBP = 80 belongs to the less severe, nominal band. Fractional
+        values between the table's whole-number bands take the next band.
+        Low DBP alone warns; critical hypotension requires SBP <= 90.
+        SI is ``None`` when heart rate is unavailable. MAP is informational.
+        Standing drops require postural context and are evaluated by
+        :func:`orthostatic_intolerance_1_1`.
+
+    Raises:
+        ValueError: Sensor error (SBP <= DBP or pulse pressure < 15 mmHg).
+            The guide's simulator slider limits are not telemetry limits.
+    """
+    if sbp_mmhg <= dbp_mmhg or sbp_mmhg - dbp_mmhg < 15.0:
+        raise ValueError("Sensor Error: SBP must exceed DBP by at least 15 mmHg")
+
+    map_mmhg = dbp_mmhg + (sbp_mmhg - dbp_mmhg) / 3.0
+    shock_index = heart_rate_bpm / sbp_mmhg if heart_rate_bpm is not None else None
+
+    triggers: list[str] = []
+    if sbp_mmhg <= 90.0:
+        triggers.append("SBP <= 90 mmHg")
+    elif sbp_mmhg <= 100.0:
+        triggers.append("SBP <= 100 mmHg")
+    elif sbp_mmhg >= 140.0:
+        triggers.append("SBP >= 140 mmHg")
+    elif sbp_mmhg > 120.0:
+        triggers.append("SBP > 120 mmHg")
+    if dbp_mmhg < 60.0:
+        triggers.append("DBP < 60 mmHg")
+    elif dbp_mmhg >= 90.0:
+        triggers.append("DBP >= 90 mmHg")
+    elif dbp_mmhg > 80.0:
+        triggers.append("DBP > 80 mmHg")
+    if shock_index is not None and shock_index > 0.9:
+        triggers.append("shock index > 0.9")
+
+    if shock_index is not None and shock_index > 0.9:
+        status, action = "critical", "Critical hemodynamic instability alert"
+    elif sbp_mmhg <= 90.0:
+        status, action = "critical", "Critical low blood pressure alert"
+    elif sbp_mmhg >= 140.0 or dbp_mmhg >= 90.0:
+        status, action = "critical", "Critical high blood pressure alert"
+    elif triggers:
+        status, action = "warning", "Blood pressure warning alert"
+    else:
+        status, action = "nominal", "No finding"
+
+    return {
+        "sbp_mmhg": sbp_mmhg,
+        "dbp_mmhg": dbp_mmhg,
+        "map_mmhg": round(map_mmhg, 1),
+        "shock_index": round(shock_index, 2) if shock_index is not None else None,
+        "triggers": triggers,
+        "status": status,
+        "action": action,
+    }
+
+
 def dehydration_2_1(
     body_mass_kg: float,
     baseline_body_mass_kg: float,
@@ -280,7 +385,7 @@ def acute_infection_3_1(
     news2_score: int,
     news2_max_parameter_score: int,
     core_temp_c: float,
-    il6_pg_ml: float,
+    il6_pg_ml: float | None,
     post_ared_window: bool,
     herpesvirus_reactivation: bool,
 ) -> InfectionResult:
@@ -330,7 +435,7 @@ def acute_infection_3_1(
         triggers.append("core temp < 36.0 °C")
     if herpesvirus_reactivation:
         triggers.append("latent herpesvirus reactivation")
-    if il6_pg_ml > 3.0 and not post_ared_window:
+    if il6_pg_ml is not None and il6_pg_ml > 3.0 and not post_ared_window:
         triggers.append("IL-6 > 3.0 pg/mL")
 
     action = (

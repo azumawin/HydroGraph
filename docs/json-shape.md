@@ -10,7 +10,9 @@ Endpoints: the device sends `POST /api/readings/`; the frontend opens
 `GET /api/stream/` (server-sent events), which sends the dictionary first, then the
 environment in effect, then readings and findings; the frontend fills its charts
 with `GET /api/readings/` (section 2a) and switches the environment with
-`PUT /api/environment/`. Details: `backend/README.md`.
+`PUT /api/environment/`. `GET /api/environments/` serves the environment catalog
+keyed by id, and `GET /api/health-conditions/` serves the current finding set
+without the stream. Details: `backend/README.md`.
 
 ## 1. Device → backend: reading body
 
@@ -101,6 +103,10 @@ finding's input channels.
   end in; the keys differ per finding.
 - Seven findings are monitored; the other three need inputs the simulator does
   not send and are never sent (their dictionary `channels` is empty).
+- `GET /api/health-conditions/` returns the same objects as a JSON array under
+  `findings`, for a client that wants them without the stream. A finding whose inputs
+  have no reading yet is left out, so an empty array means "nothing evaluated", not
+  "all clear".
 
 ## 4. Backend → frontend: dictionary
 

@@ -90,3 +90,27 @@ activity/noise terms remain in vital measurements; minute windows average the
 changing references. HRV retains its target while using the affected beat timing.
 Startup values are reference fixtures with zero collection windows. Simultaneous
 SANS/hypercapnia configuration is rejected. Recovery is not modeled.
+
+## Scenario 3 EVA dehydration
+
+Run `uv run imitacija --config config/badscenario3.toml --preview` from the
+simulator root. After 600 seconds of baseline, 9000 seconds of EVA use 0.820 L/h
+whole-body sweat, 0.100 L/h intake and 74 mmol/L sweat sodium. Net water loss is
+1.800 L, modeled as 1.800 kg, with gross sweat sodium loss 151.7 mmol. No serum
+sodium calculation is implied. Deficit drives synthetic USG and cardiovascular
+responses; other losses and routine replacement cancel in this simplified budget.
+The deficit freezes after EVA with a finite review plateau; recovery is not modeled.
+Whole-body-to-patch scaling is an assumption rather than a sensor calibration.
+All available readings initialize once; synthetic frequent mass/BP and configured
+spot USG events are labeled in the dictionary. See `badscenario3.md` for details.
+
+## Scenario 4 acute infection
+
+Run `uv run imitacija --config config/badscenario4.toml --preview` from the
+simulator root. Seconds 600–1800 smoothly progress toward temperature 38.7 °C,
+HR 116 bpm, RR 23/min, SBP 96 mmHg, SpO₂ 94% and IL-6 8.4 pg/mL. Configured
+alertness, room air and non-ARED context are explicit fixtures. EBV specimens
+collected at/after 1800 s are positive; VZV and CMV are unaffected. Timing and
+120-second assay delay are demonstration assumptions. Fever/vital noise remains
+bounded; HR/RR windows and HRV beat timing use the same infection progression.
+All 33 available readings initialize once. No treatment or recovery is modeled.

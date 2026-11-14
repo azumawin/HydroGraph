@@ -1,0 +1,40 @@
+seed = 42
+speed = 10
+#duration_s = 3000
+lab_delay_s = 120
+# No enabled_channels: all available readings initialize once and follow schedules.
+base_url = "http://127.0.0.1:8000"
+data_route = "/api/readings/"
+
+[environment]
+gravity_g = 0
+
+[[crew]]
+id = "crew-1"
+resting_hr_bpm = 72
+sbp_mmhg = 118
+dbp_mmhg = 78
+rmssd_ms = 48
+
+[acute_infection_scenario]
+id = "FAULT_04_ACUTE_INFECTION"
+owner_id = "crew-1"
+onset_s = 600
+affected_at_s = 1800
+baseline_temp_c = 36.8
+affected_temp_c = 38.7
+baseline_respiratory_rate_br_min = 14
+affected_respiratory_rate_br_min = 23
+affected_heart_rate_bpm = 116
+affected_sbp_mmhg = 96
+baseline_spo2_pct = 97
+affected_spo2_pct = 94
+baseline_il6_pg_ml = 1.4
+affected_il6_pg_ml = 8.4
+reactivation_at_s = 1800
+reactivated_virus = "EBV"
+serum_il6_event_times_s = [1860]
+saliva_pcr_event_times_s = [1860]
+affected_consciousness_level = "ALERT"
+affected_supplemental_o2 = false
+affected_post_ared_exercise_window = false
