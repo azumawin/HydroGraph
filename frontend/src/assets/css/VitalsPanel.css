@@ -185,6 +185,9 @@
 }
 
 .vitals-dashboard .vitals-dashboard-panel-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: -1px;
   padding: 0;
   border: 0;
@@ -203,6 +206,12 @@
     border-bottom-color: var(--color-text);
     color: var(--color-text);
   }
+}
+
+.vitals-dashboard .vitals-dashboard-panel-tab-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.75;
 }
 
 .vitals-dashboard .vitals-dashboard-panel-tab-content {

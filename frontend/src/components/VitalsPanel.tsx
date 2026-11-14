@@ -34,6 +34,7 @@ const VitalsPanel = () => {
             className={`vitals-dashboard-panel-tab${tab.ID === activeTabId ? " is-active" : ""}`}
             onClick={() => setActiveTabId(tab.ID)}
           >
+            <tab.ICON className="vitals-dashboard-panel-tab-icon" />
             {tab.LABEL}
           </button>
         ))}

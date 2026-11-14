@@ -1,4 +1,13 @@
-import { Activity, Droplet, HeartPulse, Thermometer, Wind } from "lucide-react";
+import {
+  Activity,
+  Droplet,
+  HeartPulse,
+  List,
+  Stethoscope,
+  Thermometer,
+  TrendingUp,
+  Wind,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://127.0.0.1:8000";
@@ -70,10 +79,10 @@ export const ASSISTANT = {
 };
 
 export const MAIN_PANEL_TABS = [
-  { ID: "vitals", LABEL: "Vitals" },
-  { ID: "measurements", LABEL: "All measurements" },
-  { ID: "trends", LABEL: "Trends" },
-  { ID: "advice", LABEL: "Advice" },
+  { ID: "vitals", LABEL: "Vitals", ICON: Activity },
+  { ID: "measurements", LABEL: "All measurements", ICON: List },
+  { ID: "trends", LABEL: "Trends", ICON: TrendingUp },
+  { ID: "advice", LABEL: "Advice", ICON: Stethoscope },
 ] as const;
 
 export type MainPanelTabId = (typeof MAIN_PANEL_TABS)[number]["ID"];
