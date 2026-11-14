@@ -1,9 +1,9 @@
-"""Research-based tests for hydrogfn.domain_4 (expected values from published sources)."""
+"""Research-based tests for hydrograph_core.domain_4 (expected values from published sources)."""
 
 import unittest
 
-from hydrogfn.domain_4 import cognitive_fatigue_4_2, cortisol_4_1, sleep_mood_4_3
-from hydrogfn.shared import Status
+from hydrograph_core.domain_4 import cognitive_fatigue_4_2, cortisol_4_1, sleep_mood_4_3
+from hydrograph_core.shared import Status
 
 _SEVERITY: dict[Status, int] = {
     Status.NOMINAL: 0,

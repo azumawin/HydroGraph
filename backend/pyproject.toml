@@ -9,7 +9,6 @@ dependencies = [
     "djangorestframework>=3.18.3",
     "markdown>=3.11.3",
     "hydrograph-core",
-    "hydrogfn",
     "drf-spectacular>=0.30.0",
 ]
 
@@ -21,7 +20,6 @@ members = ["packages/*"]
 
 [tool.uv.sources]
 hydrograph-core = { workspace = true }
-hydrogfn = { workspace = true }
 
 [dependency-groups]
 dev = [

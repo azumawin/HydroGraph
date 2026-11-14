@@ -1,8 +1,8 @@
-"""Tests for hydrogfn.gauge_factor (expected values from master plan p.4-5, section 3A)."""
+"""Tests for hydrograph_core.gauge_factor (expected values from master plan p.4-5, section 3A)."""
 
 import unittest
 
-from hydrogfn.gauge_factor import dynamic_gauge_factor, strain_from_resistance
+from hydrograph_core.gauge_factor import dynamic_gauge_factor, strain_from_resistance
 
 
 class TestDynamicGaugeFactor(unittest.TestCase):

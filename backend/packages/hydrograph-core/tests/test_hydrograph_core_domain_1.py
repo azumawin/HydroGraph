@@ -1,10 +1,10 @@
-"""Research-based tests for hydrogfn.domain_1 (parameters 1.1-1.3)."""
+"""Research-based tests for hydrograph_core.domain_1 (parameters 1.1-1.3)."""
 
 import math
 import unittest
 
-from hydrogfn import Status
-from hydrogfn.domain_1 import (
+from hydrograph_core import Status
+from hydrograph_core.domain_1 import (
     blood_pressure_heart_rate_1_3,
     cephalic_fluid_shift_1_1,
     troponin_1_2,

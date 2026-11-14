@@ -1,10 +1,10 @@
-"""Research-based tests for hydrogfn.domain_2 (parameters 2.1-2.2)."""
+"""Research-based tests for hydrograph_core.domain_2 (parameters 2.1-2.2)."""
 
 import math
 import unittest
 
-from hydrogfn import Status
-from hydrogfn.domain_2 import core_temperature_2_2, glucose_2_1
+from hydrograph_core import Status
+from hydrograph_core.domain_2 import core_temperature_2_2, glucose_2_1
 
 _GM = 120.0
 _VGS = 0.4

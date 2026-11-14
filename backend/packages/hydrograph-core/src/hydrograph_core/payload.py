@@ -105,20 +105,20 @@ def telemetry_payload(
         timestamp: ISO-8601 UTC time of the readings, e.g.
             ``"2026-11-01T12:00:00Z"``; the backend supplies it.
         user_state: ``"ACTIVE"``, ``"RESTING"`` or ``"SLEEPING"`` (the
-            backend's stored ``hydrogfn.polling.UserState`` value).
+            backend's stored ``hydrograph_core.polling.UserState`` value).
         heart_rate_bpm: Heart rate [bpm].
         bp_systolic_mmhg: Systolic blood pressure [mmHg].
         bp_diastolic_mmhg: Diastolic blood pressure [mmHg].
         respiratory_rate_br_min: Respiratory rate [breaths/min].
         spo2_pct: Peripheral oxygen saturation [%].
-        glucose: Result of :func:`hydrogfn.glucose_2_1`.
-        temperature: Result of :func:`hydrogfn.core_temperature_2_2`.
+        glucose: Result of :func:`hydrograph_core.glucose_2_1`.
+        temperature: Result of :func:`hydrograph_core.core_temperature_2_2`.
         news2_score: Aggregate NEWS2 score [0-20].
         cabin_ppco2_mmhg: Ambient CO2 partial pressure [mmHg].
-        gauge: Result of :func:`hydrogfn.gauge_factor.dynamic_gauge_factor`.
-        icp: Result of :func:`hydrogfn.cephalic_fluid_shift_1_1`; its
+        gauge: Result of :func:`hydrograph_core.gauge_factor.dynamic_gauge_factor`.
+        icp: Result of :func:`hydrograph_core.cephalic_fluid_shift_1_1`; its
             ``strain_pct`` is the jugular fluid shift.
-        cortisol: Result of :func:`hydrogfn.cortisol_4_1`.
+        cortisol: Result of :func:`hydrograph_core.cortisol_4_1`.
         cortisol_di_ds_ratio: The :math:`\Delta I_{ds} / I_0` reading passed
             to ``cortisol_4_1`` [unitless].
         cortisol_slope_status: Status of the diurnal cortisol degradation
@@ -128,15 +128,15 @@ def telemetry_payload(
         post_ared_window: Within 2 h after an ARED workout.
         latent_virus_shedding: Latent virus shedding result, passed through
             (the plan's example: ``"NO_DETECT"``).
-        troponin: Result of :func:`hydrogfn.troponin_1_2`.
-        cfe: Result of :func:`hydrogfn.cognitive_fatigue_4_2`.
+        troponin: Result of :func:`hydrograph_core.troponin_1_2`.
+        cfe: Result of :func:`hydrograph_core.cognitive_fatigue_4_2`.
         joint_angles_deg: Joint angles for the 3D dummy, keyed without the
             unit, e.g. ``{"left_knee_flexion": 112.4}`` [deg].
-        form: Result of :func:`hydrogfn.joint_kinematics_3_2` for the joint
+        form: Result of :func:`hydrograph_core.joint_kinematics_3_2` for the joint
             pair that sets the form status.
         form_joint: Name of that joint pair, e.g. ``"lumbar"``.
         others: Any further parameter or finding results evaluated this tick
-            (``blood_pressure_heart_rate_1_3``, ``hydrogfn.findings``, ...).
+            (``blood_pressure_heart_rate_1_3``, ``hydrograph_core.findings``, ...).
 
     Returns:
         The p.8 payload. Statuses are upper case as in the plan's example
@@ -150,7 +150,7 @@ def telemetry_payload(
         - ``recommended_actions`` numbers the actions of every non-nominal,
           non-unspecified result, worst first, without duplicates.
 
-        Apply ``hydrogfn.polling.alert_allowed`` before passing results in: a result
+        Apply ``hydrograph_core.polling.alert_allowed`` before passing results in: a result
         left out is neither a hazard nor an action. ``delta_Ids_over_I0`` is
         the cortisol channel; the plan's example does not say which GFET it
         is. ``blood_glucose_mg_dL`` uses 1 mM = 18 mg/dL, as in

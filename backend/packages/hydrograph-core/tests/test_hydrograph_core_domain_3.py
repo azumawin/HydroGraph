@@ -1,10 +1,10 @@
-"""Research-based tests for hydrogfn.domain_3 (expected values from published sources)."""
+"""Research-based tests for hydrograph_core.domain_3 (expected values from published sources)."""
 
 import math
 import unittest
 
-from hydrogfn.domain_3 import bone_resorption_3_1, joint_kinematics_3_2
-from hydrogfn.shared import Status
+from hydrograph_core.domain_3 import bone_resorption_3_1, joint_kinematics_3_2
+from hydrograph_core.shared import Status
 
 # at t_MET = 0 the spec's response is dIds/I0 = alpha_bone * [NTx], alpha_bone = 0.042 nM^-1
 

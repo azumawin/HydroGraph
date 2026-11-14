@@ -1,6 +1,6 @@
-# hydrogfn style guide
+# hydrograph-core style guide
 
-`hydrogfn` implements the HydroGFN health monitor from two documents in this directory:
+`hydrograph_core` implements the HydroGFN health monitor from two documents in this directory:
 
 - `Tiered Master System Specification & Implementation Plan.pdf` (the
   **master plan**): the Tier 1 / Tier 2 split, the 10 health findings, polling.
@@ -12,24 +12,24 @@ function's docstring.
 
 ## Layout
 
-This package is one uv workspace member of `backend/`. `src/hydrogfn/` is one
+This package is one uv workspace member of `backend/`. `src/hydrograph_core/` is one
 self-contained, flat module: no subpackages, no imports from outside its
 directory, standard library only. Its docs stay in this package directory.
 
 ```
-hydrogfn/
+hydrograph_core/
   __init__.py         public API: the 11 parameter functions (1.1-5.1) + Status
   shared.py           code shared across files (the Status enum)
   domain_N.py         Tier 2: parameters N.1-N.M of spec domain N
   findings.py         Tier 1: main-window health findings 1-10 (not exported
-                      from __init__; import hydrogfn.findings)
+                      from __init__; import hydrograph_core.findings)
   gauge_factor.py     Tier 2: master plan section 3A, segmented hydrogel gauge
-                      factor (not exported; import hydrogfn.gauge_factor)
+                      factor (not exported; import hydrograph_core.gauge_factor)
   payload.py          master plan section 5, the JSON telemetry payload built
                       from results the backend has computed (not exported;
-                      import hydrogfn.payload)
+                      import hydrograph_core.payload)
   polling.py          master plan section 4, the adaptive polling table and
-                      alert gating (not exported; import hydrogfn.polling)
+                      alert gating (not exported; import hydrograph_core.polling)
 ```
 
 Tier 2 turns raw sensor readings (ΔR/R0, ΔIds/I0, PSD, ...) into physical
@@ -58,11 +58,11 @@ Python >= 3.14, standard library only at runtime. Dev tools come from the
 backend workspace (`backend/pyproject.toml`). From `backend/`:
 
 ```sh
-uv sync                              # dev tools
-black packages/hydrogfn              # format; commit only black-clean code
-ruff check packages/hydrogfn         # lint
-basedpyright packages/hydrogfn       # must report 0 errors, 0 warnings
-pytest packages/hydrogfn             # tests
+uv sync                                     # dev tools
+black packages/hydrograph-core              # format; commit only black-clean code
+ruff check packages/hydrograph-core         # lint
+basedpyright packages/hydrograph-core       # must report 0 errors, 0 warnings
+pytest packages/hydrograph-core             # tests
 ```
 
 Inside the module, always import relatively (`from .shared import Status`)

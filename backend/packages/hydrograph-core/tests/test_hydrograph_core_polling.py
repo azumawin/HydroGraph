@@ -1,8 +1,8 @@
-"""Tests for hydrogfn.polling (expected values from master plan p.6, section 4)."""
+"""Tests for hydrograph_core.polling (expected values from master plan p.6, section 4)."""
 
 import unittest
 
-from hydrogfn.polling import Mode, UserState, alert_allowed, poll_interval
+from hydrograph_core.polling import Mode, UserState, alert_allowed, poll_interval
 
 
 class TestPollInterval(unittest.TestCase):

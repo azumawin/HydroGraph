@@ -8,7 +8,6 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "hydrogfn",
     "hydrograph-backend",
     "hydrograph-core",
 ]
@@ -157,11 +156,6 @@ wheels = [
 ]
 
 [[package]]
-name = "hydrogfn"
-version = "0.1.0"
-source = { editable = "packages/hydrogfn" }
-
-[[package]]
 name = "hydrograph-backend"
 version = "0.1.0"
 source = { virtual = "." }
@@ -169,7 +163,6 @@ dependencies = [
     { name = "django" },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
-    { name = "hydrogfn" },
     { name = "hydrograph-core" },
     { name = "markdown" },
 ]
@@ -189,7 +182,6 @@ requires-dist = [
     { name = "django", specifier = ">=6.0" },
     { name = "djangorestframework", specifier = ">=3.18.3" },
     { name = "drf-spectacular", specifier = ">=0.30.0" },
-    { name = "hydrogfn", editable = "packages/hydrogfn" },
     { name = "hydrograph-core", editable = "packages/hydrograph-core" },
     { name = "markdown", specifier = ">=3.11.3" },
 ]

@@ -4,7 +4,7 @@ Things that look wrong in the master plan (`Tiered Master System Specification &
 
 ## Section 2: Tier 1 findings (p.2-4)
 
-Found while writing `hydrogfn/findings.py`.
+Found while writing `hydrograph_core/findings.py`.
 
 1. **Some criteria still have no cutoff.**
    - Finding 5: the sleep duration is "anchored to flight baseline (ISS mean 6.09 hrs vs. 8.5 hrs scheduled)" but no number triggers. Code: the parameter spec's 4.3 cutoff (nominal needs > 7.5 h).
@@ -17,7 +17,7 @@ Found while writing `hydrogfn/findings.py`.
 
 ## Section 3A: hydrogel gauge factor (p.4-5)
 
-Found while writing `hydrogfn/gauge_factor.py`.
+Found while writing `hydrograph_core/gauge_factor.py`.
 
 1. **The plan doesn't say how GF runs inside a zone.**
    - It gives only spans ("114.86 – 1180.75", "9.53 – 54.24", "0.56 – 0.94"), low value first.
@@ -53,7 +53,7 @@ The old draft's cortisol mismatch is gone: 18.2 nM now gives ΔIds/I0 = 0.358 as
 
 ## Section 4: adaptive polling (p.6)
 
-Found while writing `hydrogfn/polling.py`.
+Found while writing `hydrograph_core/polling.py`.
 
 1. **It is called a state machine but has no transitions.**
    - The plan never says how ACTIVE, RESTING and SLEEPING are detected or when the state changes.
@@ -69,7 +69,7 @@ Found while writing `hydrogfn/polling.py`.
 
 ## Section 5: JSON payload (p.8)
 
-Found while writing `hydrogfn/payload.py`. The example-value mismatches are listed above under "Example JSON payload".
+Found while writing `hydrograph_core/payload.py`. The example-value mismatches are listed above under "Example JSON payload".
 
 1. **The kinematics block doesn't match Parameter 3.2.**
    - The example has `left_knee_flexion_deg` and `right_shoulder_abduction_deg`, two different joints. Parameter 3.2 measures one left/right pair of the same joint.

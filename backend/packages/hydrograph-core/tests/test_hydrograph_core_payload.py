@@ -1,13 +1,13 @@
-"""Tests for hydrogfn.payload (structure from master plan p.8, section 5)."""
+"""Tests for hydrograph_core.payload (structure from master plan p.8, section 5)."""
 
 import json
 import unittest
 from collections.abc import Mapping, Sequence
 
-import hydrogfn as h
-from hydrogfn.findings import radiation_exposure_10
-from hydrogfn.gauge_factor import dynamic_gauge_factor
-from hydrogfn.payload import TelemetryPayload, telemetry_payload
+import hydrograph_core as h
+from hydrograph_core.findings import radiation_exposure_10
+from hydrograph_core.gauge_factor import dynamic_gauge_factor
+from hydrograph_core.payload import TelemetryPayload, telemetry_payload
 
 
 def _thermistor_ohm(target_c: float) -> float:

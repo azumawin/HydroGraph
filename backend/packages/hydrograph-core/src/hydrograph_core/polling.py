@@ -143,7 +143,7 @@ def alert_allowed(channel: str, state: UserState, status: str) -> bool:
         channel: Payload channel name from the plan's table.
         state: Current user state.
         status: The reading's status value (``"critical"``, ``"warning"``,
-            ``"nominal"``, ``"unspecified"``), as in ``hydrogfn.Status``.
+            ``"nominal"``, ``"unspecified"``), as in ``hydrograph_core.Status``.
 
     Returns:
         ``True`` if the alert may fire. Nominal never alerts. Radiation & SPE

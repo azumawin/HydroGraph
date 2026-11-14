@@ -1,9 +1,9 @@
-"""Research-based tests for hydrogfn.findings (expected values from published sources)."""
+"""Research-based tests for hydrograph_core.findings (expected values from published sources)."""
 
 import unittest
 
-from hydrogfn import findings
-from hydrogfn.shared import Status
+from hydrograph_core import findings
+from hydrograph_core.shared import Status
 
 
 def _ortho(

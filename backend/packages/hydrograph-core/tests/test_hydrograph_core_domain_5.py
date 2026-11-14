@@ -1,9 +1,9 @@
-"""Research-based tests for hydrogfn.domain_5 (parameter 5.1)."""
+"""Research-based tests for hydrograph_core.domain_5 (parameter 5.1)."""
 
 import unittest
 
-from hydrogfn import Status
-from hydrogfn.domain_5 import inflammatory_cytokines_5_1
+from hydrograph_core import Status
+from hydrograph_core.domain_5 import inflammatory_cytokines_5_1
 
 
 def _cytokines(il6: float, tnf: float):

@@ -128,8 +128,8 @@ The `members = ["packages/*"]` glob already covers the new directory.
 
 ## HydroGFN domain logic
 
-`packages/hydrogfn/` holds the HydroGFN health-monitor logic: sensor formulas,
+`packages/hydrograph-core/` holds the HydroGFN health-monitor logic: sensor formulas,
 the 10 health findings, the adaptive polling table and the JSON telemetry
 payload. It is stateless; the backend keeps sessions, user state and history.
-How `api/` should call it: `packages/hydrogfn/README.md`, "Using it from the
+How `api/` should call it: `packages/hydrograph-core/README.md`, "Using it from the
 Django backend".
