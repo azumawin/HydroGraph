@@ -13,11 +13,13 @@ from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from api.assistant import AssistantError, ChatMessage, reply
 from api.broadcast import publish
 from api.environment import current_environment, current_environment_id
 from api.findings import affected_findings, crew_findings
 from api.models import EnvironmentSelection, Reading
 from api.serializers import (
+    ChatSerializer,
     EnvironmentSelectionSerializer,
     HistoryQuery,
     HistoryQuerySerializer,
@@ -240,6 +242,28 @@ def reading_history(request: Request) -> Response:
                 reading_payload(r, environment) for r in reversed(latest)
             ]
     return Response({"readings": history})
+
+
+@extend_schema(
+    summary="Ask the health assistant",
+    request=ChatSerializer,
+    responses={
+        200: {"type": "object", "properties": {"reply": {"type": "string"}}},
+        503: {"type": "object", "properties": {"detail": {"type": "string"}}},
+    },
+)
+@api_view(["POST"])
+def assistant(request: Request) -> Response:
+    """The LLM's next message, briefed with the live findings and readings."""
+    serializer = ChatSerializer(data=request.data)
+    _ = serializer.is_valid(raise_exception=True)
+    data = cast("dict[str, list[ChatMessage]]", serializer.validated_data)
+    try:
+        return Response({"reply": reply(data["messages"])})
+    except AssistantError as error:
+        return Response(
+            {"detail": str(error)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
 
 
 @require_GET

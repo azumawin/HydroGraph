@@ -16,6 +16,14 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Local secrets live in backend/.env (gitignored); real environment variables win.
+_env_file = BASE_DIR / ".env"
+if _env_file.exists():
+    for _line in _env_file.read_text().splitlines():
+        _key, _sep, _value = _line.partition("=")
+        if _sep and not _line.lstrip().startswith("#"):
+            _ = os.environ.setdefault(_key.strip(), _value.strip())
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
@@ -148,3 +156,9 @@ LOGGING = {
 # so the API answers any origin. There is no auth to protect.
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_URLS_REGEX = r"^/api/.*$"
+
+# The health assistant's LLM, on Ollama Cloud. Without a key the chat answers 503.
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "https://ollama.com/api/chat")
+OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY", "")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gpt-oss:120b")
+OLLAMA_TIMEOUT_S = float(os.environ.get("OLLAMA_TIMEOUT_S", "60"))

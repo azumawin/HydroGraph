@@ -214,3 +214,23 @@ class EnvironmentSelectionSerializer(serializers.Serializer[None]):
     """The body of ``PUT /api/environment/``."""
 
     id: serializers.ChoiceField = serializers.ChoiceField(choices=list(ENVIRONMENTS))
+
+
+class ChatMessageSerializer(serializers.Serializer[None]):
+    role: serializers.ChoiceField = serializers.ChoiceField(
+        choices=["user", "assistant"]
+    )
+    content: serializers.CharField = serializers.CharField(max_length=4000)
+
+
+class ChatSerializer(serializers.Serializer[None]):
+    """The body of ``POST /api/assistant/``: the conversation, oldest first."""
+
+    messages: ChatMessageSerializer = ChatMessageSerializer(
+        many=True, allow_empty=False
+    )
+
+    def validate_messages(self, value: list[object]) -> list[object]:
+        if len(value) > 40:
+            raise serializers.ValidationError("At most 40 messages.")
+        return value

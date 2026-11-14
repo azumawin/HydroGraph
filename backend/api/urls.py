@@ -11,6 +11,7 @@ urlpatterns = [
     path("environments/", views.environments, name="environments"),
     path("environment/", views.environment, name="environment"),
     path("readings/", views.readings, name="readings"),
+    path("assistant/", views.assistant, name="assistant"),
     path("stream/", views.stream, name="stream"),
     path("", include(router.urls)),
 ]
