@@ -6,69 +6,79 @@ from hydrogfn import findings
 from hydrogfn.shared import Status
 
 
-def _sleep(hours: float) -> findings.SleepResult:
-    return findings.sleep_deficiency_5(
-        hours,
-        90.0,
-        2000.0,
-        [],
-        min_sleep_efficiency_pct=85.0,
-        min_light_exposure_lux=1000.0,
-        max_pvt_lapses=2,
-    )
+def _ortho(
+    sbp: tuple[float, float],
+    dbp: tuple[float, float],
+    hr: tuple[float, float],
+    ctni: float | None = None,
+) -> findings.OrthostaticResult:
+    """(supine, standing) pairs for SBP, DBP and HR."""
+    return findings.orthostatic_intolerance_1(*sbp, *dbp, *hr, ctni)
+
+
+def _infection(
+    news2: int, max_param: int = 0, temp: float = 37.0, il6: float = 1.0
+) -> findings.InfectionResult:
+    return findings.acute_infection_3(news2, max_param, temp, il6, False, False)
+
+
+def _sleep(hours: float, cfe: float = 0.5) -> findings.SleepResult:
+    return findings.sleep_deficiency_5(hours, [], cfe, max_pvt_lapses=2)
 
 
 def _hypoxia(spo2: float, ppco2: float) -> findings.HypoxiaResult:
-    return findings.hypoxia_co2_4(
-        spo2,
-        14.0,
-        ppco2,
-        False,
-        max_respiratory_rate_bpm=20.0,
-        max_ppco2_mmhg=3.0,
-    )
+    return findings.hypoxia_co2_4(spo2, False, ppco2, False)
 
 
 def _energy(mmol: float) -> findings.EnergyBalanceResult:
-    return findings.negative_energy_balance_7(
-        0.0, mmol, False, min_body_mass_slope_kg_week=-0.5
-    )
+    return findings.negative_energy_balance_7(0.0, mmol, 1.0)
 
 
 def _bone(litres: float) -> findings.BoneResult:
-    return findings.bone_demineralization_8(0.0, litres, True, max_ntx_change_pct=20.0)
+    return findings.bone_demineralization_8(0.0, litres)
 
 
 def _rad(cum: float, rate: float, spe: bool) -> findings.RadiationResult:
-    return findings.radiation_exposure_10(cum, rate, spe, max_dose_rate_usv_h=50.0)
+    return findings.radiation_exposure_10(cum, rate, spe)
 
 
 class TestHydrogfnFindings(unittest.TestCase):
     # 1 Orthostatic
     def test_orthostatic_normal_response_nominal(self) -> None:
         """Source: normal shock index 0.5-0.7, Shock index https://pmc.ncbi.nlm.nih.gov/articles/PMC6698590"""
-        r = findings.orthostatic_intolerance_1(120.0, 115.0, 70.0, 80.0)
+        r = _ortho((120.0, 115.0), (80.0, 78.0), (70.0, 80.0))
         self.assertEqual(r["status"], Status.NOMINAL)
 
     def test_orthostatic_sbp_drop_20_is_warning(self) -> None:
         """Source: OH = SBP drop >= 20 mmHg, Freeman 2011 via Merck https://www.merckmanuals.com/professional/cardiovascular-disorders/symptoms-of-cardiovascular-disorders/orthostatic-hypotension"""
-        r = findings.orthostatic_intolerance_1(120.0, 100.0, 70.0, 70.0)
+        r = _ortho((120.0, 100.0), (80.0, 78.0), (70.0, 70.0))
         self.assertEqual(r["status"], Status.WARNING)
 
     def test_orthostatic_hr_rise_30_is_warning(self) -> None:
         """Source: POTS HR rise >= 30 bpm, Freeman 2011 via Merck https://www.merckmanuals.com/professional/cardiovascular-disorders/symptoms-of-cardiovascular-disorders/orthostatic-hypotension"""
-        r = findings.orthostatic_intolerance_1(120.0, 120.0, 60.0, 90.0)
+        r = _ortho((120.0, 120.0), (80.0, 78.0), (60.0, 90.0))
         self.assertEqual(r["status"], Status.WARNING)
 
     def test_orthostatic_shock_index_above_0_9_is_warning(self) -> None:
         """Source: SI > 0.9 associated with occult shock, Shock index https://pmc.ncbi.nlm.nih.gov/articles/PMC6698590"""
-        r = findings.orthostatic_intolerance_1(118.0, 115.0, 85.0, 110.0)
+        r = _ortho((118.0, 115.0), (80.0, 78.0), (85.0, 110.0))
         self.assertEqual(r["status"], Status.WARNING)
 
     def test_orthostatic_shock_index_value(self) -> None:
         """Source: SI = HR/SBP, 80/115 ~ 0.70, Shock index https://pmc.ncbi.nlm.nih.gov/articles/PMC6698590"""
-        r = findings.orthostatic_intolerance_1(120.0, 115.0, 70.0, 80.0)
+        r = _ortho((120.0, 115.0), (80.0, 78.0), (70.0, 80.0))
         self.assertAlmostEqual(r["shock_index"], 0.70, delta=0.01)
+
+    def test_orthostatic_dbp_drop_10_is_warning(self) -> None:
+        """Source: OH = SBP drop >= 20 or DBP drop >= 10 mmHg within 3 min, Freeman 2011 via Merck https://www.merckmanuals.com/professional/cardiovascular-disorders/symptoms-of-cardiovascular-disorders/orthostatic-hypotension"""
+        r = _ortho((120.0, 115.0), (80.0, 70.0), (70.0, 80.0))
+        self.assertEqual(r["status"], Status.WARNING)
+
+    def test_orthostatic_troponin_above_0_04_is_critical(self) -> None:
+        """Source: master plan p.2, event-triggered hs-cTnI > 0.04 ng/mL critical."""
+        r = _ortho((120.0, 115.0), (80.0, 78.0), (70.0, 80.0), 0.05)
+        self.assertEqual(r["status"], Status.CRITICAL)
+        self.assertIn("restrict EVA", r["action"])
 
     # 2 Dehydration
     def test_dehydration_small_loss_nominal(self) -> None:
@@ -90,6 +100,12 @@ class TestHydrogfnFindings(unittest.TestCase):
         r = findings.dehydration_2(100.0, 100.0, 1.020)
         self.assertEqual(r["status"], Status.WARNING)
 
+    def test_dehydration_fluid_deficit(self) -> None:
+        """Source: 1 kg acute body-mass loss ~ 1 L fluid, Sawka 2007 ACSM https://pubmed.ncbi.nlm.nih.gov/17277604/"""
+        self.assertEqual(
+            findings.dehydration_2(97.4, 100.0, 1.010)["fluid_deficit_ml"], 2600
+        )
+
     def test_dehydration_usg_1030_warning(self) -> None:
         """Source: USG >= 1.020 hypohydration, https://pmc.ncbi.nlm.nih.gov/articles/PMC9214901, https://pmc.ncbi.nlm.nih.gov/articles/PMC4912946"""
         r = findings.dehydration_2(100.0, 100.0, 1.030)
@@ -98,25 +114,36 @@ class TestHydrogfnFindings(unittest.TestCase):
     # 3 Infection
     def test_infection_low_scores_nominal(self) -> None:
         """Source: NEWS2 < 5 no urgent trigger, RCP NEWS2 https://www.rcp.ac.uk/media/2acdezkd/news2-chart-2_news-thresholds-and-triggers_0.pdf"""
-        r = findings.acute_infection_3(4, 1, False)
+        r = _infection(4)
         self.assertEqual(r["status"], Status.NOMINAL)
 
     def test_infection_news2_5_warning(self) -> None:
         """Source: NEWS2 >= 5 urgent response, RCP NEWS2 https://www.rcp.ac.uk/media/2acdezkd/news2-chart-2_news-thresholds-and-triggers_0.pdf"""
-        r = findings.acute_infection_3(5, 0, False)
+        r = _infection(5)
         self.assertEqual(r["status"], Status.WARNING)
 
     def test_infection_news2_7_critical(self) -> None:
         """Source: NEWS2 >= 7 emergency response, RCP NEWS2 https://www.rcp.ac.uk/media/2acdezkd/news2-chart-2_news-thresholds-and-triggers_0.pdf"""
-        r5 = findings.acute_infection_3(5, 0, False)
-        r7 = findings.acute_infection_3(7, 0, False)
+        r5 = _infection(5)
+        r7 = _infection(7)
         self.assertEqual(r7["status"], Status.CRITICAL)
         self.assertNotEqual(r7["status"], r5["status"])
 
-    def test_infection_qsofa_2_not_nominal(self) -> None:
-        """Source: qSOFA >= 2 high risk, qSOFA https://www.mdcalc.com/qsofa-quick-sofa-score-sepsis"""
-        r = findings.acute_infection_3(0, 2, False)
-        self.assertNotEqual(r["status"], Status.NOMINAL)
+    def test_infection_single_vital_3_warning(self) -> None:
+        """Source: a single NEWS2 parameter scoring 3 triggers urgent review, RCP NEWS2 https://www.rcp.ac.uk/media/2acdezkd/news2-chart-2_news-thresholds-and-triggers_0.pdf"""
+        self.assertEqual(_infection(3, max_param=3)["status"], Status.WARNING)
+
+    def test_infection_sirs_temperature(self) -> None:
+        """Source: SIRS temperature > 38.0 or < 36.0 C, MDCalc SIRS https://www.mdcalc.com/calc/1096/sirs-sepsis-septic-shock-criteria"""
+        self.assertEqual(_infection(0, temp=38.3)["status"], Status.WARNING)
+        self.assertEqual(_infection(0, temp=35.8)["status"], Status.WARNING)
+        self.assertEqual(_infection(0, temp=37.0)["status"], Status.NOMINAL)
+
+    def test_infection_il6_gated_after_ared(self) -> None:
+        """Source: master plan p.3, IL-6 > 3.0 pg/mL warns only outside the 2-hr post-ARED window."""
+        self.assertEqual(_infection(0, il6=4.0)["status"], Status.WARNING)
+        r = findings.acute_infection_3(0, 0, 37.0, 4.0, True, False)
+        self.assertEqual(r["status"], Status.NOMINAL)
 
     # 4 Hypoxia / CO2
     def test_hypoxia_normal_nominal(self) -> None:
@@ -131,6 +158,10 @@ class TestHydrogfnFindings(unittest.TestCase):
         """Source: target SpO2 94-98 %, 94 is in range, BTS https://www.brit-thoracic.org.uk/document-library/guidelines/emergency-oxygen/web-appendix-4-local-oxygen-policy-template"""
         self.assertEqual(_hypoxia(94.0, 2.0)["status"], Status.NOMINAL)
 
+    def test_hypoxia_spo2_below_90_critical(self) -> None:
+        """Source: SpO2 < 90 % is hypoxemia, BTS https://www.brit-thoracic.org.uk/document-library/guidelines/emergency-oxygen/web-appendix-4-local-oxygen-policy-template"""
+        self.assertEqual(_hypoxia(88.0, 2.0)["status"], Status.CRITICAL)
+
     def test_hypoxia_ppco2_above_limit_warning(self) -> None:
         """Source: ppCO2 1-h limit 3 mmHg, NASA https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-004-carbon-dioxide.pdf"""
         self.assertEqual(_hypoxia(97.0, 3.5)["status"], Status.WARNING)
@@ -139,15 +170,15 @@ class TestHydrogfnFindings(unittest.TestCase):
     def test_sleep_pvt_lapse_threshold(self) -> None:
         """Source: PVT lapse = RT > 500 ms, Basner 2011 PVT https://pmc.ncbi.nlm.nih.gov/articles/PMC3197786"""
         r = findings.sleep_deficiency_5(
-            8.0,
-            90.0,
-            2000.0,
-            [500.0, 501.0, 300.0],
-            min_sleep_efficiency_pct=85.0,
-            min_light_exposure_lux=1000.0,
-            max_pvt_lapses=2,
+            8.0, [500.0, 501.0, 300.0], 0.5, max_pvt_lapses=2
         )
         self.assertEqual(r["pvt_lapses"], 1)
+
+    def test_sleep_cfe_bands(self) -> None:
+        """Source: master plan p.3, CFE 0.70-1.20 warning, > 1.20 critical."""
+        self.assertEqual(_sleep(8.0, 0.69)["status"], Status.NOMINAL)
+        self.assertEqual(_sleep(8.0, 0.70)["status"], Status.WARNING)
+        self.assertEqual(_sleep(8.0, 1.21)["status"], Status.CRITICAL)
 
     def test_sleep_6h_warning(self) -> None:
         """Source: <= 6 h inadequate, AASM https://aasm.org/seven-or-more-hours-of-sleep-per-night-a-health-necessity-for-adults/"""
@@ -168,13 +199,19 @@ class TestHydrogfnFindings(unittest.TestCase):
             [450.0, 520.0, 700.0],
             0.0,
             False,
-            min_phq9_score=10,
-            min_gad7_score=10,
+            10.0,
             max_pvt_lapses=5,
             max_sleep_debt_hours=10.0,
         )
         self.assertEqual(r["pvt_lapses"], 2)
         self.assertEqual(r["status"], Status.NOMINAL)
+
+    def test_behavioral_phq9_10_warning(self) -> None:
+        """Source: PHQ-9 >= 10 moderate depression, Kroenke 2001 https://pmc.ncbi.nlm.nih.gov/articles/PMC1495268/"""
+        r = findings.behavioral_health_decline_6(
+            10, 0, [], 0.0, False, 10.0, max_pvt_lapses=5, max_sleep_debt_hours=10.0
+        )
+        self.assertEqual(r["status"], Status.WARNING)
 
     # 7 Energy balance
     def test_energy_normal_glucose_nominal(self) -> None:
@@ -184,6 +221,12 @@ class TestHydrogfnFindings(unittest.TestCase):
     def test_energy_low_glucose_warning(self) -> None:
         """Source: level 1 hypoglycemia < 70 mg/dL, 5-Minute Clinical Consult https://www.unboundmedicine.com/5minute/view/5-Minute-Clinical-Consult/116305/1.1/Hypoglycemia_Diabetic"""
         self.assertEqual(_energy(3.8)["status"], Status.WARNING)
+
+    def test_energy_level_2_hypoglycemia_named(self) -> None:
+        """Source: level 2 hypoglycemia < 54 mg/dL (3.0 mmol/L), IHSG & ADA 2017 https://diabetesjournals.org/care/article/40/1/155/37135"""
+        r = _energy(2.9)
+        self.assertEqual(r["status"], Status.WARNING)
+        self.assertIn("Level 2 hypoglycemia < 54 mg/dL", r["triggers"])
 
     def test_energy_glucose_conversion(self) -> None:
         """Source: mg/dL = mmol/L x 18.016, 5-Minute Clinical Consult https://www.unboundmedicine.com/5minute/view/5-Minute-Clinical-Consult/116305/1.1/Hypoglycemia_Diabetic"""
@@ -205,11 +248,13 @@ class TestHydrogfnFindings(unittest.TestCase):
         """Source: below AUA 2.5 L/day target, AUA https://www.auanet.org/guidelines/guidelines/kidney-stones-medical-mangement-guideline"""
         self.assertEqual(_bone(1.5)["status"], Status.WARNING)
 
-    # 9 SANS (no research threshold; caller cutoff only)
-    def test_sans_index_above_cutoff_not_nominal(self) -> None:
-        """Source: none (caller-supplied cutoff); index above cutoff flags."""
-        r = findings.sans_fluid_shift_9(2.0, max_fluid_shift_index=1.0)
-        self.assertNotEqual(r["status"], Status.NOMINAL)
+    # 9 SANS
+    def test_sans_jugular_distension_bands(self) -> None:
+        """Source: master plan p.4, < 1.1 % nominal, 1.1-1.8 % warning, > 1.8 % critical (Roy et al., 2024)."""
+        self.assertEqual(findings.sans_fluid_shift_9(1.0)["status"], Status.NOMINAL)
+        self.assertEqual(findings.sans_fluid_shift_9(1.1)["status"], Status.WARNING)
+        self.assertEqual(findings.sans_fluid_shift_9(1.8)["status"], Status.WARNING)
+        self.assertEqual(findings.sans_fluid_shift_9(1.9)["status"], Status.CRITICAL)
 
     # 10 Radiation
     def test_radiation_below_limits_nominal(self) -> None:
@@ -221,6 +266,10 @@ class TestHydrogfnFindings(unittest.TestCase):
         r = _rad(300.0, 5.0, True)
         self.assertEqual(r["status"], Status.CRITICAL)
         self.assertIn("shelter", r["action"].lower())
+
+    def test_radiation_dose_rate_above_50_warning(self) -> None:
+        """Source: master plan p.4, acute SPE dose-rate spike > 50 uSv/h warning."""
+        self.assertEqual(_rad(300.0, 60.0, False)["status"], Status.WARNING)
 
     def test_radiation_cumulative_601_not_nominal(self) -> None:
         """Source: career effective dose limit 600 mSv, NASA-STD-3001 https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf"""

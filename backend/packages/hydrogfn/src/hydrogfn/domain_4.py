@@ -52,6 +52,9 @@ def cortisol_4_1(
         Huang, Y. Sandwich SERS Chip with Raman-Silent Reporters for Ultrasensitive Serum
         Cortisol Detection and Depression Differentiation. ACS Sens. 2026.
 
+        Bellando-Randone, M. et al. (2023). Aptamer-field-effect transistor for
+        cortisol detection. Biosensors and Bioelectronics.
+
     Args:
         di_ds_ratio: Transconductance drop :math:`\Delta I_{ds} / I_0` as a fraction [unitless].
         i_max: Drop at full saturation :math:`I_{\max}` [unitless].
@@ -59,9 +62,10 @@ def cortisol_4_1(
 
     Returns:
         ``param``, ``cortisol_nm``, ``status``, ``action``.
-        Nominal < 22.4 nM, WARNING 22.4-30.0 nM, CRITICAL > 30.0 nM. The
-        master plan's 22.4 nM warning threshold overrides the parameter
-        spec's 15.0 nM.
+        Nominal < 15.0 nM, WARNING 15.0-30.0 nM, CRITICAL > 30.0 nM, as in
+        both specs. The master plan evaluates cortisol primarily by its
+        diurnal slope and applies these cutoffs to a time-of-day normalized
+        reading; normalizing is the caller's job.
 
     Raises:
         ValueError: ``di_ds_ratio`` is outside ``0 <= di_ds_ratio < i_max``; the
@@ -77,7 +81,7 @@ def cortisol_4_1(
             Status.CRITICAL,
             "Mandatory rest period, defer non-critical ground communications",
         )
-    elif cortisol_nm >= 22.4:
+    elif cortisol_nm >= 15.0:
         status, action = (
             Status.WARNING,
             "Trigger guided neuro-feedback, shift cabin lighting to warm spectrum (2700 K)",

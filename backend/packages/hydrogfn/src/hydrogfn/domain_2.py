@@ -50,9 +50,11 @@ def glucose_2_1(
 
     Returns:
         ``param``, ``glucose_mmol_l``, ``glucose_mg_dl``, ``status``, ``action``.
-        mg/dL uses the spec's approximate 1 mM = 18 mg/dL. The spec's warning
-        (3.5-4.0) and nominal (4.0-7.0) bands overlap at 4.0, which is NOMINAL.
-        Above 7.0 mM (hyperglycemia) has no protocol: UNSPECIFIED.
+        mg/dL uses the spec's approximate 1 mM = 18 mg/dL. CRITICAL < 3.0 mM,
+        WARNING 3.0-3.9 mM, nominal 3.9-7.0 mM: the master plan's IHSG/ADA
+        Level 2 (< 3.0 mM) and Level 1 (< 3.9 mM) hypoglycemia cutoffs
+        (Finding 7) override the parameter spec's 3.5 and 4.0 mM. Above 7.0 mM
+        (hyperglycemia) has no protocol: UNSPECIFIED.
 
     Raises:
         ValueError: ``delta_ids`` is outside ``0 <= delta_ids < gm * vgs``; the
@@ -65,12 +67,12 @@ def glucose_2_1(
     glucose_mmol_l = -math.log1p(-delta_ids / saturation) / k_enz
     glucose_mg_dl = glucose_mmol_l * 18.0
 
-    if glucose_mmol_l < 3.5:
+    if glucose_mmol_l < 3.0:
         status, action = (
             Status.CRITICAL,
             "Mandatory rest alert, lock mission-critical EVA controls until nutrition intake confirmed",
         )
-    elif glucose_mmol_l < 4.0:
+    elif glucose_mmol_l < 3.9:
         status, action = Status.WARNING, "Consume nutritional gel packet"
     elif glucose_mmol_l <= 7.0:
         status, action = Status.NOMINAL, "Optimal energy balance"

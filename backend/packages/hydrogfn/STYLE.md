@@ -40,17 +40,17 @@ not live here.
 
 | Param | Tier 2 panel section | Feeds Tier 1 finding | Polling group |
 | --- | --- | --- | --- |
-| 1.1 ICP / strain | Hydrogel piezoresistive strain | #9 SANS & cephalic fluid shift | Biomechanics & Fluids |
-| 1.2 cTnI | GFET signal gating | none (Tier 2 only) | Metabolic & GFET |
-| 1.3 MAP / HR | none | #1 Orthostatic intolerance | Cardiovascular |
-| 2.1 Glucose | GFET signal gating | #7 Negative energy balance | Metabolic & GFET |
-| 2.2 Core temp | none | Tier 1 vitals row | none listed |
-| 3.1 NTx | Biomarker kinetics | #8 Bone demineralization | Metabolic & GFET |
-| 3.2 Joint angles | Hydrogel strain | 3D kinematic body model | Biomechanics & Fluids |
-| 4.1 Cortisol | Biomarker kinetics | #6 Behavioral health decline | Metabolic & GFET |
-| 4.2 CFE | Neural spectrum | #5 Sleep, #6 Behavioral | Neuro-Cognitive |
-| 4.3 SQI / mood | none | #5 Sleep, Tier 1 mood score | Neuro-Cognitive |
-| 5.1 IL-6 / TNF-α | none | none (Tier 2 only) | none listed |
+| 1.1 ICP / strain | Hydrogel piezoresistive strain | #9 SANS & cephalic fluid shift | Hydrogel Strain & Sweat |
+| 1.2 cTnI | GFET signal gating | #1 Orthostatic intolerance (event-triggered) | none listed |
+| 1.3 MAP / HR | none | #1 Orthostatic intolerance | Cardiovascular Vitals |
+| 2.1 Glucose | none | #7 Negative energy balance | GFET Molecular Markers |
+| 2.2 Core temp | none | #3 Acute infection (SIRS), Tier 1 vitals row | none listed |
+| 3.1 NTx | GFET signal gating, biomarker kinetics | #8 Bone demineralization | GFET Molecular Markers |
+| 3.2 Joint angles | Hydrogel strain | 3D kinematic body model | Hydrogel Strain & Sweat |
+| 4.1 Cortisol | GFET signal gating, biomarker kinetics | #6 Behavioral health & HPA-axis | GFET Molecular Markers |
+| 4.2 CFE | Neuro-cognitive spectrum | #5 Sleep, #6 Behavioral | Neuro-Cognitive & Sleep |
+| 4.3 SQI / mood | none | #5 Sleep, Tier 1 mood score | none listed |
+| 5.1 IL-6 / TNF-α | GFET signal gating | #3 Acute infection | GFET Molecular Markers |
 
 ## Tooling
 

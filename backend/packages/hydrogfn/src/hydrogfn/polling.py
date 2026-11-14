@@ -46,18 +46,19 @@ def poll_interval(channel: str, state: UserState) -> PollInterval:
 
     Returns:
         ``channel``, ``group``, ``state``, ``mode``, ``min_interval_s``,
-        ``max_interval_s``. The plan gives "Every 15 – 30 sec" for
+        ``max_interval_s``. The plan gives "Every 15–30 sec" for
         cardiovascular channels while active, so the two intervals can
-        differ; the scheduler may poll anywhere in between. Continuous is
-        1 Hz (1 s). Suspended and unspecified have no interval (``None``).
-        While sleeping:
+        differ; the scheduler may poll anywhere in between. Radiation & SPE
+        channels are continuous at 1 Hz (1 s). Suspended and unspecified have
+        no interval (``None``). While sleeping:
 
-        - ``cephalic_fluid_index`` is UNSPECIFIED: the group is "Suspended /
-          Paused", but the plan also says passive SANS tracking continues,
-          with no rate.
-        - ``eeg_theta_alpha_ratio`` is hourly ("Hourly EEG").
-        - ``pvt_reaction_time`` is UNSPECIFIED: the plan names only
-          actigraphy and EEG for sleep.
+        - ``cephalic_fluid_index`` is UNSPECIFIED: the group is "Suspended
+          (SANS passive)", and passive neck SANS monitoring continues, with
+          no rate.
+        - ``actigraphy`` is CONTINUOUS with no interval (``None``): the plan
+          says "Continuous Actigraphy" but gives no rate.
+        - ``eeg_theta_alpha_ratio`` and ``pvt_rt`` are UNSPECIFIED: the plan
+          names only actigraphy for sleep.
 
     Raises:
         ValueError: If ``channel`` is not in the plan's polling table.
@@ -67,9 +68,9 @@ def poll_interval(channel: str, state: UserState) -> PollInterval:
     suspended = (Mode.SUSPENDED, None, None)
     unspecified = (Mode.UNSPECIFIED, None, None)
 
-    # group: (channels, {state: (mode, min interval [s], max interval [s])}), master plan p.4-5
+    # group: (channels, {state: (mode, min interval [s], max interval [s])}), master plan p.6
     table = {
-        "Environmental & Safety": (
+        "Radiation & SPE Safety": (
             ("radiation_dose", "dose_rate", "spe_flag"),
             {
                 UserState.ACTIVE: cont,
@@ -78,35 +79,35 @@ def poll_interval(channel: str, state: UserState) -> PollInterval:
             },
         ),
         "Cardiovascular Vitals": (
-            ("heart_rate", "hrv_rmssd", "bp_systolic", "bp_diastolic"),
+            ("heart_rate", "hrv_rmssd", "bp_sys", "bp_dia"),
             {
                 UserState.ACTIVE: (Mode.PERIODIC, 15.0, 30.0),
                 UserState.RESTING: (Mode.PERIODIC, 5 * minute, 5 * minute),
                 UserState.SLEEPING: (Mode.PERIODIC, 15 * minute, 15 * minute),
             },
         ),
-        "Biomechanics & Fluids": (
-            ("cephalic_fluid_index", "sweat_rate", "joint_kinematics"),
+        "Hydrogel Strain & Sweat": (
+            ("cephalic_fluid_index", "sweat_rate", "kinematics"),
             {
                 UserState.ACTIVE: (Mode.PERIODIC, minute, minute),
                 UserState.RESTING: (Mode.PERIODIC, 15 * minute, 15 * minute),
                 UserState.SLEEPING: suspended,
             },
         ),
-        "Metabolic & GFET Markers": (
-            ("glucose", "lactate", "cortisol", "bone_ntx_pct_baseline"),
+        "GFET Molecular Markers": (
+            ("glucose", "lactate", "cortisol", "ntx_pct", "il6"),
             {
                 UserState.ACTIVE: (Mode.PERIODIC, 5 * minute, 5 * minute),
                 UserState.RESTING: (Mode.PERIODIC, 30 * minute, 30 * minute),
                 UserState.SLEEPING: (Mode.PERIODIC, hour, hour),
             },
         ),
-        "Neuro-Cognitive": (
-            ("eeg_theta_alpha_ratio", "pvt_reaction_time"),
+        "Neuro-Cognitive & Sleep": (
+            ("eeg_theta_alpha_ratio", "pvt_rt", "actigraphy"),
             {
                 UserState.ACTIVE: (Mode.PERIODIC, 15 * minute, 15 * minute),
                 UserState.RESTING: (Mode.PERIODIC, hour, hour),
-                UserState.SLEEPING: (Mode.PERIODIC, hour, hour),
+                UserState.SLEEPING: unspecified,
             },
         ),
     }
@@ -115,11 +116,10 @@ def poll_interval(channel: str, state: UserState) -> PollInterval:
         if channel in channels:
             mode, lo, hi = by_state[state]
             # sleep exceptions the group row cannot carry; see Returns
-            if state is UserState.SLEEPING and channel in (
-                "cephalic_fluid_index",
-                "pvt_reaction_time",
-            ):
+            if state is UserState.SLEEPING and channel == "cephalic_fluid_index":
                 mode, lo, hi = unspecified
+            if state is UserState.SLEEPING and channel == "actigraphy":
+                mode, lo, hi = Mode.CONTINUOUS, None, None
             return {
                 "channel": channel,
                 "group": group,
@@ -146,11 +146,11 @@ def alert_allowed(channel: str, state: UserState, status: str) -> bool:
             ``"nominal"``, ``"unspecified"``), as in ``hydrogfn.Status``.
 
     Returns:
-        ``True`` if the alert may fire. Nominal never alerts. Environmental &
-        Safety channels always alert ("Non-Negotiable Override: Independent
+        ``True`` if the alert may fire. Nominal never alerts. Radiation & SPE
+        Safety channels always alert ("Hardwired 1 Hz Override: Independent
         of user state"). While sleeping, other channels alert only when
-        critical (p.1: "strict sleep-protection locks for non-critical
-        telemetry"; p.4: "active hydration prompts lock out").
+        critical (p.1: "strict circadian sleep-protection locks for
+        non-critical telemetry"; p.6: "active hydration prompts lock out").
 
     Raises:
         ValueError: If ``channel`` is not in the plan's polling table.
@@ -159,7 +159,7 @@ def alert_allowed(channel: str, state: UserState, status: str) -> bool:
 
     if status == "nominal":
         return False
-    if group == "Environmental & Safety":
+    if group == "Radiation & SPE Safety":
         return True
     if state is UserState.SLEEPING:
         return status == "critical"

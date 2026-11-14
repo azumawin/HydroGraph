@@ -1,4 +1,4 @@
-"""Tests for hydrogfn.payload (structure from master plan p.6, section 5)."""
+"""Tests for hydrogfn.payload (structure from master plan p.8, section 5)."""
 
 import json
 import unittest
@@ -28,17 +28,26 @@ def _payload(
     """A tick with nominal vitals; ICP strain and the right joint strip vary."""
     freqs = [4 + 0.5 * i for i in range(19)]
     return telemetry_payload(
-        timestamp="2026-11-01T12:00:00Z",
+        timestamp="2026-11-14T12:00:00Z",
         user_state="ACTIVE",
         heart_rate_bpm=74,
         bp_systolic_mmhg=118,
         bp_diastolic_mmhg=78,
+        respiratory_rate_br_min=15,
+        spo2_pct=97.4,
         glucose=h.glucose_2_1(30.0),
         temperature=h.core_temperature_2_2(_thermistor_ohm(36.8)),
-        gauge=dynamic_gauge_factor(1.42),
+        news2_score=0,
+        cabin_ppco2_mmhg=2.4,
+        gauge=dynamic_gauge_factor(0.08),
         icp=h.cephalic_fluid_shift_1_1(0.45089 * (1 + 2.1 * icp_strain)),
         cortisol=h.cortisol_4_1(0.25),
         cortisol_di_ds_ratio=0.25,
+        cortisol_slope_status=h.Status.NOMINAL,
+        ntx_change_pct=18.5,
+        il6_pg_ml=1.8,
+        post_ared_window=False,
+        latent_virus_shedding="NO_DETECT",
         troponin=h.troponin_1_2(0.005),
         cfe=h.cognitive_fatigue_4_2(freqs, [1.0 if f < 8 else 2.0 for f in freqs]),
         joint_angles_deg={"left_knee_flexion": 112.4},
@@ -69,8 +78,48 @@ class TestTelemetryPayload(unittest.TestCase):
             sorted(payload["kinematics_3d_dummy"]),
             ["form_status", "left_knee_flexion_deg", "lumbar_asymmetry_ratio"],
         )
+        self.assertEqual(
+            list(payload["standard_vitals"]),
+            [
+                "heart_rate_bpm",
+                "blood_pressure_sys_mmHg",
+                "blood_pressure_dia_mmHg",
+                "respiratory_rate_br_min",
+                "spo2_pct",
+                "blood_glucose_mg_dL",
+                "zhf_core_temp_celsius",
+                "news2_aggregate_score",
+                "cabin_ppco2_mmHg",
+            ],
+        )
+        blocks = payload["advanced_biotransduction"]
+        self.assertEqual(
+            list(blocks["carrageenan_hydrogel"]),
+            [
+                "displacement_mm",
+                "strain_percentage",
+                "dynamic_gauge_factor",
+                "delta_R_over_R0",
+                "jugular_fluid_shift_pct",
+                "estimated_icp_mmHg",
+            ],
+        )
+        self.assertEqual(
+            list(blocks["graphene_gfet"]),
+            [
+                "isf_cortisol_nM",
+                "cortisol_diurnal_slope_status",
+                "bone_ntx_pct_baseline",
+                "il6_pg_mL",
+                "post_ared_exercise_window",
+                "latent_virus_shedding",
+                "hs_troponin_ng_mL",
+                "delta_Ids_over_I0",
+                "eeg_theta_alpha_ratio",
+            ],
+        )
         self.assertAlmostEqual(
-            payload["standard_vitals"]["body_temp_celsius"], 36.8, delta=0.02
+            payload["standard_vitals"]["zhf_core_temp_celsius"], 36.8, delta=0.02
         )
 
     def test_json_serializable(self) -> None:
@@ -86,11 +135,12 @@ class TestTelemetryPayload(unittest.TestCase):
         self.assertEqual(copilot["recommended_actions"], [])
 
     def test_two_warnings_like_plan_example(self) -> None:
-        """ICP and form warnings give the p.6 example's two-hazard shape."""
+        """ICP and form warnings give the p.8 example's two-hazard shape."""
         copilot = _payload(0.0142, 0.03)["copilot_decision_engine"]
         self.assertEqual(copilot["overall_status"], "WARNING")
         self.assertEqual(
-            copilot["primary_hazard"], "SANS Fluid Shift + Exercise Form Asymmetry"
+            copilot["primary_hazard"],
+            "SANS Jugular Fluid Shift + Exercise Form Asymmetry",
         )
         self.assertEqual(
             copilot["recommended_actions"],
@@ -102,13 +152,13 @@ class TestTelemetryPayload(unittest.TestCase):
 
     def test_critical_finding_ranks_first(self) -> None:
         """A critical finding in others becomes the hazard and the first action."""
-        shelter = radiation_exposure_10(100, 10, True, max_dose_rate_usv_h=50)
+        shelter = radiation_exposure_10(100, 10, True)
         copilot = _payload(0.0142, 0.04, (shelter,))["copilot_decision_engine"]
         self.assertEqual(copilot["overall_status"], "CRITICAL")
         self.assertEqual(copilot["primary_hazard"], "Radiation Exposure")
         self.assertEqual(
             copilot["recommended_actions"][0],
-            "1. Move to shielded shelter zone immediately",
+            "1. Move to shielded storm shelter zone immediately and confirm hatch closure",
         )
 
 

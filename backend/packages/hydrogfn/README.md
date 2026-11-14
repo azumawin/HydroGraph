@@ -65,11 +65,11 @@ response.
    from hydrogfn.findings import orthostatic_intolerance_1
 
    reading = hydrogfn.glucose_2_1(24.0)
-   finding = orthostatic_intolerance_1(120, 95, 70, 105)
+   finding = orthostatic_intolerance_1(120, 95, 80, 72, 70, 105, None)
    ```
 
    Tier 1 findings take values the backend has collected or computed upstream (e.g.
-   supine and standing BP). Store whatever history a finding needs; the library keeps none.
+   supine and standing BP; `None` for an hs-cTnI assay that was not run). Store whatever history a finding needs; the library keeps none.
 3. Gate alerts with the stored user state:
 
    ```python
@@ -84,17 +84,18 @@ response.
 4. Schedule the next poll per channel:
 
    ```python
-   from hydrogfn.polling import Mode, poll_interval
+   from hydrogfn.polling import poll_interval
 
    interval = poll_interval("glucose", state)
-   if interval["mode"] in (Mode.CONTINUOUS, Mode.PERIODIC):
+   if interval["min_interval_s"] is not None:
        due = now - last_polled_at["glucose"] >= interval["min_interval_s"]
    ```
 
-   `SUSPENDED` and `UNSPECIFIED` have no interval; the backend decides what
-   to do for those.
+   `SUSPENDED` and `UNSPECIFIED` have no interval, nor does sleeping
+   `actigraphy` (`CONTINUOUS`, but the plan gives no rate); the backend
+   decides what to do for those.
 
-5. Build the p.6 telemetry payload from the results of one tick:
+5. Build the p.8 telemetry payload from the results of one tick:
 
    ```python
    from hydrogfn.payload import telemetry_payload
@@ -104,8 +105,8 @@ response.
 
    `copilot_decision_engine` (overall status, hazard, numbered actions) is
    derived from the results passed in, so filter them with `alert_allowed`
-   first. Broadcasting every 1000 ms and reusing last values between polls
-   is the backend's job.
+   first. Sending the payload and reusing last values between polls is the
+   backend's job; the plan gives no broadcast rate.
 
 The backend also has to:
 

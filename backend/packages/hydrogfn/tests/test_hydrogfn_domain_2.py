@@ -41,8 +41,6 @@ class TestDomain2Research(unittest.TestCase):
         """Level 2 hypoglycemia < 54 mg/dL = 3.0 mM (unboundmedicine 5-Minute Clinical Consult)."""
         self.assertEqual(_glucose(2.9)["status"], Status.CRITICAL)
 
-    # RESEARCH MISMATCH: code returns WARNING at 3.95 mM (~71 mg/dL) vs not hypoglycemic, threshold 3.9 mM / 70 mg/dL (unboundmedicine 5-Minute Clinical Consult)
-    @unittest.expectedFailure
     def test_glucose_3_95_nominal(self) -> None:
         """3.95 mM (~71 mg/dL) is not hypoglycemic (unboundmedicine 5-Minute Clinical Consult)."""
         self.assertEqual(_glucose(3.95)["status"], Status.NOMINAL)

@@ -17,20 +17,31 @@ class StandardVitals(TypedDict):
     heart_rate_bpm: float
     blood_pressure_sys_mmHg: float
     blood_pressure_dia_mmHg: float
-    blood_sugar_mM: float
-    body_temp_celsius: float
+    respiratory_rate_br_min: float
+    spo2_pct: float
+    blood_glucose_mg_dL: float
+    zhf_core_temp_celsius: float
+    news2_aggregate_score: int
+    cabin_ppco2_mmHg: float
 
 
 class CarrageenanHydrogel(TypedDict):
+    displacement_mm: float
     strain_percentage: float
-    delta_R_over_R0: float
     dynamic_gauge_factor: float
+    delta_R_over_R0: float
+    jugular_fluid_shift_pct: float
     estimated_icp_mmHg: float
 
 
 class GrapheneGfet(TypedDict):
-    cortisol_nM: float
-    troponin_ng_mL: float
+    isf_cortisol_nM: float
+    cortisol_diurnal_slope_status: str
+    bone_ntx_pct_baseline: float
+    il6_pg_mL: float
+    post_ared_exercise_window: bool
+    latent_virus_shedding: str
+    hs_troponin_ng_mL: float
     delta_Ids_over_I0: float
     eeg_theta_alpha_ratio: float
 
@@ -62,12 +73,21 @@ def telemetry_payload(
     heart_rate_bpm: float,
     bp_systolic_mmhg: float,
     bp_diastolic_mmhg: float,
+    respiratory_rate_br_min: float,
+    spo2_pct: float,
     glucose: GlucoseResult,
     temperature: TemperatureResult,
+    news2_score: int,
+    cabin_ppco2_mmhg: float,
     gauge: GaugeFactorResult,
     icp: IcpResult,
     cortisol: CortisolResult,
     cortisol_di_ds_ratio: float,
+    cortisol_slope_status: Status,
+    ntx_change_pct: float,
+    il6_pg_ml: float,
+    post_ared_window: bool,
+    latent_virus_shedding: str,
     troponin: TroponinResult,
     cfe: CfeResult,
     joint_angles_deg: Mapping[str, float],
@@ -76,7 +96,7 @@ def telemetry_payload(
     others: Sequence[Mapping[str, object]] = (),
 ) -> TelemetryPayload:
     r"""
-    Section 5: Standard JSON telemetry payload (1000 ms broadcast).
+    Section 5: Verified JSON telemetry payload.
 
     References:
         None given in the plan for the payload.
@@ -89,13 +109,25 @@ def telemetry_payload(
         heart_rate_bpm: Heart rate [bpm].
         bp_systolic_mmhg: Systolic blood pressure [mmHg].
         bp_diastolic_mmhg: Diastolic blood pressure [mmHg].
+        respiratory_rate_br_min: Respiratory rate [breaths/min].
+        spo2_pct: Peripheral oxygen saturation [%].
         glucose: Result of :func:`hydrogfn.glucose_2_1`.
         temperature: Result of :func:`hydrogfn.core_temperature_2_2`.
+        news2_score: Aggregate NEWS2 score [0-20].
+        cabin_ppco2_mmhg: Ambient CO2 partial pressure [mmHg].
         gauge: Result of :func:`hydrogfn.gauge_factor.dynamic_gauge_factor`.
-        icp: Result of :func:`hydrogfn.cephalic_fluid_shift_1_1`.
+        icp: Result of :func:`hydrogfn.cephalic_fluid_shift_1_1`; its
+            ``strain_pct`` is the jugular fluid shift.
         cortisol: Result of :func:`hydrogfn.cortisol_4_1`.
         cortisol_di_ds_ratio: The :math:`\Delta I_{ds} / I_0` reading passed
             to ``cortisol_4_1`` [unitless].
+        cortisol_slope_status: Status of the diurnal cortisol degradation
+            slope, evaluated upstream from the cortisol series.
+        ntx_change_pct: Bone NTx change from the preflight baseline [%].
+        il6_pg_ml: GFET IL-6 concentration [pg/mL].
+        post_ared_window: Within 2 h after an ARED workout.
+        latent_virus_shedding: Latent virus shedding result, passed through
+            (the plan's example: ``"NO_DETECT"``).
         troponin: Result of :func:`hydrogfn.troponin_1_2`.
         cfe: Result of :func:`hydrogfn.cognitive_fatigue_4_2`.
         joint_angles_deg: Joint angles for the 3D dummy, keyed without the
@@ -107,7 +139,7 @@ def telemetry_payload(
             (``blood_pressure_heart_rate_1_3``, ``hydrogfn.findings``, ...).
 
     Returns:
-        The p.6 payload. Statuses are upper case as in the plan's example
+        The p.8 payload. Statuses are upper case as in the plan's example
         (``"WARNING"``). ``copilot_decision_engine`` is derived from every
         result passed (``glucose`` ... ``form`` and ``others``):
 
@@ -121,11 +153,12 @@ def telemetry_payload(
         Apply ``hydrogfn.polling.alert_allowed`` before passing results in: a result
         left out is neither a hazard nor an action. ``delta_Ids_over_I0`` is
         the cortisol channel; the plan's example does not say which GFET it
-        is.
+        is. ``blood_glucose_mg_dL`` uses 1 mM = 18 mg/dL, as in
+        ``glucose_2_1``.
     """
     # parameter / finding id -> hazard name for primary_hazard
     names = {
-        "1.1": "SANS Fluid Shift",
+        "1.1": "SANS Jugular Fluid Shift",
         "1.2": "Myocardial Strain",
         "1.3": "Blood Pressure / Heart Rate",
         "2.1": "Glucose",
@@ -191,19 +224,30 @@ def telemetry_payload(
             "heart_rate_bpm": heart_rate_bpm,
             "blood_pressure_sys_mmHg": bp_systolic_mmhg,
             "blood_pressure_dia_mmHg": bp_diastolic_mmhg,
-            "blood_sugar_mM": glucose["glucose_mmol_l"],
-            "body_temp_celsius": temperature["temperature_c"],
+            "respiratory_rate_br_min": respiratory_rate_br_min,
+            "spo2_pct": spo2_pct,
+            "blood_glucose_mg_dL": glucose["glucose_mg_dl"],
+            "zhf_core_temp_celsius": temperature["temperature_c"],
+            "news2_aggregate_score": news2_score,
+            "cabin_ppco2_mmHg": cabin_ppco2_mmhg,
         },
         "advanced_biotransduction": {
             "carrageenan_hydrogel": {
+                "displacement_mm": gauge["displacement_mm"],
                 "strain_percentage": gauge["strain_pct"],
-                "delta_R_over_R0": gauge["delta_r_over_r0"],
                 "dynamic_gauge_factor": gauge["gauge_factor"],
+                "delta_R_over_R0": gauge["delta_r_over_r0"],
+                "jugular_fluid_shift_pct": icp["strain_pct"],
                 "estimated_icp_mmHg": icp["icp_mmhg"],
             },
             "graphene_gfet": {
-                "cortisol_nM": cortisol["cortisol_nm"],
-                "troponin_ng_mL": troponin["ctni_ng_ml"],
+                "isf_cortisol_nM": cortisol["cortisol_nm"],
+                "cortisol_diurnal_slope_status": Status(cortisol_slope_status).name,
+                "bone_ntx_pct_baseline": ntx_change_pct,
+                "il6_pg_mL": il6_pg_ml,
+                "post_ared_exercise_window": post_ared_window,
+                "latent_virus_shedding": latent_virus_shedding,
+                "hs_troponin_ng_mL": troponin["ctni_ng_ml"],
                 "delta_Ids_over_I0": cortisol_di_ds_ratio,
                 "eeg_theta_alpha_ratio": cfe["cfe_ratio"],
             },

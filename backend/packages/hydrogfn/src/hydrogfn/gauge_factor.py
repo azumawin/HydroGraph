@@ -8,8 +8,9 @@ from typing import TypedDict
 
 class GaugeFactorResult(TypedDict):
     section: str
+    displacement_mm: float
     strain_pct: float
-    range: str
+    zone: str
     gauge_factor: float
     delta_r_over_r0: float
 
@@ -17,137 +18,154 @@ class GaugeFactorResult(TypedDict):
 class StrainResult(TypedDict):
     section: str
     delta_r_over_r0: float
+    displacement_mm: float
     strain_pct: float
-    range: str
+    zone: str
     gauge_factor: float
-    candidates_pct: list[float]
 
 
-def dynamic_gauge_factor(strain_pct: float) -> GaugeFactorResult:
+def dynamic_gauge_factor(
+    displacement_mm: float,
+    l0_mm: float = 50.0,
+) -> GaugeFactorResult:
     r"""
     Section 3A: Segmented dynamic gauge factor (carrageenan ionic hydrogel strip).
 
-    Fractional resistance change:
+    Mechanical strain and fractional resistance shift:
+        \epsilon = \frac{\Delta L}{L_0}
         \frac{\Delta R}{R_0} = GF(\epsilon) \cdot \epsilon
 
-    Segmented gauge factor, linear inside each range:
-        GF(\epsilon) = GF_{\text{lo}} + (GF_{\text{hi}} - GF_{\text{lo}})
-            \cdot \frac{\epsilon - \epsilon_{\text{lo}}}{\epsilon_{\text{hi}} - \epsilon_{\text{lo}}}
+    Gauge factor inside a zone, a power law through the zone's end points:
+        GF(\Delta L) = GF_{\text{lo}} \cdot
+            \left(\frac{\Delta L}{\Delta L_{\text{lo}}}\right)^{p},\quad
+        p = \frac{\ln(GF_{\text{hi}} / GF_{\text{lo}})}
+            {\ln(\Delta L_{\text{hi}} / \Delta L_{\text{lo}})}
 
     References:
-        Liu, X. et al. Highly conductive and stable double network carrageenan
-        organohydrogels for advanced strain sensing and signal recognition arrays.
+        Saputra, A. N. et al. (2025). Piezoelectric effect of κ-carrageenan as a
+        tool for force sensor. Sensors, 25(15), 4594.
 
-        Bučinskas, V., Žaimis, U., Udris, D., Petronienė, J.J., & Dzedzickis, A.
-        (2025). Piezoelectric Effect of k-Carrageenan as a Tool for Force Sensor.
-        Sensors, 25, 4594. https://doi.org/10.3390/s25154594
+        Zhang, Y. et al. (2025). Ionic hydrogel sensors toward next-gen
+        personalized healthcare. Advanced Materials, 37, 2509122.
+
+        Roy, S. et al. (2024). Jugular venous pulse waveform acquisition using
+        contact piezo sensor. IEEE Transactions on Biomedical Engineering,
+        71(8), 2410–2419.
+
+        Ding, X.-R. et al. (2019). Pulse transit time technique for cuffless
+        unobtrusive blood pressure measurement: From theory to algorithm.
+        BioMedical Engineering OnLine, 18(1), 33.
 
     Args:
-        strain_pct: Elongation :math:`\epsilon` [%].
+        displacement_mm: Linear displacement :math:`\Delta L` [mm].
+        l0_mm: Unstretched gauge length :math:`L_0` [mm].
 
     Returns:
-        ``section``, ``strain_pct``, ``range``, ``gauge_factor``,
-        ``delta_r_over_r0``. Range A is 0-5 % (GF 1180.75), B is 5-15 %
-        (GF 233.48-389.58), C is 15-30 % (GF 74.34-114.86). The plan gives B
-        and C only as spans; GF is interpolated linearly from the first value
-        at the low end to the second at the high end. The shared boundaries
-        5 % and 15 % belong to the lower range.
+        ``section``, ``displacement_mm``, ``strain_pct``, ``zone``,
+        ``gauge_factor``, ``delta_r_over_r0``. Zone 1 is 0.01-0.10 mm (GF
+        1180.75 down to 114.86), zone 2 is 0.20-1.00 mm (54.24 down to 9.53),
+        zone 3 is 4.00-5.05 mm (0.94 down to 0.56). The plan gives each GF as
+        a span; its "ultra-high initial contact sensitivity" and the p.8
+        example (GF 153.2 at 0.08 mm, near the top of zone 1) put the high
+        value at the low end. The power law is the closest simple curve to
+        that example (144.0 at 0.08 mm; linear gives 351.7).
 
     Raises:
-        ValueError: If ``strain_pct`` is outside 0-30 %, where the plan
-            defines no gauge factor.
+        ValueError: If ``displacement_mm`` is in none of the three zones (below
+            0.01 mm, in the gaps 0.10-0.20 mm and 1.00-4.00 mm, or above
+            5.05 mm), where the plan defines no gauge factor.
     """
-    # (range, strain lo [%], strain hi [%], GF at lo, GF at hi), master plan p.3
-    ranges = (
-        ("A", 0.0, 5.0, 1180.75, 1180.75),
-        ("B", 5.0, 15.0, 233.48, 389.58),
-        ("C", 15.0, 30.0, 74.34, 114.86),
+    # (zone, dL lo [mm], dL hi [mm], GF at lo, GF at hi), master plan p.5
+    zones = (
+        ("1", 0.01, 0.10, 1180.75, 114.86),
+        ("2", 0.20, 1.00, 54.24, 9.53),
+        ("3", 4.00, 5.05, 0.94, 0.56),
     )
 
-    for name, e_lo, e_hi, gf_lo, gf_hi in ranges:
-        if e_lo <= strain_pct <= e_hi:
-            gf = gf_lo + (gf_hi - gf_lo) * (strain_pct - e_lo) / (e_hi - e_lo)
+    for name, d_lo, d_hi, gf_lo, gf_hi in zones:
+        if d_lo <= displacement_mm <= d_hi:
+            p = math.log(gf_hi / gf_lo) / math.log(d_hi / d_lo)
+            gf = gf_lo * math.pow(displacement_mm / d_lo, p)
+            strain = displacement_mm / l0_mm  # fraction
             return {
                 "section": "3A",
-                "strain_pct": strain_pct,
-                "range": name,
+                "displacement_mm": displacement_mm,
+                "strain_pct": round(strain * 100, 3),
+                "zone": name,
                 "gauge_factor": round(gf, 2),
-                "delta_r_over_r0": round(gf * strain_pct / 100, 4),
+                "delta_r_over_r0": round(gf * strain, 6),
             }
 
-    raise ValueError(f"strain {strain_pct} % is outside the 0-30 % defined by the plan")
-
-
-def strain_from_resistance(delta_r_over_r0: float) -> StrainResult:
-    r"""
-    Section 3A: Strain from a hydrogel resistance reading (inverse of the segmented GF).
-
-    Fractional resistance change:
-        \frac{\Delta R}{R_0} = GF(\epsilon) \cdot \epsilon
-
-    Solved for strain inside one range (what the sensor reading gives us), with
-    :math:`s = (GF_{\text{hi}} - GF_{\text{lo}}) / (\epsilon_{\text{hi}} - \epsilon_{\text{lo}})`:
-        s \epsilon^2 + (GF_{\text{lo}} - s \epsilon_{\text{lo}}) \epsilon - \frac{\Delta R}{R_0} = 0
-
-    References:
-        Liu, X. et al. Highly conductive and stable double network carrageenan
-        organohydrogels for advanced strain sensing and signal recognition arrays.
-
-        Bučinskas, V., Žaimis, U., Udris, D., Petronienė, J.J., & Dzedzickis, A.
-        (2025). Piezoelectric Effect of k-Carrageenan as a Tool for Force Sensor.
-        Sensors, 25, 4594. https://doi.org/10.3390/s25154594
-
-    Args:
-        delta_r_over_r0: Fractional resistance change :math:`\Delta R / R_0` [unitless].
-
-    Returns:
-        ``section``, ``delta_r_over_r0``, ``strain_pct``, ``range``,
-        ``gauge_factor``, ``candidates_pct``. The plan's GF jumps down at 5 %
-        and 15 %, so one reading can match a strain in more than one range.
-        ``candidates_pct`` lists every match, lowest first; ``strain_pct``,
-        ``range`` and ``gauge_factor`` describe the lowest. Ranges and
-        interpolation as in :func:`dynamic_gauge_factor`.
-
-    Raises:
-        ValueError: If ``delta_r_over_r0`` is negative or above every range's
-            maximum (59.0375, the top of range A), so no strain in 0-30 %
-            produces it.
-    """
-    # (range, strain lo [%], strain hi [%], GF at lo, GF at hi), master plan p.3
-    ranges = (
-        ("A", 0.0, 5.0, 1180.75, 1180.75),
-        ("B", 5.0, 15.0, 233.48, 389.58),
-        ("C", 15.0, 30.0, 74.34, 114.86),
+    raise ValueError(
+        f"displacement {displacement_mm} mm is in none of the plan's GF zones"
     )
 
-    matches: list[tuple[float, str, float]] = []
-    for name, e_lo_pct, e_hi_pct, gf_lo, gf_hi in ranges:
-        e_lo, e_hi = e_lo_pct / 100, e_hi_pct / 100  # fractions
-        s = (gf_hi - gf_lo) / (e_hi - e_lo)
-        b = gf_lo - s * e_lo
-        if s == 0:
-            roots = [delta_r_over_r0 / b]
-        else:
-            disc = b * b + 4 * s * delta_r_over_r0
-            roots = [] if disc < 0 else [(-b + math.sqrt(disc)) / (2 * s)]
-        for e in roots:
-            # boundary strain belongs to the lower range, so B and C exclude e_lo
-            above_lo = e >= e_lo if name == "A" else e > e_lo
-            if above_lo and e <= e_hi:
-                gf = gf_lo + s * (e - e_lo)
-                matches.append((e * 100, name, gf))
 
-    if delta_r_over_r0 < 0 or not matches:
-        raise ValueError(
-            f"delta_r_over_r0 {delta_r_over_r0} matches no strain in the plan's 0-30 %"
-        )
+def strain_from_resistance(
+    delta_r_over_r0: float,
+    l0_mm: float = 50.0,
+) -> StrainResult:
+    r"""
+    Section 3A: Displacement and strain from a hydrogel resistance reading.
 
-    strain_pct, name, gf = min(matches)
-    return {
-        "section": "3A",
-        "delta_r_over_r0": delta_r_over_r0,
-        "strain_pct": round(strain_pct, 3),
-        "range": name,
-        "gauge_factor": round(gf, 2),
-        "candidates_pct": sorted(round(m[0], 3) for m in matches),
-    }
+    Fractional resistance shift, with the zone power law of
+    :func:`dynamic_gauge_factor`:
+        \frac{\Delta R}{R_0} = \frac{GF_{\text{lo}}}{L_0 \, \Delta L_{\text{lo}}^{p}}
+            \cdot \Delta L^{1 + p}
+
+    Solved for displacement (what the sensor reading gives us):
+        \Delta L = \left(\frac{\Delta R}{R_0} \cdot
+            \frac{L_0 \, \Delta L_{\text{lo}}^{p}}{GF_{\text{lo}}}\right)^{1 / (1 + p)}
+
+    References:
+        Saputra, A. N. et al. (2025). Piezoelectric effect of κ-carrageenan as a
+        tool for force sensor. Sensors, 25(15), 4594.
+
+        Zhang, Y. et al. (2025). Ionic hydrogel sensors toward next-gen
+        personalized healthcare. Advanced Materials, 37, 2509122.
+
+    Args:
+        delta_r_over_r0: Fractional resistance shift :math:`\Delta R / R_0` [unitless].
+        l0_mm: Unstretched gauge length :math:`L_0` [mm].
+
+    Returns:
+        ``section``, ``delta_r_over_r0``, ``displacement_mm``, ``strain_pct``,
+        ``zone``, ``gauge_factor``. In every zone GF falls faster than strain
+        rises, so ΔR/R0 falls slightly as displacement grows, and the three
+        zones cover separate ΔR/R0 bands (at L0 = 50 mm: zone 1
+        0.2297-0.2362, zone 2 0.1906-0.2170, zone 3 0.0566-0.0752). A reading
+        therefore matches at most one displacement.
+
+    Raises:
+        ValueError: If ``delta_r_over_r0`` is in none of the zones' bands, so
+            no displacement the plan defines produces it.
+    """
+    # (zone, dL lo [mm], dL hi [mm], GF at lo, GF at hi), master plan p.5
+    zones = (
+        ("1", 0.01, 0.10, 1180.75, 114.86),
+        ("2", 0.20, 1.00, 54.24, 9.53),
+        ("3", 4.00, 5.05, 0.94, 0.56),
+    )
+
+    for name, d_lo, d_hi, gf_lo, gf_hi in zones:
+        # band edges at the precision dynamic_gauge_factor returns
+        y_at_lo = round(gf_lo * d_lo / l0_mm, 6)
+        y_at_hi = round(gf_hi * d_hi / l0_mm, 6)
+        if y_at_hi <= delta_r_over_r0 <= y_at_lo:
+            p = math.log(gf_hi / gf_lo) / math.log(d_hi / d_lo)
+            d = math.pow(
+                delta_r_over_r0 * l0_mm * math.pow(d_lo, p) / gf_lo, 1 / (1 + p)
+            )
+            gf = gf_lo * math.pow(d / d_lo, p)
+            return {
+                "section": "3A",
+                "delta_r_over_r0": delta_r_over_r0,
+                "displacement_mm": round(d, 4),
+                "strain_pct": round(d / l0_mm * 100, 3),
+                "zone": name,
+                "gauge_factor": round(gf, 2),
+            }
+
+    raise ValueError(
+        f"delta_r_over_r0 {delta_r_over_r0} matches no displacement in the plan's GF zones"
+    )

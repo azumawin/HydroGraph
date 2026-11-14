@@ -57,6 +57,17 @@ def cephalic_fluid_shift_1_1(
         Zheng, W., Jiang, Z. Highly conductive and stable double network carrageenan
         organohydrogels for advanced strain sensing and signal recognition arrays.
 
+        Lawley, J. S. et al. (2017). Effect of gravity and microgravity on
+        intracranial pressure. The Journal of Physiology, 595(6), 2115–2127.
+
+        Rabineau, K. M. et al. (2022). Acute effects of postural changes and
+        lower body positive/negative pressure on intracranial pressure and
+        jugular venous hemodynamics. Frontiers in Physiology, 13, 933450.
+
+        Roy, S. et al. (2024). Jugular venous pulse waveform acquisition using
+        contact piezo sensor. IEEE Transactions on Biomedical Engineering,
+        71(8), 2410–2419.
+
     Args:
         r: Live sensor resistance :math:`R` [Ω].
         r0: Un-stretched baseline resistance :math:`R_0` [Ω], at t = 0.

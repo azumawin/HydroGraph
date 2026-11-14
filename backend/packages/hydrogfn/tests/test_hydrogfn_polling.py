@@ -1,4 +1,4 @@
-"""Tests for hydrogfn.polling (expected values from master plan p.4-5, section 4)."""
+"""Tests for hydrogfn.polling (expected values from master plan p.6, section 4)."""
 
 import unittest
 
@@ -9,7 +9,7 @@ class TestPollInterval(unittest.TestCase):
     """Interval lookup per channel and state."""
 
     def test_radiation_continuous_in_every_state(self) -> None:
-        """Environmental & Safety: continuous 1 Hz, independent of state."""
+        """Radiation & SPE Safety: continuous 1 Hz, independent of state."""
         for state in UserState:
             result = poll_interval("dose_rate", state)
             self.assertEqual(result["mode"], Mode.CONTINUOUS)
@@ -28,25 +28,28 @@ class TestPollInterval(unittest.TestCase):
             poll_interval("cortisol", UserState.SLEEPING)["min_interval_s"], 3600.0
         )
 
-    def test_joint_kinematics_suspended_in_sleep(self) -> None:
-        """Biomechanics & Fluids, sleeping: suspended."""
-        result = poll_interval("joint_kinematics", UserState.SLEEPING)
+    def test_kinematics_suspended_in_sleep(self) -> None:
+        """Hydrogel Strain & Sweat, sleeping: suspended."""
+        result = poll_interval("kinematics", UserState.SLEEPING)
         self.assertEqual(result["mode"], Mode.SUSPENDED)
         self.assertIsNone(result["min_interval_s"])
 
     def test_sleep_exceptions_unspecified(self) -> None:
-        """Passive SANS tracking and PVT have no sleep rate in the plan."""
-        for channel in ("cephalic_fluid_index", "pvt_reaction_time"):
+        """Passive SANS tracking, EEG and PVT have no sleep rate in the plan."""
+        for channel in ("cephalic_fluid_index", "eeg_theta_alpha_ratio", "pvt_rt"):
             result = poll_interval(channel, UserState.SLEEPING)
             self.assertEqual(result["mode"], Mode.UNSPECIFIED)
 
-    def test_eeg_hourly_in_sleep(self) -> None:
-        """Neuro-Cognitive, sleeping: "Hourly EEG"."""
+    def test_actigraphy_continuous_in_sleep(self) -> None:
+        """Neuro-Cognitive & Sleep, sleeping: "Continuous Actigraphy", no rate given."""
+        result = poll_interval("actigraphy", UserState.SLEEPING)
+        self.assertEqual(result["mode"], Mode.CONTINUOUS)
+        self.assertIsNone(result["min_interval_s"])
+
+    def test_il6_is_a_gfet_channel(self) -> None:
+        """GFET Molecular Markers now lists il6, every 30 min while resting."""
         self.assertEqual(
-            poll_interval("eeg_theta_alpha_ratio", UserState.SLEEPING)[
-                "min_interval_s"
-            ],
-            3600.0,
+            poll_interval("il6", UserState.RESTING)["min_interval_s"], 1800.0
         )
 
     def test_unknown_channel_raises(self) -> None:
