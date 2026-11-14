@@ -49,10 +49,8 @@ const EnvironmentSwitcher = () => {
     <div className="vitals-dashboard-environment">
       <label className="vitals-dashboard-environment-select-label">
         <Globe className="vitals-dashboard-icon is-environment" />
-        <span className="vitals-dashboard-environment-select-caption">
-          {ENVIRONMENT_LABELS.SELECT}
-        </span>
         <select
+          aria-label={ENVIRONMENT_LABELS.SELECT}
           className="vitals-dashboard-environment-select"
           value={environmentId}
           disabled={isSelectingEnvironment}

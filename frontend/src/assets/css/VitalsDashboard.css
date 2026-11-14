@@ -59,11 +59,6 @@
   gap: 8px;
 }
 
-.vitals-dashboard .vitals-dashboard-environment-select-caption {
-  color: var(--color-text-secondary);
-  font-size: 12px;
-}
-
 .vitals-dashboard .vitals-dashboard-environment-select {
   padding: 4px 8px;
   border: 1px solid var(--color-border);
