@@ -6,6 +6,8 @@ import unittest
 from hydrogfn.domain_3 import bone_resorption_3_1, joint_kinematics_3_2
 from hydrogfn.shared import Status
 
+# at t_MET = 0 the spec's response is dIds/I0 = alpha_bone * [NTx], alpha_bone = 0.042 nM^-1
+
 
 def _ratio_for_angle(theta_deg: float) -> float:
     """Forward sensor equation: dR/R0 = GF * t * theta / (2 L), defaults t=1.2, L=50, GF=2.1."""
@@ -19,12 +21,12 @@ class TestDomain3(unittest.TestCase):
     @unittest.expectedFailure
     def test_ntx_healthy_is_nominal(self) -> None:
         """NTx 12.0 nM is inside 5.4-24.2 nM (https://nslijlab.testcatalog.org/show/NTX)."""
-        result = bone_resorption_3_1(12.0, 0.0, alpha_bone=1.0)
+        result = bone_resorption_3_1(12.0 * 0.042, 0.0)
         self.assertEqual(result["status"], Status.NOMINAL)
 
     def test_ntx_above_range_not_nominal(self) -> None:
         """NTx 30.0 nM is above 24.2 nM (https://nslijlab.testcatalog.org/show/NTX)."""
-        result = bone_resorption_3_1(30.0, 0.0, alpha_bone=1.0)
+        result = bone_resorption_3_1(30.0 * 0.042, 0.0)
         self.assertNotEqual(result["status"], Status.NOMINAL)
 
     def test_symmetric_90_degrees(self) -> None:

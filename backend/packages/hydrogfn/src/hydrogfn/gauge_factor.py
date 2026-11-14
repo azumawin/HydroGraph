@@ -24,10 +24,7 @@ class StrainResult(TypedDict):
     gauge_factor: float
 
 
-def dynamic_gauge_factor(
-    displacement_mm: float,
-    l0_mm: float = 50.0,
-) -> GaugeFactorResult:
+def dynamic_gauge_factor(displacement_mm: float) -> GaugeFactorResult:
     r"""
     Section 3A: Segmented dynamic gauge factor (carrageenan ionic hydrogel strip).
 
@@ -58,7 +55,6 @@ def dynamic_gauge_factor(
 
     Args:
         displacement_mm: Linear displacement :math:`\Delta L` [mm].
-        l0_mm: Unstretched gauge length :math:`L_0` [mm].
 
     Returns:
         ``section``, ``displacement_mm``, ``strain_pct``, ``zone``,
@@ -75,6 +71,7 @@ def dynamic_gauge_factor(
             0.01 mm, in the gaps 0.10-0.20 mm and 1.00-4.00 mm, or above
             5.05 mm), where the plan defines no gauge factor.
     """
+    l0_mm = 50.0  # unstretched gauge length L_0 [mm]
     # (zone, dL lo [mm], dL hi [mm], GF at lo, GF at hi), master plan p.5
     zones = (
         ("1", 0.01, 0.10, 1180.75, 114.86),
@@ -101,10 +98,7 @@ def dynamic_gauge_factor(
     )
 
 
-def strain_from_resistance(
-    delta_r_over_r0: float,
-    l0_mm: float = 50.0,
-) -> StrainResult:
+def strain_from_resistance(delta_r_over_r0: float) -> StrainResult:
     r"""
     Section 3A: Displacement and strain from a hydrogel resistance reading.
 
@@ -126,13 +120,12 @@ def strain_from_resistance(
 
     Args:
         delta_r_over_r0: Fractional resistance shift :math:`\Delta R / R_0` [unitless].
-        l0_mm: Unstretched gauge length :math:`L_0` [mm].
 
     Returns:
         ``section``, ``delta_r_over_r0``, ``displacement_mm``, ``strain_pct``,
         ``zone``, ``gauge_factor``. In every zone GF falls faster than strain
         rises, so ΔR/R0 falls slightly as displacement grows, and the three
-        zones cover separate ΔR/R0 bands (at L0 = 50 mm: zone 1
+        zones cover separate ΔR/R0 bands (zone 1
         0.2297-0.2362, zone 2 0.1906-0.2170, zone 3 0.0566-0.0752). A reading
         therefore matches at most one displacement.
 
@@ -140,6 +133,7 @@ def strain_from_resistance(
         ValueError: If ``delta_r_over_r0`` is in none of the zones' bands, so
             no displacement the plan defines produces it.
     """
+    l0_mm = 50.0  # unstretched gauge length L_0 [mm]
     # (zone, dL lo [mm], dL hi [mm], GF at lo, GF at hi), master plan p.5
     zones = (
         ("1", 0.01, 0.10, 1180.75, 114.86),

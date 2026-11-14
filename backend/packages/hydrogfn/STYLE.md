@@ -95,7 +95,8 @@ def glucose_N_1(...) -> GlucoseResult:
 - No classes other than the result `TypedDict`s, no recursion, no I/O, no global state.
 - Each parameter / finding function is self-contained: no shared helpers between parameters. A
   small amount of repeated code is preferred over coupling.
-- Physical constants are local variables with a comment giving the value and units.
+- Spec constants (physical constants, model coefficients, fixed sensor
+  geometry) are local variables with a comment giving the units, not arguments.
 
 ## Names
 
@@ -111,8 +112,12 @@ Names put the number(s) **after** a descriptive name:
 ## Signatures
 
 - Live sensor readings come first and have no default.
-- Calibration constants that the spec supplies come after, with the spec value as
-  the default. Never invent a default the spec does not give; make it required.
+- Only values measured per sensor or per person are arguments after them, with
+  the spec value as the default (`r0`, the sensor's resistance at t = 0;
+  `icp_baseline`, the person's supine ICP). Everything else the spec fixes is a
+  local constant.
+- A value the spec needs but never gives is a required keyword-only argument
+  (`*, w1, w2`). Never invent a default.
 - `snake_case` names, lowercase even for symbols (`n_b`, `lambda_d`, `k_enz`).
 - Add a unit suffix when the unit is not obvious from the name:
   `_mm`, `_ms`, `_s`, `_days`, `_hours`, `_nm`, `_ng_ml`, `_pct`.
@@ -206,8 +211,8 @@ else:
 
 ## Validation
 
-Callers supply finite inputs and valid calibration values; do not check for
-NaN, infinity or sign of constants. The one exception: when a function inverts
+Callers supply finite inputs and valid baselines; do not check for
+NaN, infinity or sign of inputs. The one exception: when a function inverts
 a saturating sensor response, raise `ValueError` for readings outside the range
 the inverse is defined on (e.g. `0 <= reading < saturation`) instead of
 returning a plausible-looking but meaningless value. Document it under `Raises`.

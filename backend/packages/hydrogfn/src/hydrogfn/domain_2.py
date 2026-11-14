@@ -26,9 +26,6 @@ class TemperatureResult(TypedDict):
 
 def glucose_2_1(
     delta_ids: float,
-    gm: float = 120.0,
-    vgs: float = 0.4,
-    k_enz: float = 0.185,
 ) -> GlucoseResult:
     r"""
     Parameter 2.1: Blood glucose & inadequate nutrition (enzymatic GFET).
@@ -44,9 +41,6 @@ def glucose_2_1(
 
     Args:
         delta_ids: Drain-source current shift from baseline :math:`\Delta I_{ds}` [µA].
-        gm: Transconductance :math:`g_m` [µS].
-        vgs: Gate-source voltage :math:`V_{gs}` [V].
-        k_enz: Enzyme saturation constant :math:`k_{\text{enz}}` [mM^-1].
 
     Returns:
         ``param``, ``glucose_mmol_l``, ``glucose_mg_dl``, ``status``, ``action``.
@@ -58,8 +52,13 @@ def glucose_2_1(
 
     Raises:
         ValueError: ``delta_ids`` is outside ``0 <= delta_ids < gm * vgs``; the
-            response saturates at ``gm * vgs``, so no concentration matches.
+            response saturates at :math:`g_m V_{gs}` = 48 µA, so no
+            concentration matches.
     """
+    gm = 120.0  # transconductance g_m [µS]
+    vgs = 0.4  # gate-source voltage V_gs [V]
+    k_enz = 0.185  # enzyme saturation constant k_enz [mM^-1]
+
     saturation = gm * vgs  # µA
     if not 0 <= delta_ids < saturation:
         raise ValueError(f"delta_ids={delta_ids} µA outside [0, {saturation}) µA")
@@ -90,9 +89,6 @@ def glucose_2_1(
 
 def core_temperature_2_2(
     r_t: float,
-    a: float = 1.1292e-3,
-    b: float = 2.3412e-4,
-    c: float = 8.7654e-8,
 ) -> TemperatureResult:
     r"""
     Parameter 2.2: Core body temperature & thermoregulation failure (hydrogel thermistor).
@@ -110,10 +106,6 @@ def core_temperature_2_2(
 
     Args:
         r_t: Thermistor resistance :math:`R_T` [Ω].
-        a: Steinhart-Hart coefficient :math:`A` [K^-1].
-        b: Steinhart-Hart coefficient :math:`B` [K^-1].
-        c: Steinhart-Hart coefficient :math:`C` [K^-1]; the spec labels it
-            K^-3, but every term must be K^-1 for the equation to balance.
 
     Returns:
         ``param``, ``temperature_k``, ``temperature_c``, ``status``, ``action``.
@@ -121,6 +113,12 @@ def core_temperature_2_2(
         so the 37.5-38.0 gap is WARNING too. Below 36.5 °C (hypothermia) has
         no protocol: UNSPECIFIED.
     """
+    # Steinhart-Hart coefficients [K^-1]; the spec labels C as K^-3, but
+    # ln(R_T) has no unit, so every term must be K^-1 like 1/T
+    a = 1.1292e-3
+    b = 2.3412e-4
+    c = 8.7654e-8
+
     log_r = math.log(r_t)
     temperature_k = 1.0 / (a + b * log_r + c * log_r**3)
     temperature_c = temperature_k - 273.15

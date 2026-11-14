@@ -1,6 +1,6 @@
 # Spec problems
 
-Fix first: replace the Debye term in `NSA_hydrograph.md:99` (Parameter 1.2). It is physically wrong at the spec's own default values.
+Fix first: replace the Debye term in `NSA_hydrograph.md:99` (Parameter 1.2). It is physically wrong at the spec's own constant values.
 
 This lists only problems in the two spec documents: `NSA_hydrograph.md` (the parameter spec) and `Tiered Master System Specification & Implementation Plan.pdf` (the master plan, cited by page). Problems in the code are tracked by the `RESEARCH MISMATCH` tests in `tests/`, not here.
 
@@ -11,7 +11,7 @@ Time estimates are for whoever owns the spec. "Edit" means changing a number or 
 1. **Parameter 1.2: Debye term** (`NSA_hydrograph.md:99`). About 1 hour (decision).
    - The spec uses `ΔVt = qN_b/(ε_r ε_0) · δ · (1 − δ/(2λ_D))`.
    - Research: the potential of charge bound farther from the graphene than the Debye length decays as `exp(−d/λ_D)`, so the shift falls toward zero as δ grows.
-   - With the spec defaults (δ = 3.5 nm, λ_D = 1 nm), the bracket is −0.75. The model predicts a reversed signal that grows with distance.
+   - With the spec's values (δ = 3.5 nm, λ_D = 1 nm), the bracket is −0.75. The model predicts a reversed signal that grows with distance.
    - Fix: use an exponential screening factor, for example `· exp(−δ/λ_D)`, and re-derive the 1.2 mV flag.
    - Sources: [arXiv 1708.08958](https://arxiv.org/pdf/1708.08958), [arXiv 2208.10742](https://arxiv.org/pdf/2208.10742), [arXiv 2402.02707 (λ_D ≈ 1 nm in sweat/saliva)](https://arxiv.org/pdf/2402.02707)
 2. **Parameter 4.1: cortisol thresholds** (`NSA_hydrograph.md:337-341`; master plan p.3, p.5). About 1 hour (decision).

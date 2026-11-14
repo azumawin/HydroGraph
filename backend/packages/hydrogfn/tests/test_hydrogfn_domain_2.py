@@ -18,8 +18,15 @@ def _glucose(mmol_l: float):
 
 
 def _temp(celsius: float):
-    """Run core_temperature_2_2 with r_t=1, a=1/T, b=c=0 so ln terms vanish."""
-    return core_temperature_2_2(1.0, a=1.0 / (celsius + 273.15), b=0.0, c=0.0)
+    """Run core_temperature_2_2 on the thermistor resistance that reads as celsius."""
+    lo, hi = 100.0, 100000.0  # NTC: resistance falls as temperature rises
+    for _ in range(100):
+        mid = (lo + hi) / 2
+        if core_temperature_2_2(mid)["temperature_c"] > celsius:
+            lo = mid
+        else:
+            hi = mid
+    return core_temperature_2_2((lo + hi) / 2)
 
 
 class TestDomain2Research(unittest.TestCase):

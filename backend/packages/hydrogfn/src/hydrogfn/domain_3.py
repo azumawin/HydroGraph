@@ -27,8 +27,6 @@ class JointResult(TypedDict):
 def bone_resorption_3_1(
     di_ds_ratio: float,
     t_met_days: float,
-    alpha_bone: float = 0.042,
-    beta_flight: float = 0.0012,
 ) -> NtxResult:
     r"""
     Parameter 3.1: Bone mineral resorption, microgravity osteopenia (anti-NTx GFET biosensor).
@@ -46,13 +44,14 @@ def bone_resorption_3_1(
         di_ds_ratio: Transconductance current reduction :math:`\Delta I_{ds} / I_0`
             as a fraction [unitless].
         t_met_days: Mission elapsed time :math:`t_{\text{MET}}` [days].
-        alpha_bone: Resorption calibration constant :math:`\alpha_{\text{bone}}` [nM^-1].
-        beta_flight: Microgravity resorption rate :math:`\beta_{\text{flight}}` [day^-1].
 
     Returns:
         ``param``, ``ntx_nm``, ``status``, ``action``.
         Nominal < 10.0 nM, WARNING 10.0-15.0 nM, CRITICAL > 15.0 nM.
     """
+    alpha_bone = 0.042  # resorption calibration constant [nM^-1]
+    beta_flight = 0.0012  # microgravity resorption rate [day^-1]
+
     # rounded before thresholds so 0.42 / 0.042 = 9.9999... still counts as 10.0
     ntx_nm = round(di_ds_ratio / (alpha_bone * math.exp(-beta_flight * t_met_days)), 2)
 
@@ -80,9 +79,6 @@ def bone_resorption_3_1(
 def joint_kinematics_3_2(
     dr_r0_left: float,
     dr_r0_right: float,
-    t_film_mm: float = 1.2,
-    l0_mm: float = 50.0,
-    gf: float = 2.1,
 ) -> JointResult:
     r"""
     Parameter 3.2: Joint kinematics & exercise form degradation (carrageenan flexure strips, left/right pair).
@@ -106,9 +102,6 @@ def joint_kinematics_3_2(
     Args:
         dr_r0_left: Fractional resistance change :math:`\Delta R / R_0` of the left strip [unitless].
         dr_r0_right: Fractional resistance change :math:`\Delta R / R_0` of the right strip [unitless].
-        t_film_mm: Hydrogel thickness :math:`t_{\text{film}}` [mm].
-        l0_mm: Un-stretched gauge length :math:`L_0` [mm].
-        gf: Gauge factor :math:`GF` [unitless].
 
     Returns:
         ``param``, ``left_flexion_deg``, ``right_flexion_deg``, ``asymmetry_ratio``,
@@ -116,6 +109,10 @@ def joint_kinematics_3_2(
         <= 115°. The spec defines no CRITICAL level and leaves asymmetry
         1.15-1.25 undefined, so anything outside nominal is WARNING.
     """
+    t_film_mm = 1.2  # hydrogel thickness [mm]
+    l0_mm = 50.0  # un-stretched gauge length [mm]
+    gf = 2.1  # gauge factor [unitless]
+
     left_deg = math.degrees(abs(2 * l0_mm / t_film_mm * dr_r0_left / gf))
     right_deg = math.degrees(abs(2 * l0_mm / t_film_mm * dr_r0_right / gf))
 

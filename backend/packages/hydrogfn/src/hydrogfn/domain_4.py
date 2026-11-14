@@ -35,8 +35,6 @@ class SleepMoodResult(TypedDict):
 
 def cortisol_4_1(
     di_ds_ratio: float,
-    i_max: float = 0.65,
-    k_d: float = 14.8,
 ) -> CortisolResult:
     r"""
     Parameter 4.1: Cortisol, stress & HPA-axis activation (aptamer / graphene-SERS biosensor).
@@ -57,8 +55,6 @@ def cortisol_4_1(
 
     Args:
         di_ds_ratio: Transconductance drop :math:`\Delta I_{ds} / I_0` as a fraction [unitless].
-        i_max: Drop at full saturation :math:`I_{\max}` [unitless].
-        k_d: Aptamer dissociation constant :math:`K_d` [nM].
 
     Returns:
         ``param``, ``cortisol_nm``, ``status``, ``action``.
@@ -69,8 +65,12 @@ def cortisol_4_1(
 
     Raises:
         ValueError: ``di_ds_ratio`` is outside ``0 <= di_ds_ratio < i_max``; the
-            response saturates at ``i_max``, so no concentration matches.
+            response saturates at :math:`I_{\max}` = 0.65, so no concentration
+            matches.
     """
+    i_max = 0.65  # drop at full saturation I_max [unitless]
+    k_d = 14.8  # aptamer dissociation constant K_d [nM]
+
     if not 0 <= di_ds_ratio < i_max:
         raise ValueError(f"di_ds_ratio={di_ds_ratio} outside [0, {i_max})")
 

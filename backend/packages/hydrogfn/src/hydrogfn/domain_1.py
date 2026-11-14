@@ -35,8 +35,6 @@ class BpHrResult(TypedDict):
 def cephalic_fluid_shift_1_1(
     r: float,
     r0: float = 0.45089,
-    gf: float = 2.1,
-    k1: float = 185.4,
     icp_baseline: float = 9.5,
 ) -> IcpResult:
     r"""
@@ -70,15 +68,18 @@ def cephalic_fluid_shift_1_1(
 
     Args:
         r: Live sensor resistance :math:`R` [Ω].
-        r0: Un-stretched baseline resistance :math:`R_0` [Ω], at t = 0.
-        gf: Gauge factor :math:`GF` [unitless].
-        k1: Pressure-strain scaling :math:`k_1` [mmHg/strain].
-        icp_baseline: :math:`\text{ICP}_{\text{baseline}}` [mmHg].
+        r0: Un-stretched baseline resistance :math:`R_0` [Ω], measured on
+            this sensor at t = 0.
+        icp_baseline: This person's supine resting
+            :math:`\text{ICP}_{\text{baseline}}` [mmHg].
 
     Returns:
         ``param``, ``strain_pct``, ``icp_mmhg``, ``status``, ``action``.
         Status is the worst of the ICP and strain thresholds.
     """
+    gf = 2.1  # gauge factor GF [unitless]
+    k1 = 185.4  # pressure-strain scaling k_1 [mmHg/strain]
+
     strain = ((r - r0) / r0) / gf  # fraction, 0.0143 = 1.43%
     icp = k1 * strain + icp_baseline  # mmHg
     pct = strain * 100
@@ -104,10 +105,6 @@ def cephalic_fluid_shift_1_1(
 
 def troponin_1_2(
     ctni_ng_ml: float,
-    n_b: float = 2.5e14,
-    eps_r: float = 78.4,
-    delta: float = 3.5e-9,
-    lambda_d: float = 1.0e-9,
 ) -> TroponinResult:
     r"""
     Parameter 1.2: Cardiac Troponin I (cTnI), myocardial strain & ischemia (GFET array).
@@ -123,10 +120,6 @@ def troponin_1_2(
     Args:
         ctni_ng_ml: Troponin concentration :math:`[\text{cTnI}]` [ng/mL]; the spec
             gives no N_b -> concentration conversion, so it is passed in directly.
-        n_b: Bound biomarker surface density :math:`N_b` [molecules/m^2].
-        eps_r: Relative permittivity of the bio-fluid interface :math:`\epsilon_r` [unitless].
-        delta: Molecular binding layer height :math:`\delta` [m].
-        lambda_d: Debye screening length :math:`\lambda_D` [m], 0.8-1.2 nm.
 
     Returns:
         ``param``, ``delta_vt_mv``, ``ctni_ng_ml``, ``status``, ``action``.
@@ -134,6 +127,10 @@ def troponin_1_2(
     """
     q = 1.602e-19  # elementary charge [C]
     eps_0 = 8.854e-12  # vacuum permittivity [F/m]
+    n_b = 2.5e14  # bound biomarker surface density N_b [molecules/m^2]
+    eps_r = 78.4  # relative permittivity of the bio-fluid interface [unitless]
+    delta = 3.5e-9  # molecular binding layer height [m]
+    lambda_d = 1.0e-9  # Debye screening length [m], 0.8-1.2 nm
 
     delta_vt = (q * n_b) / (eps_r * eps_0) * delta * (1 - delta / (2 * lambda_d))  # V
     # with delta > 2*lambda_d the bracket goes negative, so compare the magnitude
@@ -164,8 +161,6 @@ def troponin_1_2(
 def blood_pressure_heart_rate_1_3(
     ptt_ms: float,
     dt_peak_peak_s: float,
-    a: float = -45.2,
-    b: float = 280.5,
 ) -> BpHrResult:
     r"""
     Parameter 1.3: Continuous blood pressure (BP) & heart rate (HR) (hydrogel pulse patches + dry ECG).
@@ -185,8 +180,6 @@ def blood_pressure_heart_rate_1_3(
         ptt_ms: Pulse transit time neck -> wrist :math:`\text{PTT}` [ms].
         dt_peak_peak_s: Time between consecutive systolic peaks
             :math:`\Delta t_{\text{peak-peak}}` [s].
-        a: Arterial stiffness scaling factor :math:`a` [mmHg/ms].
-        b: Baseline pressure offset :math:`b` [mmHg].
 
     Returns:
         ``param``, ``map_mmhg``, ``hr_bpm``, ``status``, ``action``.
@@ -196,6 +189,9 @@ def blood_pressure_heart_rate_1_3(
         and covers HR > 120). Low MAP or low HR has no protocol: UNSPECIFIED,
         unless the other metric is WARNING.
     """
+    a = -45.2  # arterial stiffness scaling factor [mmHg/ms]
+    b = 280.5  # baseline pressure offset [mmHg]
+
     map_mmhg = a * math.log(ptt_ms) + b
     hr_bpm = 60 / dt_peak_peak_s
 
