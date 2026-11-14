@@ -30,23 +30,22 @@
   }
 
   &.is-finding {
-    align-self: stretch;
-    max-width: none;
-    padding: 0;
-    overflow: hidden;
-    border: 1px solid var(--color-divider);
-    background: var(--color-glass-tint);
+    display: grid;
+    gap: 2px;
     white-space: normal;
   }
 
   &.is-warning {
     --finding-color: var(--color-status-warning);
+
+    border-color: color-mix(in srgb, var(--finding-color) 35%, transparent);
   }
 
   &.is-critical {
     --finding-color: var(--color-status-critical);
 
-    border-color: color-mix(in srgb, var(--finding-color) 60%, transparent);
+    border-color: color-mix(in srgb, var(--finding-color) 55%, transparent);
+    background: color-mix(in srgb, var(--finding-color) 10%, var(--color-glass-tint));
   }
 
   &.is-error {
@@ -107,62 +106,16 @@
   height: 16px;
 }
 
-.vitals-dashboard .vitals-dashboard-chat-finding-heading {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  color: var(--finding-color);
-  background: color-mix(in srgb, var(--finding-color) 14%, transparent);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 16px;
-}
-
-.vitals-dashboard
-  .vitals-dashboard-chat-message.is-critical
-  .vitals-dashboard-chat-finding-heading {
-  color: var(--color-background);
-  background: var(--finding-color);
-
-  & .vitals-dashboard-chat-finding-time {
-    color: var(--color-background);
-  }
-}
-
-.vitals-dashboard .vitals-dashboard-chat-finding-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-.vitals-dashboard .vitals-dashboard-chat-finding-time {
-  margin-left: auto;
-  color: var(--color-text-secondary);
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-}
-
-.vitals-dashboard .vitals-dashboard-chat-finding-body {
-  display: grid;
-  gap: 4px;
-  padding: 10px 12px 12px;
-}
-
-.vitals-dashboard .vitals-dashboard-chat-finding-name {
+.vitals-dashboard .vitals-dashboard-chat-finding-line,
+.vitals-dashboard .vitals-dashboard-chat-finding-triggers {
   margin: 0;
-  font-size: 14px;
+}
+
+.vitals-dashboard .vitals-dashboard-chat-finding-status {
+  color: var(--finding-color);
   font-weight: 600;
-  line-height: 20px;
 }
 
 .vitals-dashboard .vitals-dashboard-chat-finding-triggers {
-  margin: 0;
   color: var(--color-text-secondary);
-}
-
-.vitals-dashboard .vitals-dashboard-chat-finding-action {
-  margin: 4px 0 0;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-divider);
 }

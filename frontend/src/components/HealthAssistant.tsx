@@ -53,7 +53,6 @@ const HealthAssistant = () => {
           name,
           triggers: finding.triggers,
           action: finding.action,
-          announcedAt: Date.now(),
         },
       });
     }
