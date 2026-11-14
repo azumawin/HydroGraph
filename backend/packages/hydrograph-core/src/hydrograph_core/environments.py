@@ -6,9 +6,11 @@ at 0, 0.166 and 0.377 g, and round-trip comm delay from 1.2 s to 26 min.
 overhead; ``mars_transit`` is the worst case, 0 g with full autonomy and
 unshielded GCR; the two surfaces hold the partial-gravity points.
 
-Display and simulation metadata only: no finding takes an environment
-argument, so switching one changes what the dashboard shows and what
-plausible telemetry a simulator generates, never how a reading is graded.
+Mostly display and simulation metadata: switching one changes what the
+dashboard shows and what telemetry a simulator generates. The one exception is
+radiation: the dose rate is graded as a spike above the environment's
+``baseline_dose_rate_usv_h`` (``evaluate_reading`` and Finding 10), because the
+lunar and Mars-transit backgrounds already exceed the plan's absolute 50 uSv/h.
 
 ``comm_delay_rt_s`` is **round trip** - the delay that decides whether the
 crew can ask the ground at all. It is really a range (Mars is 364-2684 s
@@ -17,7 +19,8 @@ round trip); each value here is one representative number for the demo.
 ``baseline_dose_rate_usv_h`` is the measured nominal GCR dose-equivalent rate
 with the crew inside the habitat or vehicle, in the unit Finding 10 compares
 against. Note that the lunar surface and Mars transit baselines are already
-above that finding's fixed 50 uSv/h warning cutoff.
+above the plan's absolute 50 uSv/h warning cutoff, which is why that cutoff is
+applied above the baseline instead.
 
 ``storm_shelter_available`` is whether "move to the shielded storm shelter",
 Finding 10's action card, is a thing the crew can actually do. True for all
@@ -98,3 +101,6 @@ ENVIRONMENTS: Final[Mapping[str, EnvironmentInfo]] = MappingProxyType(
         },
     }
 )
+
+DEFAULT_ENVIRONMENT: Final = "iss_leo"
+"""The environment in effect until one is selected."""

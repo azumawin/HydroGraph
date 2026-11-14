@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     # third party
     "rest_framework",
     "drf_spectacular",
+    "corsheaders",
     # local
     "api",
 ]
@@ -65,6 +66,7 @@ SPECTACULAR_SETTINGS = {
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -95,7 +97,7 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": os.environ.get("DJANGO_DB_PATH", BASE_DIR / "db.sqlite3"),
         # WAL: the stream's reads never wait on the simulator's writes.
         # NORMAL: no disk flush per insert (safe with WAL; a crash loses at most
         # the last few readings).
@@ -133,3 +135,16 @@ MAILERS = {
         "BACKEND": "django.core.mail.backends.console.EmailBackend",
     },
 }
+
+# runserver logs every request; with the simulator posting several per second that
+# buries everything else, so only 4xx/5xx responses are logged.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "loggers": {"django.channels.server": {"level": "WARNING"}},
+}
+
+# The frontend dev server is another origin, and proxying it buffers the stream,
+# so the API answers any origin. There is no auth to protect.
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_URLS_REGEX = r"^/api/.*$"
