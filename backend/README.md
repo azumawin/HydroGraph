@@ -71,16 +71,42 @@ straight from core (`hydrograph_core.environments`):
 ```json
 {
   "environments": [
-    { "id": "lunar_surface", "gravity_g": 0.166, "comm_delay_s": 2.6 },
-    { "id": "mars_surface", "gravity_g": 0.377, "comm_delay_s": 600.0 }
+    {
+      "id": "lunar_surface",
+      "name": "Lunar surface",
+      "gravity_g": 0.166,
+      "comm_delay_rt_s": 2.6,
+      "baseline_dose_rate_usv_h": 57.1,
+      "storm_shelter_available": true,
+      "day_length_h": 708.7
+    }
   ]
 }
 ```
 
+Four environments, in dropdown order: `iss_leo`, `lunar_surface`, `mars_transit`,
+`mars_surface`. They cover the two axes without redundancy — gravity at 0 / 0.166 /
+0.377 g, round-trip delay from 1.2 s to 26 min — with `mars_transit` as the worst
+case (0 g, full autonomy, unshielded GCR).
+
+| field | meaning |
+| --- | --- |
+| `comm_delay_rt_s` | **round-trip** delay: can the crew ask the ground at all |
+| `baseline_dose_rate_usv_h` | measured nominal GCR rate inside the habitat, in Finding 10's unit |
+| `storm_shelter_available` | whether Finding 10's "move to the storm shelter" is possible |
+| `day_length_h` | natural light-dark cycle, Finding 5's circadian premise |
+
+Delay is really a range (Mars round trip is 364–2684 s); each value is one
+representative number for the demo. Dose rates are measured values, cited in
+`hydrograph_core.environments` — note that `lunar_surface` (57.1) and `mars_transit`
+(76.7) sit **above** Finding 10's fixed 50 µSv/h warning cutoff, so that finding warns
+at rest in those environments until the cutoff becomes baseline-relative.
+
 Static, so one fetch is enough. The stream `dictionary` event carries the same list
 (both call `environments_payload()`), so a client that opens the stream needs neither
 this endpoint nor a second fetch. Nothing in the backend reads the selection yet: no
-finding takes an environment input, so switching changes only what the frontend shows.
+finding takes an environment input, so switching changes only what the frontend shows
+and what a simulator generates.
 
 ## Readings endpoints
 

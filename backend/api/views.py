@@ -59,8 +59,12 @@ def health(_request: Request) -> Response:
                                 "type": "string",
                                 "enum": list(hydrograph_core.ENVIRONMENTS),
                             },
+                            "name": {"type": "string"},
                             "gravity_g": {"type": "number"},
-                            "comm_delay_s": {"type": "number"},
+                            "comm_delay_rt_s": {"type": "number"},
+                            "baseline_dose_rate_usv_h": {"type": "number"},
+                            "storm_shelter_available": {"type": "boolean"},
+                            "day_length_h": {"type": "number"},
                         },
                     },
                 }

@@ -108,8 +108,12 @@ class ChannelEntry(TypedDict):
 
 class EnvironmentEntry(TypedDict):
     id: str
+    name: str
     gravity_g: float
-    comm_delay_s: float
+    comm_delay_rt_s: float
+    baseline_dose_rate_usv_h: float
+    storm_shelter_available: bool
+    day_length_h: float
 
 
 class FindingEntry(TypedDict):

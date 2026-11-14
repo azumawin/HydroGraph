@@ -27,11 +27,22 @@ def test_environments_lists_the_predefined_set(client: APIClient) -> None:
     response = client.get(reverse("environments"))
 
     assert response.status_code == 200
-    assert cast("dict[str, object]", response.json()) == {
-        "environments": [
-            {"id": "lunar_surface", "gravity_g": 0.166, "comm_delay_s": 2.6},
-            {"id": "mars_surface", "gravity_g": 0.377, "comm_delay_s": 600.0},
-        ]
+    payload = cast("dict[str, object]", response.json())
+    environments = cast("list[dict[str, object]]", payload["environments"])
+    assert [e["id"] for e in environments] == [
+        "iss_leo",
+        "lunar_surface",
+        "mars_transit",
+        "mars_surface",
+    ]
+    assert environments[1] == {
+        "id": "lunar_surface",
+        "name": "Lunar surface",
+        "gravity_g": 0.166,
+        "comm_delay_rt_s": 2.6,
+        "baseline_dose_rate_usv_h": 57.1,
+        "storm_shelter_available": True,
+        "day_length_h": 708.7,
     }
 
 

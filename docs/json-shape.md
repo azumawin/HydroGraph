@@ -91,8 +91,15 @@ join it to readings by `channel` and to findings by `id`.
 ```json
 {
   "environments": [
-    { "id": "lunar_surface", "gravity_g": 0.166, "comm_delay_s": 2.6 },
-    { "id": "mars_surface", "gravity_g": 0.377, "comm_delay_s": 600 }
+    {
+      "id": "lunar_surface",
+      "name": "Lunar surface",
+      "gravity_g": 0.166,
+      "comm_delay_rt_s": 2.6,
+      "baseline_dose_rate_usv_h": 57.1,
+      "storm_shelter_available": true,
+      "day_length_h": 708.7
+    }
   ],
   "channels": {
     "bp_systolic": {
@@ -113,7 +120,20 @@ join it to readings by `channel` and to findings by `id`.
 - `channels` has one entry per channel the backend accepts (the simulator's 34).
 - `findings` has all 10 findings; `channels` lists each one's inputs, empty for
   the three that are not monitored.
-- `comm_delay_s` is really a range; simplified to one number for the demo.
+- `environments` has four entries, in dropdown order: `iss_leo`, `lunar_surface`,
+  `mars_transit`, `mars_surface`. `name` is the dropdown label.
+- `comm_delay_rt_s` is the **round-trip** delay — the one that decides whether the
+  crew can ask the ground. It is really a range (Mars round trip is 364–2684 s);
+  simplified to one number per environment for the demo.
+- `baseline_dose_rate_usv_h` is the measured nominal GCR rate inside the habitat, in
+  the same unit as finding 10's `dose_rate_usv_h`, so a client can show "elevated"
+  against the local baseline instead of an absolute number.
+- `storm_shelter_available` says whether finding 10's shelter action is possible; it
+  is `true` for all four habitat interiors, and would be `false` for an EVA.
+- `day_length_h` is the natural light-dark cycle (1.52 h in LEO, 24.66 h on Mars,
+  708.7 h on the Moon; 24 h in transit, where the crew sets its own schedule).
+- No finding takes an environment input, so the selection is display and simulation
+  metadata: it changes nothing about how a reading is graded.
 - `body_regions` makes the clickable body figure data-driven instead of a
   hardcoded SVG switch statement.
 
