@@ -93,4 +93,3 @@ reports must not be inferred from the generated CFE or cabin signal. Registering
 the new CFE channel in the receiver, a five-second evaluation loop and a resolved
 severity policy remain prerequisites
 for the source's end-to-end Critical Red Alert. See `badscenario2.md`, section 7.
-

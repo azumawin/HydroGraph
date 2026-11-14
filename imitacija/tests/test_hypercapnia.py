@@ -199,20 +199,19 @@ def test_core_mapping_and_thresholds(monkeypatch):
         pytest.skip("backend core checkout is not present")
     monkeypatch.syspath_prepend(str(core))
     from hydrograph_core.findings import hypoxia_co2_2_2
-    from hydrograph_core.shared import Status
 
     items = acquire(demo())
     last = {o.reading.channel: o.reading.value for o in items}
     result = hypoxia_co2_2_2(last["spo2"] * 100, False, last["ambient_ppco2"] / MMHG_TO_PA, False)
-    assert result["status"] == Status.WARNING
+    assert result["status"] == "warning"
     assert "scrubber" in result["action"]
     for spo2, co2, expected in [
-        (97, 2.2, Status.NOMINAL),
-        (94, 3, Status.NOMINAL),
-        (93.99, 3, Status.WARNING),
-        (94, 3.01, Status.WARNING),
-        (90, 2.2, Status.WARNING),
-        (89.99, 2.2, Status.CRITICAL),
+        (97, 2.2, "nominal"),
+        (94, 3, "nominal"),
+        (93.99, 3, "warning"),
+        (94, 3.01, "warning"),
+        (90, 2.2, "warning"),
+        (89.99, 2.2, "critical"),
     ]:
         assert hypoxia_co2_2_2(spo2, False, co2, False)["status"] == expected
 
