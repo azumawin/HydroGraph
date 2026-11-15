@@ -20,7 +20,8 @@ const BodyModel = ({ regionEvaluations }: BodyModelProps) => {
   const theme = getComputedStyle(canvas);
   const neutralColor = theme.getPropertyValue(BODY_MODEL_THEME.NEUTRAL).trim();
   const evaluationColors = {
-    nominal: neutralColor,
+    nominal: theme.getPropertyValue(BODY_MODEL_THEME.NOMINAL).trim(),
+    // Measured, but the specs grade no cutoff for it: nothing to colour.
     unspecified: neutralColor,
     warning: theme.getPropertyValue(BODY_MODEL_THEME.WARNING).trim(),
     critical: theme.getPropertyValue(BODY_MODEL_THEME.CRITICAL).trim(),

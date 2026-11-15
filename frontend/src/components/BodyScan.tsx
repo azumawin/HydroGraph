@@ -3,7 +3,12 @@ import { ScanLine } from "lucide-react";
 import { Component, Suspense } from "react";
 import type { ReactNode } from "react";
 import type { Evaluation } from "../api/Service.ts";
-import { BODY_SCAN_VIEW, worstEvaluation } from "./model/ModelConstants.ts";
+import { BODY_SCAN_REGION_GROUPS } from "../Constants.ts";
+import {
+  BODY_SCAN_VIEW,
+  groupEvaluationByRegion,
+  worstEvaluation,
+} from "./model/ModelConstants.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
 import BodyModel from "./model/BodyModel.tsx";
 import BodyScanRegions from "./BodyScanRegions.tsx";
@@ -40,6 +45,10 @@ const BodyScan = () => {
       regionEvaluations[region] = worstEvaluation([regionEvaluations[region], reading.evaluation]);
     }
   }
+  // The model is drawn by the legend's groups, so every part of the body that
+  // belongs to a group with a reading is coloured, not only the ten parts a
+  // channel names directly. The legend itself keeps the per-region map.
+  const drawnEvaluations = groupEvaluationByRegion(BODY_SCAN_REGION_GROUPS, regionEvaluations);
 
   return (
     <section className="vitals-dashboard-panel vitals-dashboard-body-scan">
@@ -84,7 +93,7 @@ const BodyScan = () => {
                   position={BODY_SCAN_VIEW.RIM_LIGHT_POSITION}
                   intensity={BODY_SCAN_VIEW.RIM_LIGHT_INTENSITY}
                 />
-                <BodyModel regionEvaluations={regionEvaluations} />
+                <BodyModel regionEvaluations={drawnEvaluations} />
               </Canvas>
             </Suspense>
           </BodyScanErrorBoundary>

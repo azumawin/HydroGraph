@@ -1,4 +1,4 @@
-import type { Evaluation } from "../../api/Service.ts";
+import type { Evaluation } from "../../api/types.ts";
 
 export const BODY_SCAN_VIEW = {
   CAMERA_POSITION: [0, 0, 100] as [number, number, number],
@@ -48,8 +48,12 @@ export type BodyRegion = (typeof BODY_REGIONS)[keyof typeof BODY_REGIONS];
 
 export const BODY_REGION_IDS = Object.values(BODY_REGIONS);
 
+// The legend's own colours: a part reads green, amber or red exactly as its row
+// does, and stays neutral while nothing in it has been read. "No threshold" is
+// a reading the specs grade no cutoff for, so it is measured but not coloured.
 export const BODY_MODEL_THEME = {
   NEUTRAL: "--color-body-neutral",
+  NOMINAL: "--color-status-nominal",
   WARNING: "--color-status-warning",
   CRITICAL: "--color-status-critical",
 };
@@ -73,6 +77,37 @@ export const worstEvaluation = (
         : worst,
     undefined,
   );
+
+export type BodyRegionGroup = {
+  LABEL: string;
+  REGIONS: readonly string[];
+};
+
+// What each part of the body is drawn with: the worst reading anywhere in the
+// group the legend puts that part in.
+//
+// Only ten of the twenty-three parts carry a channel of their own. The arms,
+// the joints and the feet are measured only through their group, if at all, and
+// `heart` -- which five cardiovascular channels name -- has no mesh of its own
+// and reaches the chest and abdomen only this way. Spreading a group's state
+// across its parts is what lets the model say the same thing as the legend
+// beside it, and leaves a part neutral only when nothing in its group has been
+// read at all. Groups are passed in, so this stays free of the dashboard's
+// constants and `npm test` can cover it.
+export const groupEvaluationByRegion = (
+  groups: readonly BodyRegionGroup[],
+  regionEvaluations: Partial<Record<string, Evaluation>>,
+): Partial<Record<string, Evaluation>> => {
+  const drawn: Partial<Record<string, Evaluation>> = {};
+  for (const group of groups) {
+    const evaluation = worstEvaluation(group.REGIONS.map((region) => regionEvaluations[region]));
+    if (evaluation === undefined) continue;
+    for (const region of group.REGIONS) {
+      drawn[region] = evaluation;
+    }
+  }
+  return drawn;
+};
 
 export const BODY_MODEL_SURFACE = {
   RESOLUTION: 128,
