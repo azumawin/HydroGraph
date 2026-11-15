@@ -53,6 +53,21 @@ export const formatCommDelay = (seconds: number) =>
     ? `${ENVIRONMENT_FORMAT.NUMBER.format(seconds)} s`
     : `${ENVIRONMENT_FORMAT.NUMBER.format(seconds / ENVIRONMENT_FORMAT.SECONDS_PER_MINUTE)} min`;
 
+// The front door, before any telemetry is shown: the demo runs in one mission
+// environment and the choice is per page load, so a reload asks again rather
+// than resuming in a setting nobody picked. Formatting of what each one sets
+// lives in environments.ts.
+export const ENVIRONMENT_PICKER = {
+  TITLE: "Choose the mission environment",
+  LEAD:
+    "Every reading in this demo is taken in one of these. The choice sets the gravity, " +
+    "how late a result reaches the dashboard, the light-dark cycle behind the circadian " +
+    "findings, and the dose rate a radiation spike is graded against.",
+  LOADING: "Loading the mission environments…",
+  IN_EFFECT: "In effect",
+  CHOOSE: "Start here",
+};
+
 // a round trip short enough to talk to the ground while acting
 export const ADVICE = {
   REALTIME_GROUND_MAX_RT_S: 10,

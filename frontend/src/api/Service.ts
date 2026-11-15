@@ -1,5 +1,6 @@
 import axios from "axios";
 import { TELEMETRY } from "../Constants.ts";
+import type { MissionEnvironment } from "./types.ts";
 
 export type Evaluation = "nominal" | "warning" | "critical" | "unspecified";
 
@@ -46,14 +47,7 @@ export type FindingInfo = {
   channels: string[];
 };
 
-export type MissionEnvironment = {
-  name: string;
-  gravity_g: number;
-  comm_delay_rt_s: number;
-  baseline_dose_rate_usv_h: number;
-  storm_shelter_available: boolean;
-  day_length_h: number;
-};
+export type { MissionEnvironment };
 
 export type TelemetryDictionary = {
   environments: Record<string, MissionEnvironment>;
