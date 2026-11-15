@@ -44,6 +44,8 @@ export const ASSISTANT = {
   STARTER: "Summarize the current findings and tell me what to do.",
   STARTER_LABEL: "Summarize findings and advise",
   FALLBACK_ERROR: "The assistant could not answer. Try again.",
+  LATEST_LABEL: "Latest message",
+  SCROLL_THRESHOLD_PX: 48,
 };
 
 export const VITALS_HISTORY = {
@@ -186,6 +188,10 @@ export const BODY_SCAN_REGION_GROUPS = [
   },
   { LABEL: "Joints", REGIONS: ["left_elbow", "right_elbow", "left_knee", "right_knee"] },
 ];
+
+export const BODY_SCAN_FORMAT = {
+  VALUE: new Intl.NumberFormat(undefined, { maximumSignificantDigits: 5 }),
+};
 
 export const VITALS_NOTIFICATIONS = {
   ERROR_DURATION_MS: 4000,
