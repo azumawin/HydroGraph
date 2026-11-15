@@ -5,6 +5,7 @@ shapes outgoing payloads for ``docs/json-shape.md``.
 """
 
 import math
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Literal, TypedDict, cast
 
@@ -17,12 +18,12 @@ from core import (
     ACVPU,
     CHANNELS,
     ENVIRONMENTS,
-    FINDINGS,
     SCHEDULES,
     Display,
     EnvironmentInfo,
     Evaluation,
     FindingResult,
+    Rule,
     Severity,
     evaluate_reading,
 )
@@ -70,6 +71,16 @@ class FindingEntry(TypedDict):
     channels: list[str]
 
 
+class RulePayload(TypedDict):
+    id: str
+    name: str
+    channels: list[str]
+    required: list[str]
+    default: bool
+    enabled: bool
+    source: str
+
+
 class DictionaryPayload(TypedDict):
     environments: dict[str, EnvironmentInfo]
     channels: dict[str, ChannelEntry]
@@ -101,8 +112,8 @@ def environments_payload() -> dict[str, EnvironmentInfo]:
     return dict(ENVIRONMENTS)
 
 
-def dictionary_payload() -> DictionaryPayload:
-    """Environments, channel metadata and findings, all from core."""
+def dictionary_payload(rules: Iterable[Rule]) -> DictionaryPayload:
+    """Environments and channel metadata from core; findings from the enabled rules."""
     return {
         "environments": environments_payload(),
         "channels": {
@@ -118,10 +129,49 @@ def dictionary_payload() -> DictionaryPayload:
             for key, info in CHANNELS.items()
         },
         "findings": {
-            key: {"name": info["name"], "channels": list(info["channels"])}
-            for key, info in FINDINGS.items()
+            rule.id: {"name": rule.name, "channels": list(rule.channels)}
+            for rule in rules
         },
     }
+
+
+def rule_payload(rule: Rule, *, default: bool, enabled: bool) -> RulePayload:
+    """One rule for the rules API, with its source."""
+    return {
+        "id": rule.id,
+        "name": rule.name,
+        "channels": list(rule.channels),
+        "required": list(rule.required),
+        "default": default,
+        "enabled": enabled,
+        "source": rule.source,
+    }
+
+
+def parse_rule_change(
+    payload: object, *, creating: bool
+) -> tuple[dict[str, object] | None, ERRORS]:
+    """``source`` (required when creating) and ``enabled``, type-checked."""
+    if not isinstance(payload, dict):
+        return None, {"detail": ["Expected a JSON object."]}
+    data = cast("dict[str, object]", payload)
+    errors: ERRORS = {}
+    changes: dict[str, object] = {}
+    if "source" in data:
+        if isinstance(data["source"], str) and data["source"].strip():
+            changes["source"] = data["source"]
+        else:
+            errors["source"] = ["Must be non-empty Python source."]
+    elif creating:
+        errors["source"] = ["This field is required."]
+    if "enabled" in data:
+        if isinstance(data["enabled"], bool):
+            changes["enabled"] = data["enabled"]
+        else:
+            errors["enabled"] = ["Must be true or false."]
+    if not errors and not changes:
+        errors["detail"] = ["Send source, enabled or both."]
+    return (None, errors) if errors else (changes, {})
 
 
 def finding_payload(finding: str, result: FindingResult) -> FindingPayload:

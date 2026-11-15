@@ -18,7 +18,7 @@ from api.contracts import dictionary_payload, finding_payload
 from api.environment import current_environment
 from api.findings import crew_findings
 from api.models import Reading
-from core import ACVPU, ENVIRONMENTS
+from core import ACVPU, DEFAULT_RULES, ENVIRONMENTS
 from core.findings import DehydrationResult, InfectionResult
 
 TICK = "2026-11-14T08:00:00Z"
@@ -77,7 +77,7 @@ def test_environments_lists_the_predefined_set(client: Client) -> None:
 def test_environments_matches_the_stream_dictionary(client: Client) -> None:
     payload = cast("dict[str, object]", client.get(reverse("environments")).json())
 
-    assert payload["environments"] == dictionary_payload()["environments"]
+    assert payload["environments"] == dictionary_payload(DEFAULT_RULES)["environments"]
 
 
 def test_environments_is_get_only(client: Client) -> None:
@@ -440,6 +440,6 @@ def test_infection_explicit_context_and_optional_assays(
 
 
 def test_dictionary_sends_each_channel_schedule() -> None:
-    channels = dictionary_payload()["channels"]
+    channels = dictionary_payload(DEFAULT_RULES)["channels"]
     assert channels["heart_rate"]["schedule_s"] == 60.0
     assert channels["troponin_i"]["schedule_s"] is None

@@ -9,5 +9,7 @@ urlpatterns = [
     path("health-conditions/", views.health_conditions, name="health-conditions"),
     path("readings/", views.readings, name="readings"),
     path("assistant/", views.assistant, name="assistant"),
+    path("rules/", views.rules, name="rules"),
+    path("rules/<str:rule_id>/", views.rule, name="rule"),
     path("stream/", views.stream, name="stream"),
 ]

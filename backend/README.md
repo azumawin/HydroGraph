@@ -56,6 +56,7 @@ Useful URLs once `runserver` is up:
 | http://localhost:8000/api/environment/ | the environment in effect; `PUT` switches it |
 | http://localhost:8000/api/health-conditions/ | the findings the crew member may have |
 | http://localhost:8000/api/readings/ | `POST` sensor readings |
+| http://localhost:8000/api/rules/ | finding rules; `POST` adds a custom rule |
 | http://localhost:8000/api/stream/ | SSE stream for the frontend |
 | http://localhost:8000/api/assistant/ | `POST` a chat turn to the health assistant |
 
@@ -148,6 +149,39 @@ channels (orthostatic, sleep, behavioral). The dictionary's `findings` lists all
 with their input channels, empty for those three.
 
 Entry shape and `status` semantics: `docs/json-shape.md`, section 3.
+
+## Rules endpoints
+
+Every finding is a Python rule (contract: `core/rule.py`). The ten built-in
+rules live in `core/rules/`; they can be disabled but not edited or deleted.
+Custom rules are Python source stored in the database and run **without a
+sandbox or time limit**, so only trusted users should reach this API.
+
+| Request | Effect |
+| --- | --- |
+| `GET /api/rules/` | `{"rules": [...]}`: id, name, channels, required, default, enabled, source |
+| `POST /api/rules/` `{"source": "..."}` | add a custom rule; `400` with `{"source": [reason]}` if it is invalid or its ID is taken |
+| `PUT /api/rules/<id>/` `{"enabled": false}` | disable (or enable) any rule |
+| `PUT /api/rules/<id>/` `{"source": "..."}` | replace a custom rule's source; its ID must stay the same |
+| `DELETE /api/rules/<id>/` | delete a custom rule; `409` for a built-in one |
+
+Every change re-sends the `dictionary` event (with only the enabled rules under
+`findings`) and the findings they evaluate to every open stream.
+
+A custom rule:
+
+```python
+ID = "resting_tachycardia"
+NAME = "Resting tachycardia"
+CHANNELS = ("heart_rate",)
+
+
+def evaluate(inputs):
+    bpm = inputs["latest"]["heart_rate"] * 60  # SI wire unit: s^-1
+    if bpm > 120:
+        return {"status": "critical", "triggers": ["HR > 120 bpm"], "action": "Rest and recheck", "bpm": bpm}
+    return {"status": "nominal", "triggers": [], "action": "No finding", "bpm": bpm}
+```
 
 ## Readings endpoints
 

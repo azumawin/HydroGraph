@@ -11,6 +11,7 @@ from api.contracts import dictionary_payload, finding_payload, reading_payload
 from api.environment import current_environment_id
 from api.findings import crew_findings
 from api.models import Reading
+from api.rules import enabled_rules
 from core import CHANNELS, ENVIRONMENTS
 
 
@@ -25,7 +26,7 @@ async def events() -> AsyncGenerator[str]:
     Subscribes before reading the snapshot, so a message posted in between is
     sent twice at worst, never lost. A reconnect gets a fresh snapshot.
     """
-    yield sse_event("dictionary", dictionary_payload())
+    yield sse_event("dictionary", dictionary_payload(await enabled_rules()))
     with broadcast.subscribe() as queue:
         environment_id = await current_environment_id()
         environment = ENVIRONMENTS[environment_id]

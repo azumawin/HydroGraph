@@ -157,7 +157,7 @@ join it to readings by `channel` and to findings by `id`.
   channel (`core.SCHEDULES`, following the simulator's schedule); `null` for
   event-driven and scenario-only channels. The frontend flags a channel as overdue
   from it.
-- `findings` has all 10 findings; `channels` lists each one's inputs, empty for
+- `findings` has every **enabled** rule (the 10 built-in ones unless some are disabled, plus custom rules; `backend/README.md`, "Rules endpoints"). The dictionary is re-sent whenever the rule set changes; `channels` lists each one's inputs, empty for
   the three that are not monitored.
 - `environments` has four entries, keyed by id, in dropdown order: `iss_leo`, `lunar_surface`,
   `mars_transit`, `mars_surface`. `name` is the dropdown label.

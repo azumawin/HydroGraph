@@ -9,19 +9,21 @@ from datetime import timedelta
 from typing import cast
 
 from api.models import Reading
-from core import FINDINGS, EnvironmentInfo, FindingResult, evaluate_findings
+from api.rules import enabled_rules, log_rule_error
+from core import EnvironmentInfo, FindingResult, evaluate_findings
 
 WEEK = timedelta(days=7)
 
 
 async def crew_findings(
-    environment: EnvironmentInfo, findings: Iterable[str] = FINDINGS
+    environment: EnvironmentInfo, findings: Iterable[str] | None = None
 ) -> dict[str, FindingResult]:
-    """The given monitored findings (default: all), from the latest readings."""
-    wanted = set(findings)
-    channels = {
-        channel for finding in wanted for channel in FINDINGS[finding]["channels"]
-    }
+    """The given findings (default: every enabled rule), from the latest readings."""
+    rules = await enabled_rules()
+    if findings is not None:
+        wanted = set(findings)
+        rules = [rule for rule in rules if rule.id in wanted]
+    channels = {channel for rule in rules for channel in rule.channels}
     latest: dict[str, float | bool | str] = {}
     for channel in channels:
         reading = await (
@@ -44,13 +46,14 @@ async def crew_findings(
                 .order_by("-measured_at", "-id")
                 .afirst()
             )
-    results = evaluate_findings(
+    return evaluate_findings(
         latest,
         None if first is None else cast("float", first.value),
         None if week_before is None else cast("float", week_before.value),
         environment,
+        rules,
+        log_rule_error,
     )
-    return {finding: result for finding, result in results.items() if finding in wanted}
 
 
 async def affected_findings(
@@ -59,5 +62,5 @@ async def affected_findings(
     """Every finding that uses a new reading's channel."""
     return await crew_findings(
         environment,
-        (finding for finding, info in FINDINGS.items() if channel in info["channels"]),
+        [rule.id for rule in await enabled_rules() if channel in rule.channels],
     )

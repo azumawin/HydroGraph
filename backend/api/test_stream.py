@@ -11,7 +11,7 @@ from django.urls import reverse
 from api import broadcast, stream, views
 from api.contracts import DictionaryPayload, dictionary_payload, reading_payload
 from api.models import Reading
-from core import CHANNELS, ENVIRONMENTS
+from core import CHANNELS, DEFAULT_RULES, ENVIRONMENTS
 
 AT = datetime(2026, 11, 14, 8, 0, tzinfo=UTC)
 CREW = {"X-Simulation-Scope": "crew"}
@@ -42,7 +42,7 @@ def test_connect_sends_dictionary_then_latest_per_channel() -> None:
 
     assert dictionary.startswith("event: dictionary\ndata: ")
     payload = cast("DictionaryPayload", json.loads(dictionary.split("data: ", 1)[1]))
-    assert payload == dictionary_payload()
+    assert payload == dictionary_payload(DEFAULT_RULES)
     assert payload["environments"]["iss_leo"] == {
         "name": "ISS, low Earth orbit",
         "gravity_g": 0.0,
