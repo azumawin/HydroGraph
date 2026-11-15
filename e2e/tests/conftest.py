@@ -16,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import dashboard as ui
 import httpx
 import pytest
 from playwright.sync_api import Page, expect
@@ -231,8 +232,13 @@ def simulate(backend: Backend, simulator_python: str, tmp_path: Path):
 
 @pytest.fixture
 def dashboard(page: Page, frontend: str, backend: Backend) -> Page:
-    """The dashboard, connected: the stream's dictionary has arrived."""
+    """The dashboard, connected: an environment chosen, the dictionary arrived.
+
+    The picker opens every page load, so tests that reload or open a second page
+    call `dashboard.enter` again themselves.
+    """
     page.goto(frontend)
+    ui.enter(page)
     expect(page.locator(".vitals-dashboard-reading-status").first).not_to_have_text(
         "Loading", timeout=15000
     )

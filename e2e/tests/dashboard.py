@@ -2,9 +2,30 @@
 
 import re
 
-from playwright.sync_api import Locator, Page
+from playwright.sync_api import Locator, Page, expect
 
 POINTS = re.compile(r"(\d+) recorded timestamps")
+DEFAULT_ENVIRONMENT = "ISS, low Earth orbit"
+
+
+def environment_card(page: Page, name: str) -> Locator:
+    """One mission environment's card on the picker that opens the app."""
+    heading = page.locator(
+        ".vitals-dashboard-environment-card-name", has_text=re.compile(f"^{re.escape(name)}$")
+    )
+    return page.locator(".vitals-dashboard-environment-card").filter(has=heading)
+
+
+def enter(page: Page, name: str = DEFAULT_ENVIRONMENT) -> None:
+    """Choose a mission environment, leaving the dashboard open behind it.
+
+    Every page load starts on the picker: the choice is per load, so a reload
+    asks again. Choosing the environment already in effect changes nothing.
+    """
+    card = environment_card(page, name)
+    expect(card).to_be_visible(timeout=15000)
+    card.click()
+    expect(page.locator(".vitals-dashboard-environment-picker")).to_have_count(0)
 
 
 def vital(page: Page, label: str) -> Locator:
