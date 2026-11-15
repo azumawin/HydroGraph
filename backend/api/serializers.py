@@ -137,6 +137,8 @@ class ChannelEntry(TypedDict):
     name: str
     scope: Literal["crew", "environment"]
     unit: str
+    # How to render a value before one has arrived: a number, a flag, or ACVPU text.
+    value_type: Literal["number", "boolean", "enum"]
     display: Display
     body_regions: list[str]
     explanation: str
@@ -176,6 +178,7 @@ def dictionary_payload() -> DictionaryPayload:
                 "name": v["name"],
                 "scope": v["scope"],
                 "unit": v["unit"],
+                "value_type": v["value_type"],
                 "display": v["display"],
                 "body_regions": list(v["body_regions"]),
                 "explanation": v["explanation"],

@@ -1,64 +1,35 @@
 import axios from "axios";
 import { TELEMETRY } from "../Constants.ts";
 
-export type Evaluation = "nominal" | "warning" | "critical" | "unspecified";
+import type {
+  ChannelDisplay,
+  ChannelInfo,
+  ChannelValueType,
+  ConsciousnessLevel,
+  Evaluation,
+  FindingInfo,
+  FindingSeverity,
+  MissionEnvironment,
+  TelemetryDictionary,
+  TelemetryFinding,
+  TelemetryReading,
+} from "./types.ts";
 
-export type FindingSeverity = "nominal" | "warning" | "critical";
-
-export type ConsciousnessLevel = "ALERT" | "CONFUSION" | "VOICE" | "PAIN" | "UNRESPONSIVE";
-
-// Text readings are validated against the supported ACVPU states.
-export type ReadingValue = number | boolean | ConsciousnessLevel;
-
-export type TelemetryReading = {
-  channel: string;
-  value: ReadingValue;
-  measured_at: string;
-  evaluation: Evaluation;
-};
-
-export type TelemetryFinding = {
-  id: string;
-  status: FindingSeverity;
-  triggers: string[];
-  action: string;
-  values: Record<string, unknown>;
-};
-
-export type ChannelDisplay = {
-  unit: string;
-  scale: number;
-  offset: number;
-};
-
-export type ChannelInfo = {
-  name: string;
-  scope: "crew" | "environment";
-  unit: string;
-  display: ChannelDisplay;
-  body_regions: string[];
-  explanation: string;
-};
-
-export type FindingInfo = {
-  name: string;
-  channels: string[];
-};
-
-export type MissionEnvironment = {
-  name: string;
-  gravity_g: number;
-  comm_delay_rt_s: number;
-  baseline_dose_rate_usv_h: number;
-  storm_shelter_available: boolean;
-  day_length_h: number;
-};
-
-export type TelemetryDictionary = {
-  environments: Record<string, MissionEnvironment>;
-  channels: Record<string, ChannelInfo>;
-  findings: Record<string, FindingInfo>;
-};
+// Re-exported so existing importers keep one address for the API.
+export type {
+  ChannelDisplay,
+  ChannelInfo,
+  ChannelValueType,
+  ConsciousnessLevel,
+  Evaluation,
+  FindingInfo,
+  FindingSeverity,
+  MissionEnvironment,
+  ReadingValue,
+  TelemetryDictionary,
+  TelemetryFinding,
+  TelemetryReading,
+} from "./types.ts";
 
 export type TelemetryStreamHandlers = {
   onDictionary: (dictionary: TelemetryDictionary) => void;
@@ -94,11 +65,15 @@ const isChannelDisplay = (value: unknown): value is ChannelDisplay =>
   typeof value.scale === "number" &&
   typeof value.offset === "number";
 
+const isValueType = (value: unknown): value is ChannelValueType =>
+  value === "number" || value === "boolean" || value === "enum";
+
 const isChannelInfo = (value: unknown): value is ChannelInfo =>
   isRecord(value) &&
   typeof value.name === "string" &&
   isScope(value.scope) &&
   typeof value.unit === "string" &&
+  isValueType(value.value_type) &&
   isChannelDisplay(value.display) &&
   isStringArray(value.body_regions) &&
   typeof value.explanation === "string";

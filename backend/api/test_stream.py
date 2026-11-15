@@ -55,6 +55,7 @@ def test_connect_sends_dictionary_then_latest_per_channel() -> None:
         "name": "Blood pressure (systolic)",
         "scope": "crew",
         "unit": "Pa",
+        "value_type": "number",
         "display": {"unit": "mmHg", "scale": 1 / 133.322, "offset": 0.0},
         "body_regions": ["heart", "chest"],
         "explanation": CHANNELS["bp_systolic"]["explanation"],

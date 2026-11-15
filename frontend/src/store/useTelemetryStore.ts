@@ -1,29 +1,11 @@
 import { create } from "zustand";
 import { fetchReadingHistory, openTelemetryStream, putEnvironment } from "../api/Service.ts";
-import type {
-  ChannelInfo,
-  Evaluation,
-  ReadingValue,
-  TelemetryDictionary,
-  TelemetryFinding,
-  TelemetryReading,
-} from "../api/Service.ts";
+import type { TelemetryDictionary, TelemetryFinding, TelemetryReading } from "../api/Service.ts";
 import { TELEMETRY, VITALS_HISTORY } from "../Constants.ts";
+import { isCurrent, toVitalReading, withHistoryPoint } from "../history.ts";
+import type { VitalHistoryPoint, VitalReading } from "../history.ts";
 
-// a reading in its channel's display unit; everything static about the channel
-// stays in the dictionary. Only numbers are scaled and charted.
-export type VitalReading = {
-  channel: string;
-  value: ReadingValue;
-  unit: string;
-  evaluation: Evaluation;
-  measured_at: string;
-};
-
-export type VitalHistoryPoint = {
-  timestamp: number;
-  value: number;
-};
+export type { VitalHistoryPoint, VitalReading } from "../history.ts";
 
 type TelemetryStore = {
   dictionary: TelemetryDictionary | null;
@@ -38,26 +20,6 @@ type TelemetryStore = {
   connectTelemetry: () => () => void;
   selectEnvironment: (environmentId: string) => Promise<void>;
 };
-
-const toVitalReading = (reading: TelemetryReading, info: ChannelInfo): VitalReading => {
-  const { channel, value, evaluation, measured_at } = reading;
-  const { display } = info;
-  return {
-    channel,
-    value: typeof value === "number" ? value * display.scale + display.offset : value,
-    unit: display.unit,
-    evaluation,
-    measured_at,
-  };
-};
-
-const withHistoryPoint = (
-  points: VitalHistoryPoint[],
-  point: VitalHistoryPoint,
-): VitalHistoryPoint[] =>
-  [...points.filter((existing) => existing.timestamp !== point.timestamp), point]
-    .toSorted((first, second) => first.timestamp - second.timestamp)
-    .slice(-VITALS_HISTORY.MAX_POINTS_PER_CHANNEL);
 
 export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
   dictionary: null,
@@ -93,15 +55,15 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
         }
         const vital = toVitalReading(reading, info);
         const timestamp = Date.parse(vital.measured_at);
-        const latest = readings[vital.channel];
-        if (latest === undefined || timestamp >= Date.parse(latest.measured_at)) {
+        if (isCurrent(readings[vital.channel], timestamp)) {
           readings[vital.channel] = vital;
         }
         if (typeof vital.value === "number") {
-          history[vital.channel] = withHistoryPoint(history[vital.channel] ?? [], {
-            timestamp,
-            value: vital.value,
-          });
+          history[vital.channel] = withHistoryPoint(
+            history[vital.channel] ?? [],
+            { timestamp, value: vital.value },
+            VITALS_HISTORY.MAX_POINTS_PER_CHANNEL,
+          );
         }
       }
       for (const finding of pendingFindings) {

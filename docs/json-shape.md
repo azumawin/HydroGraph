@@ -132,6 +132,7 @@ join it to readings by `channel` and to findings by `id`.
       "name": "Blood pressure (systolic)",
       "scope": "crew",
       "unit": "Pa",
+      "value_type": "number",
       "display": { "unit": "mmHg", "scale": 0.0075006, "offset": 0.0 },
       "body_regions": ["heart", "chest"],
       "explanation": "Why this is measured, what it means…"
@@ -174,6 +175,10 @@ join it to readings by `channel` and to findings by `id`.
   frontend's body model (`frontend/src/components/model/ModelConstants.ts`:
   `head`, `neck`, `chest`, `abdomen`, `pelvis`, limbs) or `heart`; empty when a
   value has no place on the body (blood markers, cabin readings).
+- `value_type` says how a channel's values render before one has arrived: `number`
+  (scaled by `display` and charted), `boolean` (a flag such as `spe_flag`) or `enum`
+  (ACVPU text, `consciousness_level`). A view listing every channel needs it; the
+  vitals panel infers the same from each reading's value.
 
 ## 5. The environment in effect
 
