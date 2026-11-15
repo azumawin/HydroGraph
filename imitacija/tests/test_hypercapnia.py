@@ -201,11 +201,11 @@ def test_mock_delivery():
 
 
 def test_core_mapping_and_thresholds(monkeypatch):
-    core = Path(__file__).resolve().parents[2] / "backend"
-    if not (core / "core").exists():
+    core = Path(__file__).resolve().parents[2] / "backend/packages/hydrograph-core/src"
+    if not core.exists():
         pytest.skip("backend core checkout is not present")
     monkeypatch.syspath_prepend(str(core))
-    from core.findings import hypoxia_co2_2_2
+    from hydrograph_core.findings import hypoxia_co2_2_2
 
     items = acquire(demo())
     last = {o.reading.channel: o.reading.value for o in items}

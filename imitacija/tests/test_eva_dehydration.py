@@ -153,15 +153,15 @@ def test_invalid_settings_and_selection():
 
 
 def test_backend_mapping(monkeypatch):
-    core = Path(__file__).resolve().parents[2] / "backend"
-    if not (core / "core").exists():
+    core = Path(__file__).resolve().parents[2] / "backend/packages/hydrograph-core/src"
+    if not core.exists():
         pytest.skip("backend checkout unavailable")
     monkeypatch.syspath_prepend(str(core))
-    from core.channels import CHANNELS, evaluate_reading
-    from core.findings import dehydration_2_1
+    from hydrograph_core.channels import CHANNELS, evaluate_reading
+    from hydrograph_core.findings import dehydration_2_1
 
     assert "whole_body_sweat_rate" in CHANNELS
-    from core.environments import ENVIRONMENTS
+    from hydrograph_core.environments import ENVIRONMENTS
 
     assert (
         evaluate_reading(
