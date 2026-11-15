@@ -34,11 +34,10 @@
     grid-template-columns: auto minmax(0, 1fr);
     align-self: stretch;
     align-items: center;
-    gap: 10px 12px;
+    gap: 4px 8px;
     max-width: none;
-    padding: 12px;
-    border-radius: 14px;
-    background: var(--color-glass-tint);
+    padding: 10px 12px;
+    border-radius: 10px;
     white-space: normal;
   }
 
@@ -111,19 +110,13 @@
 .vitals-dashboard .vitals-dashboard-chat-finding-badge {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border-radius: 8px;
-  color: var(--color-background);
-  background: var(--finding-color);
+  color: var(--finding-color);
 }
 
 .vitals-dashboard .vitals-dashboard-chat-finding-badge-icon {
-  width: 18px;
-  height: 18px;
-  stroke-width: 2.25;
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
 }
 
 .vitals-dashboard .vitals-dashboard-chat-finding-content {
@@ -134,20 +127,22 @@
 }
 
 .vitals-dashboard .vitals-dashboard-chat-finding-title {
-  display: grid;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 8px;
   min-width: 0;
   line-height: 18px;
 }
 
 .vitals-dashboard .vitals-dashboard-chat-finding-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .vitals-dashboard .vitals-dashboard-chat-finding-status {
-  color: var(--finding-color);
+  color: var(--color-text-secondary);
   font-size: 12px;
-  font-weight: 600;
 }
 
 .vitals-dashboard .vitals-dashboard-chat-finding-triggers,
