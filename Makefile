@@ -1,10 +1,15 @@
 # HydroGraph dev commands. Run `make` for the list.
 # One terminal: `make dev`. Or three: `make run` (backend), `make frontend`, `make sim`.
 
-CONFIG ?= config/healthy.toml
-# SPEED overrides the config's own speed, e.g. `make dev SPEED=30`.
-SPEED ?=
-SIM = uv run imitacija --config $(CONFIG) $(if $(SPEED),--speed $(SPEED))
+CONFIG ?= config/badscenario1.toml
+# Accept both `speed=30` and `SPEED=30`; uppercase takes precedence.
+SPEED ?= $(speed)
+OPEN_BROWSER ?= 1
+PYTHON ?= python3
+# Paired synthetic pressure trends for the dashboard; 0 restores protocol timing.
+BP_DEMO_INTERVAL ?= 5
+BP_DEMO_ARG = $(if $(filter-out 0,$(BP_DEMO_INTERVAL)),--bp-demo-interval $(BP_DEMO_INTERVAL))
+SIM = uv run imitacija --config $(CONFIG) $(if $(SPEED),--speed $(SPEED)) $(BP_DEMO_ARG)
 FRONTEND_URL = http://127.0.0.1:5173
 VITE = ./node_modules/.bin/vite --host 127.0.0.1 --port 5173 --strictPort
 
@@ -35,12 +40,8 @@ sim: ## Feed the running backend from the simulator (CONFIG, SPEED)
 open: ## Open the frontend in the browser
 	uv run --no-project python -m webbrowser $(FRONTEND_URL)
 
-dev: migrate ## Backend + frontend + simulator, frontend opened; Ctrl+C stops all
-	@(cd backend && exec uv run python manage.py runserver --noreload) & backend=$$!; \
-	(cd frontend && exec $(VITE)) & frontend=$$!; \
-	trap 'kill $$backend $$frontend 2>/dev/null' EXIT INT TERM; \
-	sleep 3; uv run --no-project python -m webbrowser $(FRONTEND_URL); \
-	cd imitacija && $(SIM)
+dev: ## Fresh demo database + backend + frontend + simulator; Ctrl+C stops all
+	$(PYTHON) scripts/dev.py --config "$(CONFIG)" $(if $(SPEED),--speed "$(SPEED)") $(BP_DEMO_ARG) $(if $(filter 0,$(OPEN_BROWSER)),--no-open)
 
 test: ## Run backend, core and simulator tests
 	cd backend && uv run pytest -q

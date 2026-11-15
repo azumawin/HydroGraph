@@ -6,7 +6,7 @@ Static metadata from `src/imitacija/registry.py`; no generated measurements are 
 
 | Channel | Scope / specimen | Source → wire unit | Collection | Measurement source |
 | --- | --- | --- | --- | --- |
-| `heart_rate` | crew: wearable | bpm → s^-1 | 60s HR estimate; first complete window at 60s | Synthetic pulse. [Source](https://www.heart.org/en/healthy-living/exercise-and-physical-activity/fitness-basics/target-heart-rates/) |
+| `heart_rate` | crew: wearable | bpm → s^-1 | 10s HR estimate every 10s (6/min); first at 10s | Synthetic pulse. [Source](https://www.heart.org/en/healthy-living/exercise-and-physical-activity/fitness-basics/target-heart-rates/) |
 | `hrv_rmssd` | crew: NN intervals | ms → s | 60s RMSSD window every 60s; first at 61s | RMSSD of generated beat intervals. [Source](https://pmc.ncbi.nlm.nih.gov/articles/PMC5010946/) |
 | `bp_systolic` | crew: cuff | mmHg → Pa | hourly in configured session; optional 10Hz / 180s stand-test burst | Paired synthetic cuff. [Source](https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings/) |
 | `bp_diastolic` | crew: cuff | mmHg → Pa | hourly in configured session; optional 10Hz / 180s stand-test burst | Paired synthetic cuff. [Source](https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings/) |

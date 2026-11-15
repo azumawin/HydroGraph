@@ -74,7 +74,7 @@ def test_demo_windows_units_and_determinism():
     )
     for channel, first, window in [
         ("ambient_ppco2", 1, 0),
-        ("heart_rate", 60, 60),
+        ("heart_rate", 10, 10),
         ("respiratory_rate", 77, 60),
         ("spo2", 0.2, 0),
         ("eeg_cfe_ratio", 60, 60),

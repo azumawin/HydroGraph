@@ -105,6 +105,17 @@
   min-width: 0;
 }
 
+.vitals-dashboard .vitals-dashboard-reading-assessment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+  padding-left: 36px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
 .vitals-dashboard .vitals-dashboard-chart,
 .vitals-dashboard .vitals-dashboard-chart-message {
   height: 88px;

@@ -19,6 +19,46 @@ CABIN = {"X-Simulation-Scope": "environment"}
 CREW = {"X-Simulation-Scope": "crew"}
 
 
+@pytest.mark.django_db
+def test_pressure_and_heart_rate_updates_publish_combined_assessment() -> None:
+    create("bp_systolic", 120 * 133.322)
+    body = {
+        "channel": "bp_diastolic",
+        "value": 80 * 133.322,
+        "unit": "Pa",
+        "measured_at": "2026-11-14T09:00:00Z",
+    }
+    reading, finding = post(body, CREW)
+    assert reading["evaluation"] == "unspecified"
+    assert finding["id"] == "blood_pressure_1_4"
+    assert finding["status"] == "nominal"
+    assert finding["values"]["map_mmhg"] == 93.3
+    assert finding["values"]["shock_index"] is None
+
+    body.update(channel="heart_rate", value=120 / 60, unit="s^-1")
+    _, finding = post(body, CREW)
+    assert finding["status"] == "critical"
+    assert finding["values"]["shock_index"] == 1.0
+    assert "shock index > 0.9" in finding["triggers"]
+
+
+@pytest.mark.django_db
+def test_invalid_pressure_pair_does_not_fail_ingestion_and_recovers() -> None:
+    create("bp_systolic", 120 * 133.322)
+    body = {
+        "channel": "bp_diastolic",
+        "value": 115 * 133.322,
+        "unit": "Pa",
+        "measured_at": "2026-11-14T09:00:00Z",
+    }
+    _, finding = post(body, CREW)
+    assert "sensor_error" in finding["values"]
+    body.update(value=80 * 133.322)
+    _, finding = post(body, CREW)
+    assert finding["status"] == "nominal"
+    assert "sensor_error" not in finding["values"]
+
+
 def create(channel: str, value: float | bool, day: int = 0) -> None:
     measured_at = AT.replace(day=AT.day + day)
     _ = Reading.objects.create(channel=channel, value=value, measured_at=measured_at)

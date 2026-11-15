@@ -1,7 +1,7 @@
 # Compressed synthetic SANS demonstration, not clinical disease kinetics.
 seed = 42
-speed = 10
-# duration_s = 4200
+speed = 1
+#duration_s = 4200
 # No enabled_channels: every channel reports from boot, with the SANS fault on top.
 base_url = "http://127.0.0.1:8000"
 data_route = "/api/readings/"
@@ -21,11 +21,12 @@ rmssd_ms = 48
 [sans_scenario]
 id = "FAULT_01_SANS_CEPHALIC"
 owner_id = "crew-1"
-onset_s = 600
-warning_at_s = 1800
+# Real-time demo: first completed minute warns; the second is critical.
+onset_s = 10
+warning_at_s = 45
 escalate_to_critical = true
-critical_start_s = 2400
-critical_at_s = 3600
+critical_start_s = 60
+critical_at_s = 90
 baseline_strain_pct = 0.65
 warning_strain_pct = 1.55
 critical_strain_pct = 2.05
@@ -35,4 +36,4 @@ baseline_icp_indicator_mmhg = 10.0
 warning_icp_indicator_mmhg = 16.2
 critical_icp_indicator_mmhg = 19.0
 affected_logmar = 0.20
-eye_screen_times_s = [1860, 3660]
+eye_screen_times_s = [60, 120]

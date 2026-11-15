@@ -51,12 +51,18 @@ export const VITALS_HISTORY = {
 };
 
 export const VITALS_FORMAT = {
-  TIME: new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", hour12: false }),
+  TIME: new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }),
   MEASURED_AT: new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
     hour12: false,
   }),
   VALUE: new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }),
@@ -93,6 +99,7 @@ export type VitalSeries = {
 export type VitalMetric = {
   LABEL: string;
   ICON: LucideIcon;
+  FINDING_ID?: string;
   SERIES: readonly VitalSeries[];
 };
 
@@ -107,6 +114,7 @@ export const VITALS_METRICS = {
   BLOOD_PRESSURE: {
     LABEL: "Blood pressure",
     ICON: Activity,
+    FINDING_ID: "blood_pressure_1_4",
     SERIES: [
       { CHANNEL: "bp_systolic", LABEL: "Systolic", COLOR: "var(--color-chart-systolic)" },
       { CHANNEL: "bp_diastolic", LABEL: "Diastolic", COLOR: "var(--color-chart-diastolic)" },

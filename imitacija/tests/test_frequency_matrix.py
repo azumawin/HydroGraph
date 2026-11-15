@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from imitacija.clock import ManualClock
+from imitacija.main import load_settings
 from imitacija.models import Environment, Observation, Settings
+from imitacija.physiology import crew_values
 from imitacija.registry import CHANNELS, dictionary
 from imitacija.scheduler import Scheduler
 
@@ -51,6 +54,28 @@ def test_all_scalar_one_hz_streams_have_independent_phases() -> None:
         )
         first.add(times[0])
     assert len(first) > 1
+
+
+@pytest.mark.parametrize("config", ["healthy.toml", *(f"badscenario{i}.toml" for i in range(1, 5))])
+def test_heart_rate_is_six_per_minute_in_every_scenario(config: str) -> None:
+    settings = load_settings(Path("config") / config, 1, None)
+    settings = settings.model_copy(update={"enabled_channels": ("heart_rate", "hrv_rmssd")})
+    items = acquire(settings, 120, include_startup=True)
+    heart = [o for o in items if o.reading.channel == "heart_rate"]
+    assert [o.acquired_s for o in heart] == list(range(0, 121, 10))
+    assert sum(0 < o.acquired_s <= 60 for o in heart) == 6
+    assert sum(60 < o.acquired_s <= 120 for o in heart) == 6
+    assert all(o.window_s == 10 for o in heart if o.sample_kind == "scheduled")
+    hrv = [o for o in items if o.reading.channel == "hrv_rmssd" and o.sample_kind == "scheduled"]
+    assert [o.acquired_s for o in hrv] == [61]
+    assert hrv[0].window_s == 60
+
+
+def test_first_hr_estimate_needs_ten_seconds_not_a_full_minute() -> None:
+    settings = Settings()
+    with pytest.raises(ValueError):
+        crew_values("heart", 9.99, settings.crew[0], settings.seed)
+    assert float(crew_values("heart", 10, settings.crew[0], settings.seed)["heart_rate"]) > 0
 
 
 def test_stand_test_burst_is_optional_bounded_and_does_not_duplicate_cuff() -> None:
@@ -116,7 +141,8 @@ def test_explicit_assay_gates_and_48_hour_viral_sessions() -> None:
 def test_dictionary_exposes_raw_tier_separately_from_publication() -> None:
     channels = {c.channel: c for c in dictionary(Environment(), 3600).channels}
     assert channels["heart_rate"].raw_acquisition_hz == 100
-    assert channels["heart_rate"].window_s == channels["hrv_rmssd"].window_s == 60
+    assert channels["heart_rate"].window_s == 10
+    assert channels["hrv_rmssd"].window_s == 60
     assert channels["glucose"].raw_acquisition_hz == 0.2
     assert channels["glucose"].window_s == 300
     assert channels["sweat_rate"].raw_acquisition_hz == 1

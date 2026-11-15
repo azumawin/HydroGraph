@@ -5,7 +5,8 @@ channel readings (:mod:`hydrograph_core.channels`). This module bridges the
 two for one crew member: :func:`evaluate_findings` converts the latest
 readings and calls every finding whose inputs the simulator provides.
 
-Seven of the ten findings are monitored. :data:`FINDINGS` lists all ten; an
+Eight findings are monitored, including the supplementary blood pressure
+telemetry evaluator. :data:`FINDINGS` also lists the three unmonitored findings; an
 empty ``channels`` tuple marks one whose inputs the simulator does not send
 (postural BP, sleep, PHQ-9/GAD-7, EEG/PVT).
 
@@ -27,6 +28,7 @@ from typing import Final, TypedDict
 
 from .environments import EnvironmentInfo
 from .findings import (
+    BloodPressureResult,
     BoneResult,
     DehydrationResult,
     EnergyBalanceResult,
@@ -34,7 +36,9 @@ from .findings import (
     InfectionResult,
     RadiationResult,
     SansResult,
+    Severity,
     acute_infection_3_1,
+    blood_pressure_1_4,
     bone_demineralization_1_2,
     dehydration_2_1,
     hypoxia_co2_2_2,
@@ -49,11 +53,24 @@ class FindingInfo(TypedDict):
     channels: tuple[str, ...]
 
 
+class BloodPressureSensorErrorResult(TypedDict):
+    sbp_mmhg: float
+    dbp_mmhg: float
+    sensor_error: str
+    triggers: list[str]
+    status: Severity
+    action: str
+
+
 FINDINGS: Final[Mapping[str, FindingInfo]] = MappingProxyType(
     {
         "orthostatic_intolerance_1_1": {
             "name": "Orthostatic intolerance & CV deconditioning",
             "channels": (),
+        },
+        "blood_pressure_1_4": {
+            "name": "Blood pressure & hemodynamic stability",
+            "channels": ("bp_systolic", "bp_diastolic", "heart_rate"),
         },
         "bone_demineralization_1_2": {
             "name": "Bone demineralization & renal stone risk",
@@ -109,7 +126,9 @@ FINDINGS: Final[Mapping[str, FindingInfo]] = MappingProxyType(
 )
 
 type FindingResult = (
-    BoneResult
+    BloodPressureResult
+    | BloodPressureSensorErrorResult
+    | BoneResult
     | DehydrationResult
     | HypoxiaResult
     | EnergyBalanceResult
@@ -275,6 +294,10 @@ def evaluate_findings(
     """
 
     def has(finding: str) -> bool:
+        if finding == "blood_pressure_1_4":
+            # Heart rate updates the shock index, but pressure can be assessed
+            # before a heart-rate measurement is available.
+            return "bp_systolic" in latest and "bp_diastolic" in latest
         required = (
             (
                 "respiratory_rate",
@@ -292,6 +315,25 @@ def evaluate_findings(
         return float(latest[channel])
 
     results: dict[str, FindingResult] = {}
+
+    if has("blood_pressure_1_4"):
+        # Pa -> mmHg; s^-1 -> bpm. Avoid SI round-trip noise at exact cutoffs.
+        sbp = round(num("bp_systolic") / 133.322, 9)
+        dbp = round(num("bp_diastolic") / 133.322, 9)
+        hr = num("heart_rate") * 60 if "heart_rate" in latest else None
+        try:
+            results["blood_pressure_1_4"] = blood_pressure_1_4(sbp, dbp, hr)
+        except ValueError as error:
+            # Paired channels arrive in separate requests; an invalid or
+            # temporarily inconsistent pair must not break ingestion or SSE.
+            results["blood_pressure_1_4"] = {
+                "sbp_mmhg": sbp,
+                "dbp_mmhg": dbp,
+                "sensor_error": str(error),
+                "triggers": [str(error)],
+                "status": "warning",
+                "action": "Check the blood pressure sensor and repeat the paired measurement",
+            }
 
     if has("bone_demineralization_1_2"):
         # Fractional NTx change -> %; m^3 -> L.
