@@ -1,5 +1,6 @@
 import { useThree } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
+import { Color } from "three";
 import type { BufferGeometry } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { Evaluation } from "../../api/Service.ts";
@@ -8,6 +9,16 @@ import { createBodyGeometry } from "./createBodyGeometry.ts";
 
 type BodyModelProps = {
   regionEvaluations: Partial<Record<string, Evaluation>>;
+};
+
+const muteColor = (cssColor: string) => {
+  const hsl = { h: 0, s: 0, l: 0 };
+  new Color(cssColor).getHSL(hsl);
+  return new Color().setHSL(
+    hsl.h,
+    hsl.s * BODY_SCAN_VIEW.COLOR_SATURATION_SCALE,
+    hsl.l * BODY_SCAN_VIEW.COLOR_LIGHTNESS_SCALE,
+  );
 };
 
 const BodyModel = ({ regionEvaluations }: BodyModelProps) => {
@@ -68,7 +79,9 @@ const BodyModel = ({ regionEvaluations }: BodyModelProps) => {
         </bufferGeometry>
         {BODY_REGION_IDS.map((region, materialIndex) => {
           const evaluation = regionEvaluations[region];
-          const color = evaluation === undefined ? neutralColor : evaluationColors[evaluation];
+          const color = muteColor(
+            evaluation === undefined ? neutralColor : evaluationColors[evaluation],
+          );
 
           return (
             <meshStandardMaterial
