@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { RULES } from "../Constants.ts";
 import { useRules } from "../hooks/useRules.ts";
+import CodeEditor from "./CodeEditor.tsx";
 
 type RuleEditor = { mode: "new" } | { mode: "edit"; ruleId: string };
 
@@ -74,14 +75,7 @@ const RulesTab = () => {
       </div>
       {editor !== null && (
         <div className="vitals-dashboard-rules-editor">
-          <textarea
-            className="vitals-dashboard-rules-source"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            spellCheck={false}
-            wrap="off"
-            aria-label="Rule source"
-          />
+          <CodeEditor value={draft} onChange={setDraft} label="Rule source" />
           {actionError && (
             <p className="vitals-dashboard-rules-error" role="alert">
               {actionError}
@@ -158,7 +152,7 @@ const RulesTab = () => {
             </p>
             <details className="vitals-dashboard-rules-details">
               <summary className="vitals-dashboard-rules-summary">Source</summary>
-              <pre className="vitals-dashboard-rules-code">{rule.source}</pre>
+              <CodeEditor value={rule.source} label={`${rule.name} source`} />
             </details>
           </li>
         ))}

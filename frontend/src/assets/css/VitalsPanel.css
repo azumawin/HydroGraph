@@ -639,24 +639,6 @@
   gap: 8px;
 }
 
-.vitals-dashboard .vitals-dashboard-rules-source {
-  min-height: 240px;
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  color: var(--color-text);
-  background: var(--color-glass-tint);
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 12px;
-  line-height: 18px;
-  resize: vertical;
-  outline: none;
-
-  &:focus {
-    border-color: var(--color-accent);
-  }
-}
-
 .vitals-dashboard .vitals-dashboard-rules-editor-actions {
   display: flex;
   justify-content: flex-end;
@@ -781,6 +763,8 @@
 }
 
 .vitals-dashboard .vitals-dashboard-rules-details {
+  display: grid;
+  gap: 6px;
   margin-left: 42px;
 }
 
@@ -790,13 +774,84 @@
   cursor: pointer;
 }
 
-.vitals-dashboard .vitals-dashboard-rules-code {
-  margin: 6px 0 0;
-  padding: 10px 12px;
-  overflow-x: auto;
-  border-radius: 8px;
+.vitals-dashboard .vitals-dashboard-code-editor {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
   background: var(--color-glass-tint);
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 11px;
-  line-height: 16px;
+
+  &:focus-within {
+    border-color: var(--color-accent);
+  }
+
+  & .cm-editor {
+    max-height: 420px;
+    color: var(--color-text);
+    background: transparent;
+    font-size: 12px;
+
+    &.cm-focused {
+      outline: none;
+    }
+  }
+
+  & .cm-scroller {
+    min-height: 240px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    line-height: 18px;
+  }
+
+  & .cm-content {
+    caret-color: var(--color-text);
+  }
+
+  & .cm-gutters {
+    border-right: 1px solid var(--color-divider);
+    color: var(--color-text-secondary);
+    background: transparent;
+  }
+
+  & .cm-activeLine,
+  & .cm-activeLineGutter {
+    background: var(--color-glass-fill);
+  }
+
+  & .cm-selectionBackground,
+  & .cm-focused .cm-selectionBackground {
+    background: var(--color-border);
+  }
+
+  & .cm-cursor {
+    border-left-color: var(--color-text);
+  }
+
+  & .is-keyword {
+    color: var(--color-chart-systolic);
+  }
+
+  & .is-string {
+    color: var(--color-chart-blood-sugar);
+  }
+
+  & .is-literal {
+    color: var(--color-chart-temperature);
+  }
+
+  & .is-comment {
+    color: var(--color-text-secondary);
+    font-style: italic;
+  }
+
+  & .is-function {
+    color: var(--color-chart-diastolic);
+  }
+
+  & .is-constant {
+    color: var(--color-chart-heart-rate);
+  }
+
+  &.is-read-only .cm-scroller {
+    min-height: 0;
+    font-size: 11px;
+  }
 }
