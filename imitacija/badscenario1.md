@@ -2,6 +2,13 @@
 
 **Scenario:** `FAULT_01_SANS_CEPHALIC` — Finding 9.
 
+**Current demo timing:** `config/badscenario1.toml` now runs at speed 1, with
+onset at 10 s, warning endpoint at 45 s, critical ramp from 60–90 s, and eye
+screens at 60/120 s. Completed-minute strain measurements first warn at 60 s
+and become critical at 120 s. The original implementation plan and longer
+timeline below are historical; the shared `SansScenario` defaults still retain
+that longer timeline. Only the shipped scenario 1 config is shortened.
+
 **Source:** [Unhealthy simulation specification, Scenario 1](docs/hydrogfn_unhealthy_simulation_specification%20%281%29.md#scenario-1-spaceflight-associated-neuro-ocular-syndrome-sans--cephalic-fluid-shift).
 
 **Status:** Implementation plan only. The proposed configuration, functions and new channels below do not exist yet. Numerical targets from the supplied document are treated as simulation requirements. Timing, interpolation and additional fixture values below are engineering assumptions, not a validated clinical progression model.

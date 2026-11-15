@@ -81,8 +81,8 @@ this value; it is not "normal".
 
 ## 3. Backend → frontend: finding
 
-`event: finding` on the stream: one of the master plan's 10 Tier 1 health
-findings. Sent on connect, then again whenever a reading arrives on one of the
+`event: finding` on the stream: a master-plan finding or the supplementary
+`blood_pressure_1_4` assessment. Sent on connect, then again whenever a reading arrives on one of the
 finding's input channels.
 
 ```json
@@ -103,7 +103,7 @@ finding's input channels.
 - `action` is the plan's action card, or `"No finding"`.
 - `values` holds the finding's own evaluated quantities, in the units their names
   end in; the keys differ per finding.
-- Seven findings are monitored; the other three need inputs the simulator does
+- Eight findings are monitored; the other three need inputs the simulator does
   not send and are never sent (their dictionary `channels` is empty).
 - `GET /api/health-conditions/` returns the same objects as a JSON array under
   `findings`, for a client that wants them without the stream. A finding whose inputs
@@ -157,7 +157,7 @@ join it to readings by `channel` and to findings by `id`.
   channel (`core.SCHEDULES`, following the simulator's schedule); `null` for
   event-driven and scenario-only channels. The frontend flags a channel as overdue
   from it.
-- `findings` has every **enabled** rule (the 10 built-in ones unless some are disabled, plus custom rules; `backend/README.md`, "Rules endpoints"). The dictionary is re-sent whenever the rule set changes; `channels` lists each one's inputs, empty for
+- `findings` has every **enabled** rule (the 10 master-plan findings plus `blood_pressure_1_4`, unless some are disabled, plus custom rules; `backend/README.md`, "Rules endpoints"). The dictionary is re-sent whenever the rule set changes; `channels` lists each one's inputs, empty for
   the three that are not monitored.
 - `environments` has four entries, keyed by id, in dropdown order: `iss_leo`, `lunar_surface`,
   `mars_transit`, `mars_surface`. `name` is the dropdown label.

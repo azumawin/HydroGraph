@@ -6,7 +6,8 @@ channel readings (:mod:`core.channels`). Each finding is a rule
 readings and call their finding. :func:`evaluate_findings` runs a set of rules
 for one crew member.
 
-Seven of the ten findings are monitored. :data:`FINDINGS` lists all ten; an
+Eight findings are monitored, including the supplementary blood pressure
+telemetry evaluator. :data:`FINDINGS` also lists the three unmonitored ones; an
 empty ``channels`` tuple marks one whose inputs the simulator does not send
 (postural BP, sleep, PHQ-9/GAD-7, EEG/PVT).
 

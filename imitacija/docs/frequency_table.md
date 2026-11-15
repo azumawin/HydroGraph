@@ -1,5 +1,10 @@
 ### Telemetry Sampling & Evaluation Matrix by Condition
 
+> Current project override: `heart_rate` publishes a completed 10-second
+> estimate every 10 seconds (six results/minute), starting at second 10.
+> This supersedes the HR publication cadence in the matrix below; HRV and
+> other minute-based estimates keep their separate windows and schedules.
+
 | # | Disease / Condition | Primary Channels & Sensor Tier | Per Second (`Hz`) — Raw Acquisition | Per Minute (`1/min`) — Windowed / Derived | Per Hour (`1/hr`) — Clinical & Trend Cadence | Engineering & Physiological Rationale |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **1** | **Orthostatic Intolerance / CV Deconditioning** | `heart_rate`, `hrv_rmssd`, `bp_systolic`, `bp_diastolic` *(Tier-1 PPG/Cuff)* + `hs_ctni` *(Tier-2 GFET event)* | **100 Hz** (raw PPG waveform for R-peak / IBI extraction) | **1 / min** (rolling 60s RMSSD, resting HR, Shock Index `HR/SBP`) | **1 / hr** (or **10 Hz** burst during active 3-min Stand Test) | Beat-to-beat intervals require 100 Hz PPG for accurate RMSSD (ESC/NASPE), while orthostatic drops (≥ 20 mmHg SBP) occur over 1–3 minutes of standing. |

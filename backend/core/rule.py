@@ -28,6 +28,7 @@ from typing import TypedDict, cast
 from .channels import CHANNELS
 from .environments import EnvironmentInfo
 from .findings import (
+    BloodPressureResult,
     BoneResult,
     DehydrationResult,
     EnergyBalanceResult,
@@ -35,10 +36,23 @@ from .findings import (
     InfectionResult,
     RadiationResult,
     SansResult,
+    Severity,
 )
 
+
+class BloodPressureSensorErrorResult(TypedDict):
+    sbp_mmhg: float
+    dbp_mmhg: float
+    sensor_error: str
+    triggers: list[str]
+    status: Severity
+    action: str
+
+
 type FindingResult = (
-    BoneResult
+    BloodPressureResult
+    | BloodPressureSensorErrorResult
+    | BoneResult
     | DehydrationResult
     | HypoxiaResult
     | EnergyBalanceResult

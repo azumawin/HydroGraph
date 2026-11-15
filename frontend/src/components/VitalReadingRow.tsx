@@ -1,12 +1,14 @@
 import { VITALS_EVALUATION_LABELS, VITALS_FORMAT, formatReadingValue } from "../Constants.ts";
 import type { VitalMetric } from "../Constants.ts";
 import type { VitalReading } from "../store/useTelemetryStore.ts";
+import type { TelemetryFinding } from "../api/Service.ts";
 import { BODY_EVALUATION_PRIORITY } from "./model/ModelConstants.ts";
 import VitalHistoryChart from "./VitalHistoryChart.tsx";
 
 type VitalReadingRowProps = {
   metric: VitalMetric;
   readings: VitalReading[];
+  finding?: TelemetryFinding;
   isLoadingReading: boolean;
   hasReadingError: boolean;
 };
@@ -14,6 +16,7 @@ type VitalReadingRowProps = {
 const VitalReadingRow = ({
   metric,
   readings,
+  finding,
   isLoadingReading,
   hasReadingError,
 }: VitalReadingRowProps) => {
@@ -30,14 +33,21 @@ const VitalReadingRow = ({
         )[0]
       : undefined;
   const Icon = metric.ICON;
-  const evaluation = evaluatedReading?.evaluation;
+  const evaluation =
+    hasCompleteReading && !hasReadingError && !isLoadingReading
+      ? (finding?.status ?? evaluatedReading?.evaluation)
+      : undefined;
+  const sensorError = finding?.values.sensor_error;
+  const isFlagged = evaluation === "warning" || evaluation === "critical";
   const statusLabel = isLoadingReading
     ? "Loading"
     : hasReadingError
       ? "Unavailable"
       : evaluation === undefined
         ? "Not measured"
-        : VITALS_EVALUATION_LABELS[evaluation];
+        : typeof sensorError === "string"
+          ? "Sensor error"
+          : VITALS_EVALUATION_LABELS[evaluation];
   const measurementValue =
     isLoadingReading || hasReadingError
       ? "—"
@@ -86,6 +96,17 @@ const VitalReadingRow = ({
             ))}
           </span>
         </div>
+        {finding && (
+          <div className="vitals-dashboard-reading-assessment">
+            {typeof finding.values.map_mmhg === "number" && (
+              <span>MAP {VITALS_FORMAT.VALUE.format(finding.values.map_mmhg)} mmHg</span>
+            )}
+            {typeof finding.values.shock_index === "number" && (
+              <span>Shock index {finding.values.shock_index.toFixed(2)}</span>
+            )}
+            {isFlagged && <span>{finding.triggers.join(" · ")}</span>}
+          </div>
+        )}
       </div>
     </article>
   );

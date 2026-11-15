@@ -158,3 +158,28 @@
 .vitals-dashboard .vitals-dashboard-chat-finding-triggers {
   color: var(--color-text-secondary);
 }
+
+.vitals-dashboard .vitals-dashboard-chat-latest {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-self: center;
+  align-items: center;
+  gap: 6px;
+  margin: 0 24px 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text);
+  background: var(--color-glass-tint);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--color-accent);
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-chat-latest-icon {
+  width: 14px;
+  height: 14px;
+}

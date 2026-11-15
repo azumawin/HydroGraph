@@ -59,17 +59,95 @@
   gap: 8px;
 }
 
+.vitals-dashboard .vitals-dashboard-environment-select-control {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.vitals-dashboard .vitals-dashboard-environment-select-chevron {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
 .vitals-dashboard .vitals-dashboard-environment-select {
-  padding: 4px 8px;
+  appearance: none;
+  min-height: 40px;
+  padding: 8px 36px 8px 12px;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--color-text);
-  background: var(--color-surface-opaque);
+  background: var(--color-glass-tint);
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
 
+  &:hover:not(:disabled) {
+    border-color: var(--color-accent);
+    background-color: var(--color-accent-wash);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
   &:disabled {
+    color: var(--color-text-secondary);
     cursor: progress;
+  }
+
+  & option {
+    color: var(--color-text);
+    background: var(--color-surface-opaque);
+  }
+}
+
+@supports (appearance: base-select) {
+  .vitals-dashboard .vitals-dashboard-environment-select,
+  .vitals-dashboard .vitals-dashboard-environment-select::picker(select) {
+    appearance: base-select;
+  }
+
+  .vitals-dashboard .vitals-dashboard-environment-select::picker-icon {
+    display: none;
+  }
+
+  .vitals-dashboard .vitals-dashboard-environment-select::picker(select) {
+    margin-top: 8px;
+    padding: 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    color: var(--color-text);
+    background: var(--color-surface-opaque);
+    box-shadow: 0 8px 24px var(--color-shadow);
+  }
+
+  .vitals-dashboard .vitals-dashboard-environment-select option {
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: transparent;
+
+    &:hover,
+    &:focus,
+    &:checked {
+      background: var(--color-accent-wash);
+    }
+  }
+
+  @supports (backdrop-filter: blur(20px)) {
+    .vitals-dashboard .vitals-dashboard-environment-select::picker(select) {
+      background:
+        linear-gradient(var(--color-glass-fill), var(--color-glass-fill)), var(--color-glass-tint);
+      backdrop-filter: blur(20px);
+    }
   }
 }
 
@@ -212,7 +290,8 @@
 }
 
 @supports (backdrop-filter: blur(20px)) {
-  .vitals-dashboard .vitals-dashboard-panel {
+  .vitals-dashboard .vitals-dashboard-panel,
+  .vitals-dashboard .vitals-dashboard-environment {
     background:
       linear-gradient(var(--color-glass-fill), var(--color-glass-fill)), var(--color-glass-tint);
     backdrop-filter: blur(20px);

@@ -134,7 +134,13 @@ Keep labels on a stable reading surface beside the model. Group supplied evaluat
 
 The [assistant panel](./src/components/HealthAssistant.tsx) should feel like a calm conversation surface. It has no header.
 
-Leave the assistant unchanged unless explicitly requested. Keep its original empty body; do not add connection badges, explanatory copy, or disabled messaging controls as part of the vitals work. If chat content is explicitly requested later, use smoke-grey assistant messages, a faint accent wash for user messages, a 40 px composer with a clear border, and a platinum send action with charcoal text. Do not add demonstration conversations or unsupported health claims as part of a visual restyle.
+Keep the findings and conversation in one independently scrolling surface, with the header and 40 px composer fixed within the panel. Use a thin neutral scrollbar and contain wheel scrolling within the transcript. Follow new replies while the reader is near the bottom; preserve their position when they scroll up, with a “Latest message” control to resume following. Initial findings must remain visible without moving the dashboard viewport.
+
+Use translucent smoke-grey assistant messages and a faint accent wash for user messages. Starter, latest-message, and send buttons use neutral white text, translucent fills, thin reflective borders, and visible keyboard focus. Keep the disabled send state readable without lowering the opacity of the whole control. Do not add demonstration conversations or unsupported health claims as part of a visual restyle.
+
+### Mission environment
+
+Use the shared glass fill, directional reflection, edge highlight, and blur for the environment container. The selector uses a translucent fill, a neutral chevron, and a 40 px height. Enhance the native select with `appearance: base-select` where supported so its open picker also uses glass, softly rounded options, and a quiet selection wash. Preserve native keyboard navigation and use the smoke-grey surface as the fallback for browsers without customizable selects or backdrop filtering.
 
 ### Interaction and state
 

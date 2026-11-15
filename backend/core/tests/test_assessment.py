@@ -14,6 +14,7 @@ ISS = ENVIRONMENTS["iss_leo"]
 HEALTHY: dict[str, float | bool] = {
     "heart_rate": 70 / 60,
     "bp_systolic": 120 * MMHG,
+    "bp_diastolic": 80 * MMHG,
     "spo2": 0.98,
     "body_temperature": 273.15 + 36.8,
     "respiratory_rate": 14 / 60,
@@ -77,6 +78,51 @@ class TestNews2(unittest.TestCase):
 
 
 class TestEvaluateFindings(unittest.TestCase):
+    def test_blood_pressure_reuses_combined_thresholds_with_si_units(self) -> None:
+        cases = [
+            (120, 80, None, "nominal"),
+            (121, 80, None, "warning"),
+            (100, 70, None, "warning"),
+            (90, 60, None, "critical"),
+            (140, 80, None, "critical"),
+            (120, 90, None, "critical"),
+            (120, 80, 108, "nominal"),
+            (120, 80, 109, "critical"),
+        ]
+        for sbp, dbp, hr, expected in cases:
+            latest = {"bp_systolic": sbp * MMHG, "bp_diastolic": dbp * MMHG}
+            if hr is not None:
+                latest["heart_rate"] = hr / 60
+            with self.subTest(sbp=sbp, dbp=dbp, hr=hr):
+                result = evaluate_findings(latest, None, None, ISS)[
+                    "blood_pressure_1_4"
+                ]
+                self.assertEqual(result["status"], expected)
+                self.assertEqual(
+                    result.get("map_mmhg"), round(dbp + (sbp - dbp) / 3, 1)
+                )
+                self.assertEqual(
+                    result.get("shock_index"),
+                    round(hr / sbp, 2) if hr is not None else None,
+                )
+
+    def test_blood_pressure_waits_for_both_pressures(self) -> None:
+        result = evaluate_findings({"bp_systolic": 120 * MMHG}, None, None, ISS)
+        self.assertNotIn("blood_pressure_1_4", result)
+
+    def test_bad_pressure_pair_reports_sensor_error_without_breaking_findings(
+        self,
+    ) -> None:
+        result = evaluate_findings(
+            {**HEALTHY, "bp_systolic": 85 * MMHG, "bp_diastolic": 80 * MMHG},
+            75.0,
+            None,
+            ISS,
+        )
+        self.assertIn("sensor_error", result["blood_pressure_1_4"])
+        self.assertNotIn("map_mmhg", result["blood_pressure_1_4"])
+        self.assertIn("acute_infection_3_1", result)
+
     def test_catalog_channels_exist(self) -> None:
         for finding, info in FINDINGS.items():
             with self.subTest(finding=finding):

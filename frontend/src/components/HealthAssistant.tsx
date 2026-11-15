@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
-import { SendHorizontal } from "lucide-react";
+import type { FormEvent, UIEvent } from "react";
+import { ArrowDown, SendHorizontal } from "lucide-react";
 import { assistantErrorDetail, postAssistant } from "../api/Service.ts";
 import type { ChatMessage, TelemetryFinding } from "../api/Service.ts";
 import { ASSISTANT, FINDING_STATUS_LABELS } from "../Constants.ts";
@@ -25,6 +25,7 @@ const HealthAssistant = () => {
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shouldFollowLatest, setShouldFollowLatest] = useState(true);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const messageIdRef = useRef(0);
   const announcedFindingsRef = useRef<Record<string, string>>({});
@@ -63,9 +64,9 @@ const HealthAssistant = () => {
 
   useLayoutEffect(() => {
     const transcript = transcriptRef.current;
-    if (transcript === null) return;
+    if (transcript === null || !shouldFollowLatest) return;
     transcript.scrollTop = transcript.scrollHeight;
-  }, [messages, isSending, error]);
+  }, [messages, isSending, error, shouldFollowLatest]);
 
   const send = async (content: string) => {
     const text = content.trim();
@@ -78,6 +79,7 @@ const HealthAssistant = () => {
     };
     const conversation = [...messages, userMessage];
     setMessages((current) => [...current, userMessage]);
+    setShouldFollowLatest(true);
     setDraft("");
     setError(null);
     setIsSending(true);
@@ -98,6 +100,14 @@ const HealthAssistant = () => {
     }
   };
 
+  const handleTranscriptScroll = (event: UIEvent<HTMLDivElement>) => {
+    const transcript = event.currentTarget;
+    setShouldFollowLatest(
+      transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight <=
+        ASSISTANT.SCROLL_THRESHOLD_PX,
+    );
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void send(draft);
@@ -110,6 +120,7 @@ const HealthAssistant = () => {
     >
       <div
         ref={transcriptRef}
+        onScroll={handleTranscriptScroll}
         className="vitals-dashboard-panel-content min-h-0 flex-1 overflow-y-auto p-6"
       >
         <div className="vitals-dashboard-chat" aria-live="polite">
@@ -130,6 +141,16 @@ const HealthAssistant = () => {
           {error && <p className="vitals-dashboard-chat-message is-error">{error}</p>}
         </div>
       </div>
+      {!shouldFollowLatest && messages.length > 0 && (
+        <button
+          type="button"
+          className="vitals-dashboard-chat-latest"
+          onClick={() => setShouldFollowLatest(true)}
+        >
+          <ArrowDown className="vitals-dashboard-chat-latest-icon" aria-hidden="true" />
+          {ASSISTANT.LATEST_LABEL}
+        </button>
+      )}
       <form className="vitals-dashboard-chat-composer" onSubmit={handleSubmit}>
         <input
           className="vitals-dashboard-chat-input"

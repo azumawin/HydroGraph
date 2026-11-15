@@ -441,5 +441,5 @@ def test_infection_explicit_context_and_optional_assays(
 
 def test_dictionary_sends_each_channel_schedule() -> None:
     channels = dictionary_payload(DEFAULT_RULES)["channels"]
-    assert channels["heart_rate"]["schedule_s"] == 60.0
+    assert channels["heart_rate"]["schedule_s"] == 10.0
     assert channels["troponin_i"]["schedule_s"] is None

@@ -463,7 +463,7 @@ _DAY = 86400.0
 
 SCHEDULES: Final[Mapping[str, float]] = MappingProxyType(
     {
-        "heart_rate": _MINUTE,
+        "heart_rate": 10.0,
         "hrv_rmssd": _MINUTE,
         "respiratory_rate": _MINUTE,
         "spo2": 1.0,

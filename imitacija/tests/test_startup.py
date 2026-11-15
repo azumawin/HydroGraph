@@ -64,7 +64,9 @@ def test_startup_does_not_repeat_or_reset_sparse_and_regular_schedules() -> None
     assert Counter(
         o.reading.channel for o in sink.items if o.sample_kind == "startup_baseline"
     ) == Counter({c: 1 for c in settings.enabled_channels})
-    assert [o.acquired_s for o in sink.items if o.reading.channel == "heart_rate"] == [0, 60]
+    assert [o.acquired_s for o in sink.items if o.reading.channel == "heart_rate"] == list(
+        range(0, 61, 10)
+    )
     sparse = Collected()
     enabled = tuple(name for name in settings.enabled_channels if name != "heart_rate")
     config = settings.model_copy(update={"enabled_channels": enabled})

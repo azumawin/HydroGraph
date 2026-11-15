@@ -67,6 +67,24 @@ def test_charts_and_values_update_live_during_a_run(
     expect(ui.unit(heart_rate)).to_have_text("bpm")
 
 
+def test_scenario_one_streams_six_hr_measurements_per_minute_at_speed_one(
+    dashboard: Page,
+    backend: Backend,
+    simulate,
+) -> None:
+    run = simulate("badscenario1.toml", speed=1, duration=65)
+    heart = ui.vital(dashboard, "Heart rate")
+    expect(ui.chart(heart)).to_have_attribute(
+        "aria-label", "Heart rate history. 1 recorded timestamps.", timeout=15000
+    )
+    for count in range(2, 8):
+        expect(ui.chart(heart)).to_have_attribute(
+            "aria-label", f"Heart rate history. {count} recorded timestamps.", timeout=20000
+        )
+    run.wait()
+    assert_delivered_cleanly(run.counters(), backend)
+
+
 def test_reload_mid_run_resumes_live_updates(dashboard: Page, backend: Backend, simulate) -> None:
     simulate("healthy.toml", speed=60, duration=1200)
     wait_for_more_points(dashboard, "Heart rate", than=1)
@@ -100,18 +118,19 @@ def test_hypercapnia_scenario_escalates_on_screen(
 
 
 def test_sans_scenario_reaches_critical(dashboard: Page, backend: Backend, simulate) -> None:
-    run = simulate("badscenario1.toml", speed=120, duration=4200)
+    # The scenario itself progresses early; telemetry runs at real-time speed.
+    run = simulate("badscenario1.toml", speed=1, duration=135)
 
     sans_warning = ui.finding_messages_with_status(
         dashboard, "SANS & cephalic fluid shift", "Warning"
     )
-    expect(sans_warning.first).to_be_visible(timeout=40000)
+    expect(sans_warning.first).to_be_visible(timeout=75000)
     sans_critical = ui.finding_messages_with_status(
         dashboard, "SANS & cephalic fluid shift", "Critical"
     )
-    expect(sans_critical.first).to_be_visible(timeout=40000)
+    expect(sans_critical.first).to_be_visible(timeout=75000)
     expect(sans_critical.first).to_contain_text("jugular distension > 1.8%")
     expect(ui.region_status(ui.region(dashboard, "Head & neck"))).to_have_text("Critical")
 
     run.wait()
-    assert backend.server_errors() == []
+    assert_delivered_cleanly(run.counters(), backend)
