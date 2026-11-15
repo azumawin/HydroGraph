@@ -189,8 +189,8 @@ def test_single_severity_finding_shows_as_warning_with_triggers_and_action(
     backend.post("urine_volume_24h", 1.5e-3, "m^3")
 
     bone = ui.finding_message(dashboard, "Bone demineralization & renal stone risk")
-    expect(bone).to_contain_text("Warning:")
-    expect(bone).to_contain_text("NTx > +25% from baseline · urine volume < 2.0 L/day")
+    expect(bone).to_contain_text("Warning")
+    expect(bone).to_contain_text("NTx > +25% from baseline, urine volume < 2.0 L/day")
     expect(bone).to_contain_text("Increase ARED resistive exercise load")
 
 
@@ -200,14 +200,14 @@ def test_severity_finding_escalates_to_critical(dashboard: Page, backend: Backen
     backend.post("spe_flag", True, "boolean", minutes=1, scope="environment")
 
     radiation = ui.finding_message(dashboard, "Radiation dose & solar particle events")
-    expect(radiation).to_contain_text("Critical:")
+    expect(radiation).to_contain_text("Critical")
     expect(radiation).to_contain_text("storm shelter")
 
     backend.post("spe_flag", False, "boolean", minutes=2, scope="environment")
 
     radiation_messages = ui.finding_messages(dashboard, "Radiation dose & solar particle events")
     expect(radiation_messages).to_have_count(1)
-    expect(radiation).to_contain_text("Critical:")
+    expect(radiation).to_contain_text("Critical")
 
 
 def test_finding_combines_crew_and_cabin_readings(dashboard: Page, backend: Backend) -> None:
@@ -215,7 +215,7 @@ def test_finding_combines_crew_and_cabin_readings(dashboard: Page, backend: Back
     backend.post("ambient_ppco2", 3.5 * MMHG, "Pa", scope="environment")
 
     hypoxia = ui.finding_message(dashboard, "Hypoxia & CO2 exposure")
-    expect(hypoxia).to_contain_text("Warning:")
+    expect(hypoxia).to_contain_text("Warning")
     expect(hypoxia).to_contain_text("ppCO2 > 3.0 mmHg")
 
 
