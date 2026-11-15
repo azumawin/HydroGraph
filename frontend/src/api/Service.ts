@@ -1,5 +1,6 @@
 import axios from "axios";
 import { TELEMETRY } from "../Constants.ts";
+import type { MissionEnvironment } from "./types.ts";
 
 export type Evaluation = "nominal" | "warning" | "critical" | "unspecified";
 
@@ -38,6 +39,7 @@ export type ChannelInfo = {
   display: ChannelDisplay;
   body_regions: string[];
   explanation: string;
+  schedule_s: number | null;
 };
 
 export type FindingInfo = {
@@ -45,14 +47,7 @@ export type FindingInfo = {
   channels: string[];
 };
 
-export type MissionEnvironment = {
-  name: string;
-  gravity_g: number;
-  comm_delay_rt_s: number;
-  baseline_dose_rate_usv_h: number;
-  storm_shelter_available: boolean;
-  day_length_h: number;
-};
+export type { MissionEnvironment };
 
 export type TelemetryDictionary = {
   environments: Record<string, MissionEnvironment>;
@@ -101,7 +96,8 @@ const isChannelInfo = (value: unknown): value is ChannelInfo =>
   typeof value.unit === "string" &&
   isChannelDisplay(value.display) &&
   isStringArray(value.body_regions) &&
-  typeof value.explanation === "string";
+  typeof value.explanation === "string" &&
+  (typeof value.schedule_s === "number" || value.schedule_s === null);
 
 const isFindingInfo = (value: unknown): value is FindingInfo =>
   isRecord(value) && typeof value.name === "string" && isStringArray(value.channels);
@@ -239,4 +235,66 @@ export const assistantErrorDetail = (error: unknown): string | null => {
   if (!axios.isAxiosError(error) || !isRecord(error.response?.data)) return null;
   const { detail } = error.response.data;
   return typeof detail === "string" ? detail : null;
+};
+
+export type FindingRule = {
+  id: string;
+  name: string;
+  channels: string[];
+  required: string[];
+  default: boolean;
+  enabled: boolean;
+  source: string;
+};
+
+export type FindingRuleChange = { enabled?: boolean; source?: string };
+
+const isFindingRule = (value: unknown): value is FindingRule =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.name === "string" &&
+  isStringArray(value.channels) &&
+  isStringArray(value.required) &&
+  typeof value.default === "boolean" &&
+  typeof value.enabled === "boolean" &&
+  typeof value.source === "string";
+
+const parseRule = (data: unknown): FindingRule => {
+  if (!isFindingRule(data)) throw malformed();
+  return data;
+};
+
+const ruleUrl = (ruleId: string) => `${TELEMETRY.RULES_URL}${encodeURIComponent(ruleId)}/`;
+
+export const fetchRules = async (): Promise<FindingRule[]> => {
+  const response = await axios.get<unknown>(TELEMETRY.RULES_URL);
+  if (!isRecord(response.data) || !Array.isArray(response.data.rules)) throw malformed();
+  return response.data.rules.map(parseRule);
+};
+
+export const createRule = async (source: string): Promise<FindingRule> => {
+  const response = await axios.post<unknown>(TELEMETRY.RULES_URL, { source });
+  return parseRule(response.data);
+};
+
+export const updateRule = async (
+  ruleId: string,
+  change: FindingRuleChange,
+): Promise<FindingRule> => {
+  const response = await axios.put<unknown>(ruleUrl(ruleId), change);
+  return parseRule(response.data);
+};
+
+export const deleteRule = async (ruleId: string): Promise<void> => {
+  await axios.delete(ruleUrl(ruleId));
+};
+
+// the backend reason for a rejected rule change such as a source error
+export const ruleErrorDetail = (error: unknown): string | null => {
+  if (!axios.isAxiosError(error) || !isRecord(error.response?.data)) return null;
+  const { source, detail } = error.response.data;
+  if (isStringArray(source) && source.length > 0) return source.join(" ");
+  if (typeof detail === "string") return detail;
+  if (isStringArray(detail) && detail.length > 0) return detail.join(" ");
+  return null;
 };

@@ -123,7 +123,11 @@ export const useTelemetryStore = create<TelemetryStore>()((set, get) => ({
 
     const stream = openTelemetryStream({
       onDictionary: (dictionary) => {
-        set({ dictionary, hasTelemetryError: false });
+        // the dictionary is resent when rules change so drop findings of disabled rules
+        const findings = Object.fromEntries(
+          Object.entries(get().findings).filter(([id]) => id in dictionary.findings),
+        );
+        set({ dictionary, findings, hasTelemetryError: false });
         // after the dictionary, so every history reading can be converted; sent on each
         // (re)connect, and the flush merges history with live readings by timestamp
         fetchReadingHistory(VITALS_HISTORY.MAX_POINTS_PER_CHANNEL)

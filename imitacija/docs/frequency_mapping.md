@@ -65,6 +65,29 @@ the override explicitly. Other channels and thresholds retain their behavior.
 use `BP_DEMO_INTERVAL=0` to run the original protocol. The standalone simulator
 CLI and existing scenario configs retain the original timing unless opted in.
 
+### Dashboard assay and specimen demo override
+
+`--lab-demo-interval 5` (or `lab_demo_interval_s = 5` in a config) publishes the
+calendar-driven groups every five simulation seconds: `cortisol`, `troponin`,
+`lactate`, `vitamin`, `il6`, `mass`, `usg`, `urine`, `ntx`, `sweat` and
+`sweat_summary`. Their own protocols put the next result hours, days or a month
+after the startup baseline, which is the whole run for a dashboard demo.
+
+Each sample is evaluated one step further along that group's own calendar, the
+step being its stated cadence, so the series is this simulator's existing
+trajectory sampled coarsely rather than a value invented for the chart. The
+compressed calendar carries no bounded scale factor, unlike the pressure and
+CGM demos. Local sweat has no resting acquisition, so its two groups replay the
+daily active and wet bout instead of polling a dry patch. A demo-paced result is
+not held for `lab_delay_s`, since the synthetic laboratory hour would outlast the
+run. Dictionary metadata names the override, its calendar and the removed delay.
+
+A scenario that gives its target an explicit schedule for one of these groups --
+EVA mass, EVA spot urine, infection IL-6 -- keeps it, as do other crew members
+and every channel outside the list. `make dev` and `make sim` enable this mode
+with `LAB_DEMO_INTERVAL=5` by default; use `LAB_DEMO_INTERVAL=0` to run the
+original calendars.
+
 ### Protocol schedules
 
 The default BP session begins at 08:00 and repeats hourly indefinitely. `bp_session_duration_s` can still restrict it to an explicit finite session. Set `stand_test_start_s = 600` to request a 10 Hz paired-pressure burst over `[600, 780)` seconds. This is synthetic continuous pressure, **not ten cuff inflations per second**; it does not introduce illness or a POTS diagnosis. No burst runs by default.

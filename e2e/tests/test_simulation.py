@@ -41,15 +41,12 @@ def test_healthy_run_fills_every_vital_and_flags_nothing(
 
     for label in VITALS:
         expect(ui.status(ui.vital(dashboard, label))).to_have_text(MEASURED, timeout=15000)
-    # Six original findings plus the combined blood pressure assessment.
-    expect(dashboard.locator(".vitals-dashboard-finding")).to_have_count(7, timeout=15000)
 
     run.wait()
     assert_delivered_cleanly(run.counters(), backend)
     for label in ["Heart rate", "Blood oxygen", "Body temperature"]:
         assert ui.chart_points(ui.vital(dashboard, label)) >= 3, label
-    expect(dashboard.locator(".vitals-dashboard-finding-status.is-warning")).to_have_count(0)
-    expect(dashboard.locator(".vitals-dashboard-finding-status.is-critical")).to_have_count(0)
+    expect(dashboard.locator(".vitals-dashboard-chat-message")).to_have_count(0)
     expect(dashboard.locator(".vitals-dashboard-reading-status.is-critical")).to_have_count(0)
 
 
@@ -105,12 +102,9 @@ def test_hypercapnia_scenario_escalates_on_screen(
 ) -> None:
     run = simulate("badscenario2.toml", speed=30, duration=420)
 
-    hypoxia = ui.finding(dashboard, "Hypoxia & CO2 exposure")
-    expect(ui.finding_status(hypoxia)).to_have_text("Nominal", timeout=15000)
-    expect(ui.finding_status(hypoxia)).to_have_text("Warning", timeout=30000)
-    expect(hypoxia.locator(".vitals-dashboard-finding-triggers")).to_contain_text(
-        "ppCO2 > 3.0 mmHg"
-    )
+    hypoxia = ui.finding_message(dashboard, "Hypoxia & CO2 exposure")
+    expect(hypoxia).to_contain_text("Warning", timeout=30000)
+    expect(hypoxia).to_contain_text("ppCO2 > 3.0 mmHg")
 
     oxygen = ui.vital(dashboard, "Blood oxygen")
     expect(ui.status(oxygen)).to_have_text("Warning", timeout=30000)
@@ -127,13 +121,15 @@ def test_sans_scenario_reaches_critical(dashboard: Page, backend: Backend, simul
     # The scenario itself progresses early; telemetry runs at real-time speed.
     run = simulate("badscenario1.toml", speed=1, duration=135)
 
-    sans = ui.finding(dashboard, "SANS & cephalic fluid shift")
-    expect(ui.finding_status(sans)).to_have_text("Nominal", timeout=15000)
-    expect(ui.finding_status(sans)).to_have_text("Warning", timeout=75000)
-    expect(ui.finding_status(sans)).to_have_text("Critical", timeout=75000)
-    expect(sans.locator(".vitals-dashboard-finding-triggers")).to_have_text(
-        "jugular distension > 1.8%"
+    sans_warning = ui.finding_messages_with_status(
+        dashboard, "SANS & cephalic fluid shift", "Warning"
     )
+    expect(sans_warning.first).to_be_visible(timeout=75000)
+    sans_critical = ui.finding_messages_with_status(
+        dashboard, "SANS & cephalic fluid shift", "Critical"
+    )
+    expect(sans_critical.first).to_be_visible(timeout=75000)
+    expect(sans_critical.first).to_contain_text("jugular distension > 1.8%")
     expect(ui.region_status(ui.region(dashboard, "Head & neck"))).to_have_text("Critical")
 
     run.wait()

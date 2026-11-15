@@ -14,6 +14,7 @@ from functools import lru_cache
 
 from .frequency import FREQUENCIES
 from .models import (
+    CGM_WINDOW_S,
     AcuteInfectionScenario,
     AstronautProfile,
     Environment,
@@ -78,6 +79,23 @@ def blood_pressure_demo_scale(t: float, seed: int, owner: str) -> float:
     This is a synthetic trend, not a raw arterial pulse waveform.
     """
     p = phase(seed, owner, "blood_pressure_demo")
+    return (
+        1
+        + 0.02 * math.sin(2 * math.pi * t / 90 + p)
+        + 0.01 * math.sin(2 * math.pi * t / 23 + 2 * p)
+    )
+
+
+def glucose_demo_scale(t: float, seed: int, owner: str) -> float:
+    """Small interstitial-glucose demo variation around the healthy trajectory.
+
+    The same bounded +/-3% scale as the pressure demo, on the same short
+    periods. The CGM's own trajectory moves with meals over hours, so across a
+    two-minute dashboard run it is a flat line; this gives it a visible trace.
+    Evaluated from acquisition time so retries never generate different values.
+    This is a synthetic trend, not a validated glucose excursion.
+    """
+    p = phase(seed, owner, "glucose_demo")
     return (
         1
         + 0.02 * math.sin(2 * math.pi * t / 90 + p)
@@ -191,8 +209,14 @@ def crew_values(
     hypercapnia: HypercapniaScenario | None = None,
     dehydration: EvaDehydrationScenario | None = None,
     infection: AcuteInfectionScenario | None = None,
+    glucose_window_s: float = CGM_WINDOW_S,
 ) -> dict[str, float | bool | str]:
-    """Produce one physical acquisition group in conventional source units."""
+    """Produce one physical acquisition group in conventional source units.
+
+    ``glucose_window_s`` is the CGM's sensor window, 5 minutes by its own
+    specification. The dashboard demo shortens it so the chart has points
+    before the first real result at 343 s; nothing else changes it.
+    """
     if dehydration is not None and dehydration.owner_id != profile.id:
         dehydration = None
     if infection and infection.owner_id == profile.id:
@@ -342,11 +366,11 @@ def crew_values(
                 / 12
             }
         case "glucose":
-            if t < 300:
-                raise ValueError("CGM estimate needs its completed 5-minute sensor window")
+            if t < glucose_window_s:
+                raise ValueError("CGM estimate needs its completed sensor window")
             raw = []
-            for i in range(60):
-                sample = t - 300 + (i + 1) * 5
+            for i in range(max(1, round(glucose_window_s / 5))):
+                sample = t - glucose_window_s + (i + 1) * 5
                 sample_hour = sample % DAY / 3600
                 meals = sum(
                     1.45 * math.exp(-(((sample_hour - meal - 0.65) / 0.65) ** 2))

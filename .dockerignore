@@ -1,0 +1,22 @@
+# Build contexts are the repository root; keep host-only state out of them so an
+# image never inherits a local virtualenv, node_modules or database.
+**/.venv
+**/node_modules
+**/__pycache__
+**/*.py[oc]
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/dist
+# Never bake a host secrets file into an image; the services read the key from
+# the environment instead (see compose.yaml).
+**/.env
+**/staticfiles
+**/db.sqlite3
+**/db.sqlite3-wal
+**/db.sqlite3-shm
+.git
+.github
+docs
+e2e
+**/*.pdf

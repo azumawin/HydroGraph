@@ -5,14 +5,14 @@ from typing import cast
 
 import pytest
 from asgiref.sync import async_to_sync
+from django.test import Client
 from django.urls import reverse
-from hydrograph_core import ENVIRONMENTS
-from hydrograph_core.findings import DehydrationResult, EnergyBalanceResult
-from rest_framework.test import APIClient
 
 from api import stream, views
 from api.findings import crew_findings
 from api.models import Reading
+from core import ENVIRONMENTS
+from core.findings import DehydrationResult, EnergyBalanceResult
 
 AT = datetime(2026, 11, 14, 8, 0, tzinfo=UTC)
 CABIN = {"X-Simulation-Scope": "environment"}
@@ -32,14 +32,15 @@ def test_pressure_and_heart_rate_updates_publish_combined_assessment() -> None:
     assert reading["evaluation"] == "unspecified"
     assert finding["id"] == "blood_pressure_1_4"
     assert finding["status"] == "nominal"
-    assert finding["values"]["map_mmhg"] == 93.3
-    assert finding["values"]["shock_index"] is None
+    values = cast("dict[str, object]", finding["values"])
+    assert values["map_mmhg"] == 93.3
+    assert values["shock_index"] is None
 
     body.update(channel="heart_rate", value=120 / 60, unit="s^-1")
     _, finding = post(body, CREW)
     assert finding["status"] == "critical"
-    assert finding["values"]["shock_index"] == 1.0
-    assert "shock index > 0.9" in finding["triggers"]
+    assert cast("dict[str, object]", finding["values"])["shock_index"] == 1.0
+    assert "shock index > 0.9" in cast("list[str]", finding["triggers"])
 
 
 @pytest.mark.django_db
@@ -52,11 +53,11 @@ def test_invalid_pressure_pair_does_not_fail_ingestion_and_recovers() -> None:
         "measured_at": "2026-11-14T09:00:00Z",
     }
     _, finding = post(body, CREW)
-    assert "sensor_error" in finding["values"]
+    assert "sensor_error" in cast("dict[str, object]", finding["values"])
     body.update(value=80 * 133.322)
     _, finding = post(body, CREW)
     assert finding["status"] == "nominal"
-    assert "sensor_error" not in finding["values"]
+    assert "sensor_error" not in cast("dict[str, object]", finding["values"])
 
 
 def create(channel: str, value: float | bool, day: int = 0) -> None:
@@ -71,8 +72,11 @@ def post(
     published: list[str] = []
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(views, "publish", published.append)
-        response = APIClient().post(
-            reverse("readings"), body, format="json", headers=headers
+        response = Client().post(
+            reverse("readings"),
+            json.dumps(body),
+            content_type="application/json",
+            headers=headers,
         )
     assert response.status_code == 201
     return [
@@ -133,7 +137,7 @@ def test_body_mass_baseline_and_week_before_come_from_history() -> None:
     create("body_mass", 76.0, day=1)
     create("body_mass", 75.0, day=8)
 
-    results = crew_findings(ENVIRONMENTS["iss_leo"])
+    results = async_to_sync(crew_findings)(ENVIRONMENTS["iss_leo"])
 
     dehydration = cast("DehydrationResult", results["dehydration_2_1"])
     energy = cast("EnergyBalanceResult", results["negative_energy_balance_2_3"])
@@ -166,8 +170,10 @@ def put_environment(environment_id: str) -> tuple[int, list[dict[str, object]]]:
     published: list[str] = []
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(views, "publish", published.append)
-        response = APIClient().put(
-            reverse("environment"), {"id": environment_id}, format="json"
+        response = Client().put(
+            reverse("environment"),
+            json.dumps({"id": environment_id}),
+            content_type="application/json",
         )
     events = [
         cast("dict[str, object]", json.loads(m.split("data: ", 1)[1]))
@@ -178,7 +184,7 @@ def put_environment(environment_id: str) -> tuple[int, list[dict[str, object]]]:
 
 @pytest.mark.django_db
 def test_environment_defaults_to_iss_and_switches() -> None:
-    client = APIClient()
+    client = Client()
     assert client.get(reverse("environment")).json() == {"id": "iss_leo"}
 
     status, events = put_environment("mars_transit")
@@ -194,7 +200,7 @@ def test_unknown_environment_is_rejected_and_changes_nothing() -> None:
 
     assert status == 400
     assert events == []
-    assert APIClient().get(reverse("environment")).json() == {"id": "iss_leo"}
+    assert Client().get(reverse("environment")).json() == {"id": "iss_leo"}
 
 
 @pytest.mark.django_db
@@ -222,7 +228,7 @@ def test_switch_regrades_dose_rate_against_the_new_baseline() -> None:
 
 
 def test_stream_and_environment_allow_any_origin() -> None:
-    client = APIClient()
+    client = Client()
     preflight = client.options(
         reverse("environment"),
         HTTP_ORIGIN="http://127.0.0.1:5173",

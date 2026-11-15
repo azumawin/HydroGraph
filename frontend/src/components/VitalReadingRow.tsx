@@ -1,4 +1,3 @@
-import { CircleAlert, Check, Minus } from "lucide-react";
 import { VITALS_EVALUATION_LABELS, VITALS_FORMAT, formatReadingValue } from "../Constants.ts";
 import type { VitalMetric } from "../Constants.ts";
 import type { VitalReading } from "../store/useTelemetryStore.ts";
@@ -40,7 +39,6 @@ const VitalReadingRow = ({
       : undefined;
   const sensorError = finding?.values.sensor_error;
   const isFlagged = evaluation === "warning" || evaluation === "critical";
-  const StatusIcon = evaluation === undefined ? Minus : isFlagged ? CircleAlert : Check;
   const statusLabel = isLoadingReading
     ? "Loading"
     : hasReadingError
@@ -66,7 +64,7 @@ const VitalReadingRow = ({
     <article className="vitals-dashboard-reading">
       <div className="vitals-dashboard-reading-summary">
         <div className="vitals-dashboard-reading-heading">
-          <Icon className="vitals-dashboard-reading-icon" />
+          <Icon className="vitals-dashboard-reading-icon" color={metric.SERIES[0].COLOR} />
           <h3 className="vitals-dashboard-reading-label">{metric.LABEL}</h3>
         </div>
         <div className="vitals-dashboard-reading-measurement">
@@ -74,7 +72,6 @@ const VitalReadingRow = ({
           <span className="vitals-dashboard-reading-unit">{orderedReadings[0]?.unit}</span>
         </div>
         <div className={`vitals-dashboard-reading-status is-${evaluation ?? "unmeasured"}`}>
-          <StatusIcon className="vitals-dashboard-status-icon" />
           {statusLabel}
         </div>
       </div>
@@ -94,7 +91,7 @@ const VitalReadingRow = ({
           <span className="vitals-dashboard-reading-timestamp">
             {measurementTimes.map((measuredAt) => (
               <time key={measuredAt} dateTime={measuredAt}>
-                Measured {VITALS_FORMAT.MEASURED_AT.format(new Date(measuredAt))}
+                {VITALS_FORMAT.MEASURED_AT.format(new Date(measuredAt))}
               </time>
             ))}
           </span>

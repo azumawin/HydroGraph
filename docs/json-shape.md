@@ -76,7 +76,7 @@ requests history once the dictionary arrives (on every (re)connect) and merges i
 with live readings by `measured_at`. Evaluations use the environment in effect.
 
 `evaluation` is one of `"nominal" | "warning" | "critical" | "unspecified"`
-(`hydrograph_core.Evaluation`). `unspecified` means the specs give no threshold for
+(`core.Evaluation`). `unspecified` means the specs give no threshold for
 this value; it is not "normal".
 
 ## 3. Backend → frontend: finding
@@ -134,7 +134,8 @@ join it to readings by `channel` and to findings by `id`.
       "unit": "Pa",
       "display": { "unit": "mmHg", "scale": 0.0075006, "offset": 0.0 },
       "body_regions": ["heart", "chest"],
-      "explanation": "Why this is measured, what it means…"
+      "explanation": "Why this is measured, what it means…",
+      "schedule_s": 3600
     }
   },
   "findings": {
@@ -146,13 +147,17 @@ join it to readings by `channel` and to findings by `id`.
 }
 ```
 
-- `channels` has one entry per channel the backend accepts (the simulator's 35).
+- `channels` has one entry per channel the backend accepts (the simulator's 40).
   `scope` is the `X-Simulation-Scope` the device must send; `unit` is the SI wire
   unit of every reading's `value`.
 - `display` converts a numeric value for people: `value * scale + offset`, in
   `display.unit`, the spec's clinical unit (mmHg, bpm, °C, µSv/h, ...). It is `""`
   with scale 1 for booleans and dimensionless ratios.
-- `findings` has all 10 master-plan findings plus `blood_pressure_1_4`; `channels` lists each one's inputs, empty for
+- `schedule_s` is the expected seconds between readings of a routinely sampled
+  channel (`core.SCHEDULES`, following the simulator's schedule); `null` for
+  event-driven and scenario-only channels. The frontend flags a channel as overdue
+  from it.
+- `findings` has every **enabled** rule (the 10 master-plan findings plus `blood_pressure_1_4`, unless some are disabled, plus custom rules; `backend/README.md`, "Rules endpoints"). The dictionary is re-sent whenever the rule set changes; `channels` lists each one's inputs, empty for
   the three that are not monitored.
 - `environments` has four entries, keyed by id, in dropdown order: `iss_leo`, `lunar_surface`,
   `mars_transit`, `mars_surface`. `name` is the dropdown label.

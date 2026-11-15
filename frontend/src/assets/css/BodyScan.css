@@ -1,7 +1,10 @@
 .vitals-dashboard .vitals-dashboard-body-scan-header {
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 12px 0;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  margin: 0 24px;
+  padding: 16px 0 0;
 }
 
 .vitals-dashboard .vitals-dashboard-scan-readings-toggle {
@@ -45,9 +48,7 @@
 
 .vitals-dashboard .vitals-dashboard-scan-alerts {
   display: flex;
-  justify-content: flex-end;
   gap: 12px;
-  width: 100%;
   font-size: 12px;
   line-height: 16px;
 
@@ -170,8 +171,8 @@
   gap: 2px;
   padding: 3px 12px;
   border: 1px solid var(--color-divider);
-  border-radius: 12px;
-  background: var(--color-glass-fill);
+  border-radius: 8px;
+  background: var(--color-glass-tint);
   font-size: 12px;
   line-height: 16px;
 }

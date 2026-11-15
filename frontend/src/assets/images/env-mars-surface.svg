@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-hidden="true">
+  <title>Mars surface: dust-reddened sky over rust dunes and scattered rock</title>
+  <defs>
+    <linearGradient id="mars-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#55331f"/>
+      <stop offset="0.6" stop-color="#9a5a33"/>
+      <stop offset="1" stop-color="#c88856"/>
+    </linearGradient>
+    <linearGradient id="mars-ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b5643a"/>
+      <stop offset="0.45" stop-color="#7d4128"/>
+      <stop offset="1" stop-color="#452419"/>
+    </linearGradient>
+    <radialGradient id="mars-sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff1d6"/>
+      <stop offset="0.4" stop-color="#ffd9a8" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#c88856" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="320" height="180" fill="url(#mars-sky)"/>
+  <circle cx="248" cy="52" r="26" fill="url(#mars-sun)"/>
+  <circle cx="248" cy="52" r="6" fill="#fff4e2" opacity="0.95"/>
+  <path d="M0 96 L52 86 L96 92 L148 80 L198 90 L252 82 L320 92 V180 H0 Z" fill="#6d3923" opacity="0.6"/>
+  <path d="M0 112 L44 100 L110 110 L170 96 L236 108 L292 98 L320 104 V180 H0 Z" fill="url(#mars-ground)"/>
+  <g fill="#8f4b2c" opacity="0.7">
+    <ellipse cx="96" cy="144" rx="70" ry="12"/>
+    <ellipse cx="248" cy="160" rx="62" ry="11"/>
+  </g>
+  <g fill="#3a1e14">
+    <path d="M36 128 l9 -12 l11 12 z"/>
+    <path d="M148 140 l12 -16 l14 16 z"/>
+    <path d="M268 132 l8 -10 l9 10 z"/>
+    <ellipse cx="206" cy="150" rx="7" ry="3"/>
+    <ellipse cx="78" cy="166" rx="9" ry="3.5"/>
+  </g>
+  <g stroke="#c88856" stroke-width="1" opacity="0.35">
+    <path d="M0 122 H320"/>
+    <path d="M0 136 H320"/>
+  </g>
+</svg>

@@ -1,6 +1,6 @@
 # Blood pressure on the dashboard
 
-The existing `hydrograph_core.findings.blood_pressure_1_4()` evaluator was added
+The existing `core.findings.blood_pressure_1_4()` evaluator was added
 in commit `9483adf`. Its docstring references a "Blood Pressure Telemetry Guide"
 in `message.md`, which is absent from the repository. `imitacija/ranges.md`
 also discusses blood pressure, but its clinical categories differ from this
@@ -22,7 +22,7 @@ from `s^-1` to bpm and pressures from Pa to mmHg before evaluation. When heart
 rate is missing, pressure is still evaluated and shock index remains unavailable.
 These are project alert rules, not diagnoses.
 
-`hydrograph_core.assessment.evaluate_findings()` calls the evaluator when both
+the built-in rule `core/rules/blood_pressure_1_4.py` calls the evaluator when both
 pressure channels are present. The finding catalog lists both pressure channels
 and heart rate so updates to any of them trigger a new assessment. The backend
 publishes `blood_pressure_1_4` through the existing `finding` stream, includes it

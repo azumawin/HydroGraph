@@ -1,0 +1,112 @@
+# Demo stack: dashboard, API and telemetry generator, one command.
+#
+#   docker compose up --build
+#   SCENARIO=badscenario1 docker compose up --build
+#
+# Then open http://localhost:5173. The API is also published on
+# http://localhost:8000 (Swagger UI at /api/docs/).
+#
+# Every launch starts from an empty database (see RESET_DB below), so a scenario
+# always plays from its own beginning; `docker compose down -v` additionally
+# discards the volume it lived on.
+name: hydrograph
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    # Where `make dev` keeps the health assistant's LLM key. Reused when it
+    # exists so the chat works here too; the image never contains it.
+    env_file:
+      - path: backend/.env
+        required: false
+    environment:
+      # The database lives on the volume, not in the container layer, so
+      # RESET_DB=0 can carry a run across `up`/`down`.
+      - DJANGO_DB_PATH=/data/db.sqlite3
+      # Reached as localhost, as frontend, and as whatever name the host has.
+      - "DJANGO_ALLOWED_HOSTS=*"
+      - RESET_DB=${RESET_DB:-1}
+      # Unused by Django, and deliberately so: compose recreates a container
+      # whose environment changed, so naming the scenario here restarts the
+      # backend when `SCENARIO=... docker compose up -d` switches it, and the
+      # new scenario gets the empty database it expects.
+      - SCENARIO=${SCENARIO:-healthy}
+      # Valueless on purpose: each is passed through only when you actually set
+      # it, so it cannot overwrite backend/.env with an empty value. Without a
+      # key the dashboard still runs and only the assistant answers 503.
+      - OLLAMA_API_KEY
+      - OLLAMA_MODEL
+      - OLLAMA_URL
+      - OLLAMA_TIMEOUT_S
+      - ASSISTANT_RATE
+      - ASSISTANT_DAILY_RATE
+    volumes:
+      - db:/data
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      # Nothing may publish readings or serve the dashboard before migrations
+      # have run; the liveness probe is the signal that they have.
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/api/health/")
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        # Unset means same-origin: nginx proxies /api/ to the backend.
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL-}
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  imitacija:
+    build:
+      context: .
+      dockerfile: docker/imitacija.Dockerfile
+    environment:
+      # One of the TOMLs in imitacija/config/, without the extension:
+      #   badscenario1   SANS / cephalic fluid shift (the scenario we demo)
+      #   healthy        nominal crew and cabin
+      #   badscenario2   hypercapnia
+      #   badscenario3   EVA dehydration
+      #   badscenario4   acute infection
+      #   research_demo  six months of sparse labs in ~26 seconds
+      SCENARIO: ${SCENARIO:-badscenario1}
+      # Simulation seconds per wall second; unset keeps the scenario's own pace.
+      SPEED: ${SPEED-}
+      # Stop after this many simulation seconds; unset runs until Ctrl+C.
+      DURATION: ${DURATION-}
+      # Paired synthetic pressure trends every N simulated seconds, as the
+      # Makefile's BP_DEMO_INTERVAL does. Without it the dashboard shows blood
+      # pressure once at boot and then not again for 8 simulated hours, which is
+      # when the real cuff protocol takes its first reading. 0 restores it.
+      BP_DEMO_INTERVAL: ${BP_DEMO_INTERVAL:-5}
+      # The same for blood sugar, whose CGM window otherwise holds the chart at
+      # one boot point until its first completed result 343 simulated seconds
+      # in. 0 restores the 5-minute window.
+      GLUCOSE_DEMO_INTERVAL: ${GLUCOSE_DEMO_INTERVAL:-5}
+      # The same for the assays, 24h specimens and spot collections: their own
+      # calendars put the next result hours, days or a month out, so the
+      # dashboard holds one boot point for each. 0 restores those calendars.
+      LAB_DEMO_INTERVAL: ${LAB_DEMO_INTERVAL:-5}
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: on-failure:3
+
+volumes:
+  db:

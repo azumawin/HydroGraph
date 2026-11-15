@@ -24,7 +24,7 @@
   --color-accent: #e7e7e7;
   --color-body-neutral: #a6a6a6;
   --color-status-warning: #edb65b;
-  --color-status-critical: #ef6969;
+  --color-status-critical: #ff9c9c;
   --color-status-nominal: #83d4ac;
   --color-chart-heart-rate: #ef8585;
   --color-chart-systolic: #c6a4eb;
@@ -37,11 +37,12 @@
   --color-divider: color-mix(in srgb, var(--color-surface) 16%, transparent);
   --color-accent-wash: color-mix(in srgb, var(--color-accent) 12%, transparent);
   --color-glass-fill: color-mix(in srgb, var(--color-surface) 8%, transparent);
-  --color-glass-reflection: color-mix(in srgb, var(--color-surface) 16%, transparent);
-  --color-edge-highlight: color-mix(in srgb, var(--color-surface) 65%, transparent);
+  --color-glass-tint: color-mix(in srgb, var(--color-background) 80%, transparent);
   --color-shadow: color-mix(in srgb, var(--color-background) 30%, transparent);
 
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", system-ui,
+    sans-serif;
   line-height: 1.5;
   color: var(--color-text);
   background-color: var(--color-background);

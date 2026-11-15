@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { ChevronDown, ScanLine } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Component, Suspense, useId, useState } from "react";
 import type { ReactNode } from "react";
 import type { Evaluation } from "../api/Service.ts";
@@ -58,10 +58,17 @@ const BodyScan = () => {
   }
 
   return (
-    <section className="vitals-dashboard-panel vitals-dashboard-body-scan">
-      <header className="vitals-dashboard-panel-header vitals-dashboard-body-scan-header">
-        <ScanLine className="vitals-dashboard-icon" />
-        <h2 className="vitals-dashboard-panel-title m-0">Biometric body scan</h2>
+    <section
+      className="vitals-dashboard-panel vitals-dashboard-body-scan"
+      aria-label="Biometric body scan"
+    >
+      <div className="vitals-dashboard-body-scan-header">
+        {(criticalCount > 0 || warningCount > 0) && (
+          <span className="vitals-dashboard-scan-alerts" aria-label="Additional reading alerts">
+            {criticalCount > 0 && <span className="is-critical">{criticalCount} critical</span>}
+            {warningCount > 0 && <span className="is-warning">{warningCount} warning</span>}
+          </span>
+        )}
         <button
           type="button"
           className="vitals-dashboard-scan-readings-toggle"
@@ -76,13 +83,7 @@ const BodyScan = () => {
           </span>
           <ChevronDown aria-hidden="true" />
         </button>
-        {(criticalCount > 0 || warningCount > 0) && (
-          <span className="vitals-dashboard-scan-alerts" aria-label="Additional reading alerts">
-            {criticalCount > 0 && <span className="is-critical">{criticalCount} critical</span>}
-            {warningCount > 0 && <span className="is-warning">{warningCount} warning</span>}
-          </span>
-        )}
-      </header>
+      </div>
       <div
         id={readingsId}
         hidden={!showReadings}

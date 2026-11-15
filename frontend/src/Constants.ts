@@ -1,4 +1,14 @@
-import { Activity, Droplet, HeartPulse, Thermometer, Wind } from "lucide-react";
+import {
+  Activity,
+  Droplet,
+  HeartPulse,
+  FileCode,
+  List,
+  Stethoscope,
+  Thermometer,
+  TrendingUp,
+  Wind,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://127.0.0.1:8000";
@@ -8,6 +18,7 @@ export const TELEMETRY = {
   ENVIRONMENT_URL: `${BACKEND_URL}/api/environment/`,
   READINGS_URL: `${BACKEND_URL}/api/readings/`,
   ASSISTANT_URL: `${BACKEND_URL}/api/assistant/`,
+  RULES_URL: `${BACKEND_URL}/api/rules/`,
   EVENTS: {
     DICTIONARY: "dictionary",
     ENVIRONMENT: "environment",
@@ -37,15 +48,144 @@ export const ENVIRONMENT_FORMAT = {
   MAX_HOURS_SHOWN: 48,
 };
 
+export const formatCommDelay = (seconds: number) =>
+  seconds < ENVIRONMENT_FORMAT.SECONDS_PER_MINUTE
+    ? `${ENVIRONMENT_FORMAT.NUMBER.format(seconds)} s`
+    : `${ENVIRONMENT_FORMAT.NUMBER.format(seconds / ENVIRONMENT_FORMAT.SECONDS_PER_MINUTE)} min`;
+
+// The front door, before any telemetry is shown: the demo runs in one mission
+// environment and the choice is per page load, so a reload asks again rather
+// than resuming in a setting nobody picked. Formatting of what each one sets
+// lives in environments.ts.
+export const ENVIRONMENT_PICKER = {
+  TITLE: "Choose the mission environment",
+  LEAD:
+    "Every reading in this demo is taken in one of these. The choice sets the gravity, " +
+    "how late a result reaches the dashboard, the light-dark cycle behind the circadian " +
+    "findings, and the dose rate a radiation spike is graded against.",
+  LOADING: "Loading the mission environments…",
+  IN_EFFECT: "In effect",
+  CHOOSE: "Start here",
+};
+
+// a round trip short enough to talk to the ground while acting
+export const ADVICE = {
+  REALTIME_GROUND_MAX_RT_S: 10,
+  GROUND_AVAILABLE_TITLE: "Ground available",
+  AUTONOMOUS_TITLE: "Act on your own",
+  NO_FINDINGS: "No findings evaluated yet.",
+  ALL_CLEAR: "No active findings. No action needed.",
+  ESCALATION: {
+    ground: {
+      critical: "Start the action now and call the flight surgeon.",
+      warning: "Report this to the flight surgeon and follow their guidance.",
+    },
+    autonomous: {
+      critical: "Start the action now. Send a report; do not wait for the reply.",
+      warning: "Start the action and log it for the next ground report.",
+    },
+  },
+};
+
+export const RULES = {
+  TEMPLATE: `ID = "resting_tachycardia"
+NAME = "Resting tachycardia"
+CHANNELS = ("heart_rate",)
+
+
+def evaluate(inputs):
+    bpm = inputs["latest"]["heart_rate"] * 60
+    if bpm > 120:
+        return {"status": "critical", "triggers": ["HR > 120 bpm"], "action": "Rest and recheck in 10 min", "bpm": bpm}
+    return {"status": "nominal", "triggers": [], "action": "No finding", "bpm": bpm}
+`,
+  FALLBACK_ERROR: "The rule change failed. Try again.",
+  LOAD_ERROR: "Could not load the rules.",
+};
+
 export const ASSISTANT = {
   PLACEHOLDER: "Ask about the findings…",
   SEND_LABEL: "Send",
   THINKING: "Thinking…",
-  STARTER: "Summarize the current findings and tell me what to do.",
-  STARTER_LABEL: "Summarize findings and advise",
+  MAX_CONTEXT_MESSAGES: 40,
   FALLBACK_ERROR: "The assistant could not answer. Try again.",
   LATEST_LABEL: "Latest message",
   SCROLL_THRESHOLD_PX: 48,
+};
+
+export const MAIN_PANEL_TABS = [
+  { ID: "vitals", LABEL: "Vitals", ICON: Activity },
+  { ID: "measurements", LABEL: "All measurements", ICON: List },
+  { ID: "trends", LABEL: "Trends", ICON: TrendingUp },
+  { ID: "advice", LABEL: "Advice", ICON: Stethoscope },
+  { ID: "rules", LABEL: "Rules", ICON: FileCode },
+] as const;
+
+export type MainPanelTabId = (typeof MAIN_PANEL_TABS)[number]["ID"];
+
+export const MEASUREMENTS = {
+  SCOPE_LABELS: { crew: "Crew", environment: "Habitat" },
+  COLUMNS: ["Measurement", "Latest", "Status", "Measured", "Next", "Change"],
+  NO_READING: "No reading",
+  NOW_REFRESH_MS: 30000,
+  CHANGE_PRECISION: 10,
+  CHANGE_FORMAT: new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 1,
+    signDisplay: "exceptZero",
+  }),
+};
+
+const HOUR_MS = 3600000;
+
+export const TRENDS = {
+  PERIODS: [
+    { ID: "day", LABEL: "Day", DURATION_MS: 24 * HOUR_MS },
+    { ID: "week", LABEL: "Week", DURATION_MS: 7 * 24 * HOUR_MS },
+    { ID: "month", LABEL: "Month", DURATION_MS: 30 * 24 * HOUR_MS },
+    { ID: "half_year", LABEL: "6 months", DURATION_MS: 182 * 24 * HOUR_MS },
+  ],
+  BUCKET_COUNT: 24,
+  HISTORY_LIMIT: 1000,
+  NOT_EVALUATED: "Not evaluated",
+  NO_READING: "No reading",
+  HISTORY_ERROR: "Could not load the reading history. Switch tabs to try again.",
+};
+
+const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+
+const RELATIVE_TIME_UNITS = [
+  { UNIT: "day", SECONDS: 86400 },
+  { UNIT: "hour", SECONDS: 3600 },
+  { UNIT: "minute", SECONDS: 60 },
+  { UNIT: "second", SECONDS: 1 },
+] as const;
+
+export const formatTimeAgo = (timestamp: number, now: number): string => {
+  const elapsedSeconds = Math.max(0, (now - timestamp) / 1000);
+  const { UNIT, SECONDS } =
+    RELATIVE_TIME_UNITS.find((unit) => elapsedSeconds >= unit.SECONDS) ??
+    RELATIVE_TIME_UNITS[RELATIVE_TIME_UNITS.length - 1];
+  return RELATIVE_TIME.format(-Math.floor(elapsedSeconds / SECONDS), UNIT);
+};
+
+export const SCHEDULE = {
+  MIN_GRACE_S: 120,
+  UPCOMING_MIN_INTERVAL_S: 3600,
+  UPCOMING_WINDOW_S: 86400,
+};
+
+const INTERVAL_UNITS = [
+  { LABEL: "d", SECONDS: 86400 },
+  { LABEL: "h", SECONDS: 3600 },
+  { LABEL: "min", SECONDS: 60 },
+  { LABEL: "s", SECONDS: 1 },
+] as const;
+
+export const formatInterval = (seconds: number): string => {
+  const { LABEL, SECONDS } =
+    INTERVAL_UNITS.find((unit) => seconds >= unit.SECONDS) ??
+    INTERVAL_UNITS[INTERVAL_UNITS.length - 1];
+  return `${ENVIRONMENT_FORMAT.NUMBER.format(Math.round((seconds / SECONDS) * 10) / 10)} ${LABEL}`;
 };
 
 export const VITALS_HISTORY = {

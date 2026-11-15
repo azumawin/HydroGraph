@@ -1,19 +1,19 @@
 # HydroGraph backend
 
-Django + Django REST Framework API, plus the pure-logic packages it builds on.
+Async Django API, plus the pure-logic `core` package it builds on.
 
 ```
 backend/
-├── pyproject.toml          uv workspace root (virtual project — not installable)
+├── pyproject.toml          uv project (virtual — not installable)
 ├── manage.py
-├── config/                 Django project: settings, urls, asgi, wsgi
-├── api/                    Django app — the DRF layer (views, serializers, urls)
-└── packages/
-    └── hydrograph-core/    domain logic, no Django imports
+├── config/                 Django project: settings, urls, asgi
+├── api/                    async views, contracts, findings, assistant, SSE
+└── core/                   domain logic, no Django imports
 ```
 
-The split matters: `packages/*` hold logic that can be imported and tested without a
-Django settings module. `api/` stays thin — validation, serialization, routing.
+The split matters: `core/` holds logic that can be imported and tested without a
+Django settings module. `api/` stays thin — async views, JSON validation, routing,
+persistence and the stream.
 
 ## Prerequisites
 
@@ -56,9 +56,9 @@ Useful URLs once `runserver` is up:
 | http://localhost:8000/api/environment/ | the environment in effect; `PUT` switches it |
 | http://localhost:8000/api/health-conditions/ | the findings the crew member may have |
 | http://localhost:8000/api/readings/ | `POST` sensor readings |
+| http://localhost:8000/api/rules/ | finding rules; `POST` adds a custom rule |
 | http://localhost:8000/api/stream/ | SSE stream for the frontend |
-| http://localhost:8000/api/docs/ | Swagger UI |
-| http://localhost:8000/api/schema/ | raw OpenAPI 3 schema (YAML) |
+| http://localhost:8000/api/assistant/ | `POST` a chat turn to the health assistant |
 
 There is no auth: every endpoint is public.
 
@@ -68,7 +68,7 @@ the stream never sends anything.
 ## Environments endpoint
 
 `GET /api/environments/` returns the environments the dashboard's switcher offers,
-straight from core (`hydrograph_core.environments`):
+straight from core (`core.environments`):
 
 ```json
 {
@@ -99,7 +99,7 @@ case (0 g, full autonomy, unshielded GCR).
 
 Delay is really a range (Mars round trip is 364–2684 s); each value is one
 representative number for the demo. Dose rates are measured values, cited in
-`hydrograph_core.environments` — note that `lunar_surface` (57.1) and `mars_transit`
+`core.environments` — note that `lunar_surface` (57.1) and `mars_transit`
 (76.7) sit **above** Finding 10's fixed 50 µSv/h warning cutoff, so that finding warns
 at rest in those environments until the cutoff becomes baseline-relative.
 
@@ -126,11 +126,13 @@ Tier 1 findings over them, and returns the conditions those readings support:
   "findings": [
     {
       "id": "radiation_exposure_3_2",
-      "cumulative_dose_msv": 1.0,
-      "dose_rate_usv_h": 18.0,
-      "triggers": ["solar particle event"],
       "status": "critical",
-      "action": "Move to shielded storm shelter zone immediately and confirm hatch closure"
+      "triggers": ["solar particle event"],
+      "action": "Move to shielded storm shelter zone immediately and confirm hatch closure",
+      "values": {
+        "cumulative_dose_msv": 1.0,
+        "dose_rate_usv_h": 18.0
+      }
     }
   ]
 }
@@ -148,10 +150,43 @@ with their input channels, empty for those three.
 
 Entry shape and `status` semantics: `docs/json-shape.md`, section 3.
 
+## Rules endpoints
+
+Every finding is a Python rule (contract: `core/rule.py`). The ten built-in
+rules live in `core/rules/`; they can be disabled but not edited or deleted.
+Custom rules are Python source stored in the database and run **without a
+sandbox or time limit**, so only trusted users should reach this API.
+
+| Request | Effect |
+| --- | --- |
+| `GET /api/rules/` | `{"rules": [...]}`: id, name, channels, required, default, enabled, source |
+| `POST /api/rules/` `{"source": "..."}` | add a custom rule; `400` with `{"source": [reason]}` if it is invalid or its ID is taken |
+| `PUT /api/rules/<id>/` `{"enabled": false}` | disable (or enable) any rule |
+| `PUT /api/rules/<id>/` `{"source": "..."}` | replace a custom rule's source; its ID must stay the same |
+| `DELETE /api/rules/<id>/` | delete a custom rule; `409` for a built-in one |
+
+Every change re-sends the `dictionary` event (with only the enabled rules under
+`findings`) and the findings they evaluate to every open stream.
+
+A custom rule:
+
+```python
+ID = "resting_tachycardia"
+NAME = "Resting tachycardia"
+CHANNELS = ("heart_rate",)
+
+
+def evaluate(inputs):
+    bpm = inputs["latest"]["heart_rate"] * 60  # SI wire unit: s^-1
+    if bpm > 120:
+        return {"status": "critical", "triggers": ["HR > 120 bpm"], "action": "Rest and recheck", "bpm": bpm}
+    return {"status": "nominal", "triggers": [], "action": "No finding", "bpm": bpm}
+```
+
 ## Readings endpoints
 
-Channels, units and thresholds live in core (`hydrograph_core.channels`); the backend
-only stores and ships readings. `evaluation` is a `hydrograph_core.Evaluation` value
+Channels, units and thresholds live in core (`core.channels`); the backend
+only stores and ships readings. `evaluation` is a `core.Evaluation` value
 (`nominal` / `warning` / `critical` / `unspecified`).
 
 Request and message shapes follow `docs/json-shape.md`.
@@ -193,8 +228,9 @@ To feed it from the simulator, set `base_url = "http://127.0.0.1:8000"` and
 - then, the moment a reading is POSTed, its `reading` event and a `finding` event
   for each finding that uses its channel; an `environment` event on every switch.
 
-Findings come from core (`hydrograph_core.assessment`): seven of the master plan's ten
-plus `blood_pressure_1_4` are monitored, from the latest crew and cabin readings (`api/findings.py`). The other
+Findings come from the rules in effect (`core.rules`, plus any custom rules): seven
+of the master plan's ten plus `blood_pressure_1_4` are monitored, from the latest
+crew and cabin readings (`api/findings.py`). The other
 three (orthostatic, sleep, behavioral) need inputs the simulator does not send.
 
 Delivery is an in-memory queue per open stream (`api/broadcast.py`), so it needs a
@@ -247,52 +283,19 @@ shared between worker processes.
 The database is SQLite at `backend/db.sqlite3` (gitignored). Delete it and re-run
 `migrate` to start clean.
 
-## API documentation
-
-`drf-spectacular` generates an OpenAPI 3 schema from the DRF views and serves Swagger UI
-over it. Start the server and open <http://localhost:8000/api/docs/>:
-
-```sh
-python manage.py runserver
-```
-
-- `/api/schema/` serves the raw OpenAPI document the UI reads.
-- Both URLs are public (`SERVE_PERMISSIONS` in `SPECTACULAR_SETTINGS`); tighten for production.
-- Annotate views with `@extend_schema` to improve what the docs show — `health` has an example.
-
-To swap the UI, change one line in `config/urls.py` — `SpectacularRedocView` for Redoc, or
-drop the `api/docs/` path to remove the docs entirely.
-
-## Adding a logic package
-
-```sh
-mkdir -p packages/hydrograph-foo/src/hydrograph_foo
-```
-
-Give it a `pyproject.toml` copied from `packages/hydrograph-core/pyproject.toml` (same
-`uv_build` build system, new `name`), then declare it in the root `pyproject.toml`:
-
-```toml
-[project]
-dependencies = [..., "hydrograph-foo"]
-
-[tool.uv.sources]
-hydrograph-foo = { workspace = true }
-```
-
-`uv sync` installs it editable — imports resolve immediately, no reinstall after edits.
-The `members = ["packages/*"]` glob already covers the new directory.
-
 ## Adding an endpoint
 
 1. Model in `api/models.py`, then `makemigrations` + `migrate`.
-2. `ModelSerializer` in `api/serializers.py`.
-3. `ModelViewSet` in `api/views.py`, delegating real work to a `packages/*` module.
-4. Register it on the router in `api/urls.py` (there's a commented example).
+2. Validate its input in `api/contracts.py`.
+3. An `async` view in `api/views.py`, delegating domain work to `core/`.
+4. Add the path in `api/urls.py`.
+
+Views are plain async Django (`JsonResponse`), not DRF. Use `@csrf_exempt` for
+`POST`/`PUT` endpoints and `@require_GET` or `@require_http_methods` for methods.
 
 ## HydroGFN domain logic
 
-`packages/hydrograph-core/` holds the HydroGFN health-monitor logic: the 10 Tier 1
-health findings. It is stateless; the backend keeps sessions, user state and history.
-How `api/` should call it: `packages/hydrograph-core/README.md`, "Using it from the
-Django backend".
+`core/` holds the HydroGFN health-monitor logic: the 10 Tier 1 health findings,
+the 40-channel catalog and the mission environments. It is stateless; the backend
+keeps readings, the selected environment and stream subscribers. How `api/` calls
+it: `core/README.md`, "Using it from the Django backend".

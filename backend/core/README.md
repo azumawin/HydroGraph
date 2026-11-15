@@ -1,0 +1,71 @@
+# core
+
+Pure domain logic for the HydroGFN health monitor: the master plan's 10 Tier 1
+health findings, the sensor channel catalog (the simulator's 40 channels, in SI
+wire units) with single-reading thresholds, and the mission environments. No Django imports, no I/O, no state. The backend
+consumes it; any rule about what a value means belongs here, not in `api/`.
+
+Built from two spec documents in this directory:
+
+- `Tiered Master System Specification & Implementation Plan.pdf` (the master plan)
+- `NSA_hydrograph.md` (the parameter spec)
+
+Conventions are in `STYLE.md`. Suspected spec errors are in `sus.md`, and
+confirmed ones are in `mismatches.md`.
+
+```sh
+cd backend
+pytest core  # this package's tests
+```
+
+## core
+
+A self-contained flat module in `backend/core/` (Python >= 3.14, no runtime
+dependencies). `import core` exports the 10 finding functions, named
+`<finding>_D_S` (D = hazard domain, S = place in it; map to plan finding
+numbers in the `findings.py` docstring), `CHANNELS` +
+`evaluate_reading(channel, value, environment=...)`, `FINDINGS` +
+`evaluate_findings(latest, ...)` (findings from the latest readings), and
+`ENVIRONMENTS`. Conventions: `STYLE.md`.
+
+Each function returns only the values it can actually produce: a finding with
+one severity has `status: bool` (`True` = present); one with several has
+`status: Severity` (`"nominal" | "warning" | "critical"`). `evaluate_reading`
+returns an `Evaluation`, which adds `"unspecified"` for readings the specs give
+no cutoff for.
+
+```python
+import core
+
+finding = core.sans_fluid_shift_1_3(1.5)
+finding["status"], finding["triggers"]  # "warning", ["jugular distension >= 1.1%"]
+```
+
+## Using it from the Django backend
+
+The package is a stateless library. The backend owns all state: reading history
+and who is subscribed. Every function takes plain values and returns a plain
+`dict` of numbers, strings, booleans and lists that `json.dumps` accepts as-is.
+
+It lives inside the Django project, so `backend/` on `sys.path` is enough; no
+package install or workspace member is required. The backend (`backend/api/`)
+uses it in two places:
+
+1. Each reading: `evaluate_reading(channel, value, environment=...)` gives its
+   `evaluation`; only the dose rate depends on the environment (graded above its
+   `baseline_dose_rate_usv_h`).
+2. Findings: `evaluate_findings(latest, body_mass_first_kg, body_mass_week_before_kg,
+   environment)`
+   takes one crew member's latest reading per channel (plus the latest cabin
+   readings) in SI wire units, and the body-mass history the baselines need:
+
+   ```python
+   from core import ENVIRONMENTS, evaluate_findings
+
+   latest = {"spo2": 0.89, "ambient_ppco2": 260.0}
+   results = evaluate_findings(latest, None, None, ENVIRONMENTS["iss_leo"])
+   results["hypoxia_co2_2_2"]["status"]  # "critical"
+   ```
+
+   Findings whose inputs are missing are left out. The finding functions
+   themselves take spec units (mmHg, °C, ...) and can be called directly.

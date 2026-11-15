@@ -8,13 +8,14 @@ from dataclasses import dataclass, field
 from typing import Literal, Protocol
 
 from .clock import Clock, timestamp
-from .frequency import FREQUENCIES
-from .models import AstronautProfile, Observation, Reading, Settings
+from .frequency import FREQUENCIES, LAB_DEMO_CALENDAR, Calendar, lab_demo_interval
+from .models import CGM_WINDOW_S, AstronautProfile, Observation, Reading, Settings
 from .physiology import (
     DAY,
     blood_pressure_demo_scale,
     crew_values,
     environment_values,
+    glucose_demo_scale,
     monitor_dose_msv,
     startup_crew_values,
 )
@@ -50,6 +51,9 @@ class Rule:
     group: str
     phase: float = 0
     interval: float | None = None
+    # Set only by the dashboard demo: the sample index maps onto the group's
+    # own protocol calendar instead of standing for the acquisition instant.
+    calendar: Calendar | None = None
     points: tuple[float, ...] = ()
     repeat: float | None = None
     end: float | None = None
@@ -90,6 +94,16 @@ class Rule:
         return min(candidates) if candidates else None
 
 
+def glucose_window(settings: Settings) -> float:
+    """The CGM window in effect: the dashboard demo's, or the specified 5 minutes.
+
+    A result still averages the raw 5-second samples inside its own window, so a
+    shorter demo window means fewer of them, never a partial 5-minute mean.
+    """
+    demo = settings.glucose_demo_interval_s
+    return CGM_WINDOW_S if demo is None else demo
+
+
 def rules(settings: Settings) -> tuple[Rule, ...]:
     """Use NASA-informed demo schedules, not the superseded biochemical polling loop."""
     tests = tuple(
@@ -115,6 +129,15 @@ def rules(settings: Settings) -> tuple[Rule, ...]:
         if settings.bp_session_duration_s is None
         else settings.bp_session_start_s + settings.bp_session_duration_s
     )
+    # The CGM's own 5-minute window puts its first completed result at 343 s, so
+    # a short demo shows one startup point and nothing else. The demo override
+    # samples a correspondingly shorter window instead; see glucose_window().
+    glucose_demo = settings.glucose_demo_interval_s
+    glucose_rule = (
+        periodic("glucose", 343)
+        if glucose_demo is None
+        else Rule("glucose", phase=glucose_demo, interval=glucose_demo)
+    )
     scenario_rules = (
         ()
         if settings.sans_scenario is None
@@ -131,7 +154,7 @@ def rules(settings: Settings) -> tuple[Rule, ...]:
         periodic("respiration", 77),
         periodic("spo2", 0.2),
         periodic("temperature", 0.4),
-        periodic("glucose", 343),
+        glucose_rule,
         periodic("sweat", active=True),
         periodic("sweat_summary", active=True),
         Rule(
@@ -242,6 +265,19 @@ class Scheduler:
                     # One paired stream replaces the cuff/scenario/stand-test
                     # schedule only when the dashboard demo is explicitly enabled.
                     owner_rule = Rule("bp", interval=settings.bp_demo_interval_s)
+                calendar = LAB_DEMO_CALENDAR.get(rule.group)
+                if (
+                    settings.lab_demo_interval_s is not None
+                    and calendar is not None
+                    and owner_rule is rule
+                ):
+                    # Only the untouched protocol calendar is compressed: a
+                    # scenario target keeps the schedule its fault gave it.
+                    owner_rule = Rule(
+                        rule.group,
+                        interval=lab_demo_interval(settings.lab_demo_interval_s, settings.speed),
+                        calendar=calendar,
+                    )
                 due = owner_rule.next_after(0)
                 if due is not None:
                     self._push(due, owner_rule, scope, owner)
@@ -275,6 +311,17 @@ class Scheduler:
         self.counter += 1
         heapq.heappush(self.events, Event(due, self.counter, rule, scope, owner))
 
+    def _sampled(self, rule: Rule, instant: float) -> float:
+        """Protocol time this acquisition stands for, normally the instant itself.
+
+        Under the dashboard demo a sparse group's samples walk its own calendar
+        instead (see Calendar), one step per interval. Derived from the instant,
+        never from a counter, so a late or coalesced poll cannot shift the walk.
+        """
+        if rule.calendar is None or rule.interval is None:
+            return instant
+        return rule.calendar.instant(max(0, round(instant / rule.interval) - 1))
+
     def acquire(self, event: Event, instant: float) -> None:
         """Create result values at actual acquisition time; late polls coalesce, never replay."""
         profile: AstronautProfile | None = (
@@ -282,26 +329,28 @@ class Scheduler:
         )
         values: dict[str, float | bool | str]
         scenario = self.settings.sans_scenario
+        sampled = self._sampled(event.rule, instant)
         if event.rule.group == "eeg_cfe" and self.settings.hypercapnia_scenario is not None:
-            values = dict(hypercapnia_eeg_values(instant, self.settings.hypercapnia_scenario))
+            values = dict(hypercapnia_eeg_values(sampled, self.settings.hypercapnia_scenario))
         elif event.rule.group in {"cephalic", "eye_screen"} and scenario is not None:
-            values = sans_values(event.rule.group, instant, scenario)
+            values = sans_values(event.rule.group, sampled, scenario)
         else:
             values = (
                 crew_values(
                     event.rule.group,
-                    instant,
+                    sampled,
                     profile,
                     self.settings.seed,
                     self.settings.sans_scenario,
                     dehydration=self.settings.eva_dehydration_scenario,
                     infection=self.settings.acute_infection_scenario,
                     hypercapnia=self.settings.hypercapnia_scenario,
+                    glucose_window_s=glucose_window(self.settings),
                 )
                 if profile is not None
                 else environment_values(
                     event.rule.group,
-                    instant,
+                    sampled,
                     self.settings.environment,
                     self.settings.seed,
                     hypercapnia=self.settings.hypercapnia_scenario,
@@ -315,7 +364,9 @@ class Scheduler:
             # independent publication clocks. Never emit the sibling on this tick.
             if c.group != event.rule.group:
                 continue
-            self._publish(c, value, event.owner, event.scope, instant)
+            self._publish(
+                c, value, event.owner, event.scope, instant, demo=event.rule.calendar is not None
+            )
 
     def _publish(
         self,
@@ -326,6 +377,7 @@ class Scheduler:
         instant: float,
         *,
         startup: bool = False,
+        demo: bool = False,
     ) -> None:
         """Convert once and enqueue immutable data with explicit sampling provenance."""
         key = (owner, channel.id)
@@ -334,6 +386,9 @@ class Scheduler:
         if channel.group == "bp" and self.settings.bp_demo_interval_s is not None:
             assert isinstance(value, (float, int)) and not isinstance(value, bool)
             value *= blood_pressure_demo_scale(instant, self.settings.seed, owner)
+        if channel.group == "glucose" and self.settings.glucose_demo_interval_s is not None:
+            assert isinstance(value, (float, int)) and not isinstance(value, bool)
+            value *= glucose_demo_scale(instant, self.settings.seed, owner)
         wire_value = (
             value
             if isinstance(value, (bool, str))
@@ -347,7 +402,9 @@ class Scheduler:
         )
         # Startup fixtures are already available profile values, not a newly drawn
         # laboratory specimen. Communication delay still applies to their delivery.
-        lab_delay = self.settings.lab_delay_s if channel.lab and not startup else 0
+        # A demo-paced assay is held no longer either: the synthetic laboratory
+        # hour would outlast the dashboard run that asked for the trend.
+        lab_delay = self.settings.lab_delay_s if channel.lab and not (startup or demo) else 0
         self.sink.submit(
             Observation(
                 reading=reading,
@@ -357,7 +414,13 @@ class Scheduler:
                 sequence=sequence,
                 acquired_s=instant,
                 available_s=instant + lab_delay + self.settings.environment.comm_delay_s,
-                window_s=0 if startup else channel.window_s,
+                # The demo's CGM result averages its own shorter window, so it
+                # must not claim the 5 minutes the registry records.
+                window_s=0
+                if startup
+                else glucose_window(self.settings)
+                if channel.group == "glucose"
+                else channel.window_s,
                 sample_kind="startup_baseline" if startup else "scheduled",
             )
         )
