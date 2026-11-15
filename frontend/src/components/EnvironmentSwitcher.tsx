@@ -1,4 +1,4 @@
-import { Globe } from "lucide-react";
+import { ChevronDown, Globe } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { ENVIRONMENT_FORMAT, ENVIRONMENT_LABELS } from "../Constants.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
@@ -57,18 +57,21 @@ const EnvironmentSwitcher = () => {
         <span className="vitals-dashboard-environment-select-caption">
           {ENVIRONMENT_LABELS.SELECT}
         </span>
-        <select
-          className="vitals-dashboard-environment-select"
-          value={environmentId}
-          disabled={isSelectingEnvironment}
-          onChange={handleEnvironmentChange}
-        >
-          {Object.entries(environments).map(([id, environment]) => (
-            <option key={id} value={id}>
-              {environment.name}
-            </option>
-          ))}
-        </select>
+        <span className="vitals-dashboard-environment-select-control">
+          <select
+            className="vitals-dashboard-environment-select"
+            value={environmentId}
+            disabled={isSelectingEnvironment}
+            onChange={handleEnvironmentChange}
+          >
+            {Object.entries(environments).map(([id, environment]) => (
+              <option key={id} value={id}>
+                {environment.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="vitals-dashboard-environment-select-chevron" aria-hidden="true" />
+        </span>
       </label>
       <dl className="vitals-dashboard-environment-facts">
         {facts.map((fact) => (

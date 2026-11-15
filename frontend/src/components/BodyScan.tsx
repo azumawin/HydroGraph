@@ -1,12 +1,14 @@
 import { Canvas } from "@react-three/fiber";
-import { ScanLine } from "lucide-react";
-import { Component, Suspense } from "react";
+import { ChevronDown, ScanLine } from "lucide-react";
+import { Component, Suspense, useId, useState } from "react";
 import type { ReactNode } from "react";
 import type { Evaluation } from "../api/Service.ts";
+import { VITALS_METRICS } from "../Constants.ts";
 import { BODY_SCAN_VIEW, worstEvaluation } from "./model/ModelConstants.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
 import BodyModel from "./model/BodyModel.tsx";
 import BodyScanRegions from "./BodyScanRegions.tsx";
+import BodyScanReadings from "./BodyScanReadings.tsx";
 import "../assets/css/BodyScan.css";
 
 class BodyScanErrorBoundary extends Component<{ children: ReactNode }, { hasModelError: boolean }> {
@@ -32,6 +34,20 @@ class BodyScanErrorBoundary extends Component<{ children: ReactNode }, { hasMode
 const BodyScan = () => {
   const readings = useTelemetryStore((state) => state.readings);
   const channels = useTelemetryStore((state) => state.dictionary?.channels);
+  const hasTelemetryError = useTelemetryStore((state) => state.hasTelemetryError);
+  const [showReadings, setShowReadings] = useState(false);
+  const readingsId = useId();
+  const visibleVitalChannels = new Set<string>(
+    Object.values(VITALS_METRICS).flatMap((metric) =>
+      metric.SERIES.map((series) => series.CHANNEL),
+    ),
+  );
+  const extraChannels = Object.entries(channels ?? {}).filter(
+    ([channel]) => !visibleVitalChannels.has(channel),
+  );
+  const extraReadings = extraChannels.flatMap(([channel]) => readings[channel] ?? []);
+  const criticalCount = extraReadings.filter((reading) => reading.evaluation === "critical").length;
+  const warningCount = extraReadings.filter((reading) => reading.evaluation === "warning").length;
 
   // worst evaluation of the readings placed on each body region
   const regionEvaluations: Partial<Record<string, Evaluation>> = {};
@@ -43,11 +59,45 @@ const BodyScan = () => {
 
   return (
     <section className="vitals-dashboard-panel vitals-dashboard-body-scan">
-      <header className="vitals-dashboard-panel-header">
+      <header className="vitals-dashboard-panel-header vitals-dashboard-body-scan-header">
         <ScanLine className="vitals-dashboard-icon" />
         <h2 className="vitals-dashboard-panel-title m-0">Biometric body scan</h2>
+        <button
+          type="button"
+          className="vitals-dashboard-scan-readings-toggle"
+          title={`${extraReadings.length} of ${extraChannels.length} additional channels have readings`}
+          aria-expanded={showReadings}
+          aria-controls={readingsId}
+          onClick={() => setShowReadings(!showReadings)}
+        >
+          Extra readings
+          <span className="vitals-dashboard-scan-readings-count">
+            {extraReadings.length}/{extraChannels.length}
+          </span>
+          <ChevronDown aria-hidden="true" />
+        </button>
+        {(criticalCount > 0 || warningCount > 0) && (
+          <span className="vitals-dashboard-scan-alerts" aria-label="Additional reading alerts">
+            {criticalCount > 0 && <span className="is-critical">{criticalCount} critical</span>}
+            {warningCount > 0 && <span className="is-warning">{warningCount} warning</span>}
+          </span>
+        )}
       </header>
-      <div className="vitals-dashboard-body-scan-content">
+      <div
+        id={readingsId}
+        hidden={!showReadings}
+        className="vitals-dashboard-scan-readings-container"
+      >
+        {showReadings && (
+          <BodyScanReadings
+            channels={extraChannels}
+            readings={readings}
+            isLoading={channels === undefined && !hasTelemetryError}
+            hasTelemetryError={hasTelemetryError}
+          />
+        )}
+      </div>
+      <div className="vitals-dashboard-body-scan-content" hidden={showReadings}>
         <div className="vitals-dashboard-panel-content vitals-dashboard-body-scan-viewer min-h-0 flex-1">
           <BodyScanErrorBoundary>
             <Suspense

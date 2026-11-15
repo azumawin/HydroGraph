@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
-import { CircleAlert, Check, MessageSquare, SendHorizontal } from "lucide-react";
+import type { FormEvent, UIEvent } from "react";
+import { ArrowDown, CircleAlert, Check, MessageSquare, SendHorizontal } from "lucide-react";
 import { assistantErrorDetail, postAssistant } from "../api/Service.ts";
 import type { ChatMessage } from "../api/Service.ts";
 import { ASSISTANT, FINDING_STATUS_LABELS } from "../Constants.ts";
@@ -14,14 +14,25 @@ const HealthAssistant = () => {
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const transcriptEnd = useRef<HTMLDivElement>(null);
+  const transcript = useRef<HTMLDivElement>(null);
+  const [shouldFollowLatest, setShouldFollowLatest] = useState(true);
 
   const findingList = Object.values(findings);
   const hasFindings = findingList.length > 0;
 
   useEffect(() => {
-    transcriptEnd.current?.scrollIntoView({ block: "end" });
-  }, [messages, isSending, error]);
+    if (!shouldFollowLatest || (messages.length === 0 && !isSending && error === null)) return;
+    const scroller = transcript.current;
+    if (scroller !== null) scroller.scrollTop = scroller.scrollHeight;
+  }, [messages, isSending, error, shouldFollowLatest]);
+
+  const handleTranscriptScroll = (event: UIEvent<HTMLDivElement>) => {
+    const scroller = event.currentTarget;
+    setShouldFollowLatest(
+      scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <=
+        ASSISTANT.SCROLL_THRESHOLD_PX,
+    );
+  };
 
   const send = async (content: string) => {
     const text = content.trim();
@@ -29,6 +40,7 @@ const HealthAssistant = () => {
 
     const conversation: ChatMessage[] = [...messages, { role: "user", content: text }];
     setMessages(conversation);
+    setShouldFollowLatest(true);
     setDraft("");
     setError(null);
     setIsSending(true);
@@ -54,7 +66,14 @@ const HealthAssistant = () => {
         <MessageSquare className="vitals-dashboard-icon" />
         <h2 className="vitals-dashboard-panel-title m-0">Health assistant</h2>
       </header>
-      <div className="vitals-dashboard-panel-content min-h-0 flex-1 overflow-y-auto p-6">
+      <div
+        className="vitals-dashboard-assistant-transcript"
+        ref={transcript}
+        onScroll={handleTranscriptScroll}
+        role="region"
+        aria-label="Findings and conversation"
+        tabIndex={0}
+      >
         {!hasFindings && <p className="vitals-dashboard-findings-empty">No findings yet.</p>}
         <ul className="vitals-dashboard-findings">
           {findingList.map((finding) => {
@@ -114,9 +133,18 @@ const HealthAssistant = () => {
             </p>
           )}
           {error && <p className="vitals-dashboard-chat-message is-error">{error}</p>}
-          <div ref={transcriptEnd} />
         </div>
       </div>
+      {!shouldFollowLatest && messages.length > 0 && (
+        <button
+          type="button"
+          className="vitals-dashboard-chat-latest"
+          onClick={() => setShouldFollowLatest(true)}
+        >
+          <ArrowDown aria-hidden="true" />
+          {ASSISTANT.LATEST_LABEL}
+        </button>
+      )}
       <form className="vitals-dashboard-chat-composer" onSubmit={handleSubmit}>
         <input
           className="vitals-dashboard-chat-input"

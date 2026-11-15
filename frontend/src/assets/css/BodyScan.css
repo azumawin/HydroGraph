@@ -1,3 +1,136 @@
+.vitals-dashboard .vitals-dashboard-body-scan-header {
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.vitals-dashboard .vitals-dashboard-scan-readings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-glass-fill);
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+
+  &:hover,
+  &[aria-expanded="true"] {
+    background: var(--color-accent-wash);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  & svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-scan-readings-count {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.vitals-dashboard .vitals-dashboard-scan-alerts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
+  font-size: 12px;
+  line-height: 16px;
+
+  & .is-critical {
+    color: var(--color-status-critical);
+  }
+
+  & .is-warning {
+    color: var(--color-status-warning);
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-scan-readings-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.vitals-dashboard .vitals-dashboard-scan-readings {
+  padding: 12px 24px 20px;
+}
+
+.vitals-dashboard .vitals-dashboard-scan-readings-description,
+.vitals-dashboard .vitals-dashboard-scan-readings-message {
+  margin: 0 0 12px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.vitals-dashboard .vitals-dashboard-scan-readings-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vitals-dashboard .vitals-dashboard-scan-reading {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-scan-reading-heading,
+.vitals-dashboard .vitals-dashboard-scan-reading-details {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vitals-dashboard .vitals-dashboard-scan-reading-heading {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.vitals-dashboard .vitals-dashboard-scan-reading-value {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.vitals-dashboard .vitals-dashboard-scan-reading-unit,
+.vitals-dashboard .vitals-dashboard-scan-reading-details,
+.vitals-dashboard .vitals-dashboard-scan-reading-time {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+}
+
+.vitals-dashboard .vitals-dashboard-scan-reading-details {
+  margin-top: 4px;
+
+  & .vitals-dashboard-body-region-status {
+    flex-shrink: 0;
+  }
+}
+
 .vitals-dashboard .vitals-dashboard-body-scan-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 164px;
@@ -8,6 +141,11 @@
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
+}
+
+.vitals-dashboard .vitals-dashboard-body-scan-content[hidden],
+.vitals-dashboard .vitals-dashboard-scan-readings-container[hidden] {
+  display: none;
 }
 
 .vitals-dashboard .vitals-dashboard-body-scan-viewer {
