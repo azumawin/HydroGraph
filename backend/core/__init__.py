@@ -4,7 +4,8 @@ Each ``<finding>_D_S`` function implements one finding: D is its hazard
 domain, S its place within that domain. The numbering is ours, not the plan's;
 the mapping to plan finding numbers is in :mod:`core.findings`.
 :mod:`core.channels` grades single readings;
-:mod:`core.assessment` runs the findings on the latest readings;
+:mod:`core.rule` defines findings as rules and :mod:`core.rules` holds the
+built-in ones; :mod:`core.assessment` runs rules on the latest readings;
 :mod:`core.environments` lists the mission environments.
 """
 
@@ -41,11 +42,14 @@ from .findings import (
     sans_fluid_shift_1_3,
     sleep_deficiency_4_1,
 )
+from .rule import Rule, RuleError, RuleInputs, compile_rule
+from .rules import DEFAULT_RULES
 
 __all__ = [
     "ACVPU",
     "CHANNELS",
     "DEFAULT_ENVIRONMENT",
+    "DEFAULT_RULES",
     "ENVIRONMENTS",
     "FINDINGS",
     "SCHEDULES",
@@ -56,12 +60,16 @@ __all__ = [
     "FindingInfo",
     "FindingResult",
     "News2Result",
+    "Rule",
+    "RuleError",
+    "RuleInputs",
     "Severity",
     "__version__",
     "acute_infection_3_1",
     "behavioral_health_decline_4_2",
     "blood_pressure_1_4",
     "bone_demineralization_1_2",
+    "compile_rule",
     "dehydration_2_1",
     "evaluate_findings",
     "evaluate_reading",
