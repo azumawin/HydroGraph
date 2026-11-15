@@ -13,6 +13,16 @@ database is removed at shutdown. `backend/db.sqlite3` and any `DJANGO_DB_PATH`
 provided for standalone use are left untouched. Reloading the page during a
 session restores that session's history.
 
+The dashboard opens on the **mission environment picker**: a card per
+environment showing its gravity, round-trip comm delay, light-dark cycle and
+radiation baseline, and what those do to the run -- how late a result arrives,
+and the dose rate a spike is graded above. Nothing is shown until one is chosen,
+and the choice is per page load, so a reload asks again instead of resuming
+wherever the backend was left. Choosing applies it through
+`PUT /api/environment/` exactly as the header's switcher does, so the simulator
+and every other open dashboard follow it; the card marked **In effect** is the
+one the backend currently holds. The header's switcher still changes it mid-run.
+
 `make dev` uses the Makefile's `CONFIG` and the config's speed unless overridden.
 Choose them explicitly when testing a particular scenario:
 
@@ -73,6 +83,15 @@ demo disabled, at speed 1 healthy
 blood pressure will keep its startup dots for eight real hours. Infection and
 EVA scenarios have their own minute-by-minute pressure schedules. See
 `imitacija/docs/frequency_mapping.md` for the full schedule.
+
+The all-measurements tab draws every chart for a timeframe chosen in its header:
+**1 min, 5 min, 30 min or All**. The dashboard keeps 120 points per channel, so
+how much history a channel holds follows its cadence: about two minutes for a
+1 Hz channel, ten minutes at five seconds, and about two hours at one a minute.
+The options stop there instead of offering days or months, which would be an axis
+with nothing on most of it. Each window is measured back from that channel's own
+newest reading, so a row always shows its latest points even after a run ends,
+and both axes fit whatever falls inside the window.
 
 At accelerated speeds, acquisition can exceed HTTP delivery capacity. The
 simulator's bounded queue thins the busiest channels first to preserve sparse

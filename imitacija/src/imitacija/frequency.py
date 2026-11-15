@@ -101,6 +101,26 @@ class Calendar:
         return self.first + (index % self.samples if self.samples else index) * self.step
 
 
+# A dashboard chart needs a point a second at most, and the demo below publishes
+# thirteen channels at once. At accelerated speed a five-simulation-second
+# interval is far past that: the transport cannot absorb the volume, the bounded
+# queue thins the busiest channels to keep up, and the dashboard ends up with
+# fewer points than it would have had -- including on the vitals it was already
+# drawing. So a demo sample is never asked for more often than this many
+# simulation seconds per wall second.
+LAB_DEMO_MIN_WALL_S = 1.0
+
+
+def lab_demo_interval(configured: float, speed: float) -> float:
+    """The demo interval in effect: the configured one, or the rate floor above.
+
+    At the demo's own speed of 1 these are the same. Only an accelerated run
+    moves the floor, where a chart gains nothing from a faster stream than the
+    backend can store.
+    """
+    return max(configured, speed * LAB_DEMO_MIN_WALL_S)
+
+
 # Assay, 24h-specimen and spot-collection protocols put their next result hours,
 # days or a month out, so a dashboard run shows their startup baseline and
 # nothing else. The demo publishes these groups at a fixed interval and evaluates

@@ -1,6 +1,6 @@
-/* The panel's single scroll region: the findings list with the transcript
-   underneath it, the composer pinned below it outside the scroll. The gutter and
-   the hairline scrollbar are the ones every other panel's scroll area uses. */
+/* The panel's single scroll region, holding the transcript, with the composer
+   pinned below it outside the scroll. The gutter and the hairline scrollbar are
+   the ones every other panel's scroll area uses. */
 .vitals-dashboard .vitals-dashboard-health-assistant-content {
   flex: 1;
   min-height: 0;
@@ -13,86 +13,10 @@
   scrollbar-color: var(--color-border) transparent;
 }
 
-.vitals-dashboard .vitals-dashboard-findings {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.vitals-dashboard .vitals-dashboard-findings-empty {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-}
-
-.vitals-dashboard .vitals-dashboard-finding {
-  display: grid;
-  gap: 4px;
-  padding: 8px 12px;
-  border: 1px solid var(--color-divider);
-  border-radius: 12px;
-  background: var(--color-glass-fill);
-}
-
-.vitals-dashboard .vitals-dashboard-finding-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.vitals-dashboard .vitals-dashboard-finding-name {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 18px;
-}
-
-.vitals-dashboard .vitals-dashboard-finding-status {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
-  border-radius: 999px;
-  color: var(--color-text-secondary);
-  background: color-mix(in srgb, currentColor 8%, transparent);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 16px;
-
-  &.is-nominal {
-    color: var(--color-status-nominal);
-  }
-
-  &.is-warning {
-    color: var(--color-status-warning);
-  }
-
-  &.is-critical {
-    color: var(--color-status-critical);
-  }
-}
-
-.vitals-dashboard .vitals-dashboard-finding-triggers,
-.vitals-dashboard .vitals-dashboard-finding-action {
-  margin: 0;
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.vitals-dashboard .vitals-dashboard-finding-triggers {
-  color: var(--color-text-secondary);
-}
-
 .vitals-dashboard .vitals-dashboard-chat {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 16px;
 }
 
 .vitals-dashboard .vitals-dashboard-chat-starter {

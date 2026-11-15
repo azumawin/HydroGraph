@@ -17,7 +17,6 @@ export const TELEMETRY = {
   CONNECTION_LABEL: "live telemetry",
   HISTORY_LABEL: "reading history",
   FLUSH_INTERVAL_MS: 250,
-  MALFORMED_MESSAGE: "Received a telemetry message that does not match the backend contract.",
   DISCONNECTED_MESSAGE: "Lost the connection to the telemetry stream.",
 };
 
@@ -30,11 +29,19 @@ export const ENVIRONMENT_LABELS = {
   SELECT_FAILED: "the selected environment",
 };
 
-export const ENVIRONMENT_FORMAT = {
-  NUMBER: new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }),
-  SECONDS_PER_MINUTE: 60,
-  HOURS_PER_DAY: 24,
-  MAX_HOURS_SHOWN: 48,
+// The front door, before any telemetry is shown: the demo runs in one mission
+// environment and the choice is per page load, so a reload asks again rather
+// than resuming in a setting nobody picked. Formatting of what each one sets
+// lives in environments.ts, which the header's switcher shares.
+export const ENVIRONMENT_PICKER = {
+  TITLE: "Choose the mission environment",
+  LEAD:
+    "Every reading in this demo is taken in one of these. The choice sets the gravity, " +
+    "how late a result reaches the dashboard, the light-dark cycle behind the circadian " +
+    "findings, and the dose rate a radiation spike is graded against.",
+  LOADING: "Loading the mission environments…",
+  IN_EFFECT: "In effect",
+  CHOOSE: "Start here",
 };
 
 export const ASSISTANT = {
@@ -162,10 +169,19 @@ export const VITALS_MIN_SPAN_BY_CHANNEL: Record<string, number> = Object.fromEnt
 
 export const DASHBOARD_TABS = {
   VITALS: { ID: "vitals", LABEL: "Vitals" },
+  CONDITIONS: { ID: "conditions", LABEL: "Health conditions" },
   MEASUREMENTS: { ID: "measurements", LABEL: "All measurements" },
 } as const;
 
 export type DashboardTabId = (typeof DASHBOARD_TABS)[keyof typeof DASHBOARD_TABS]["ID"];
+
+// The health-conditions tab: what the backend's finding evaluators detect
+// across channels, one card each. The assistant panel keeps the conversation
+// about them; this tab is the detections themselves.
+export const CONDITIONS = {
+  TITLE: "Health conditions",
+  EMPTY: "No findings yet.",
+};
 
 // The all-measurements tab: every channel in the dictionary, one row each.
 export const MEASUREMENTS = {
@@ -175,6 +191,20 @@ export const MEASUREMENTS = {
     { ID: "crew", LABEL: "Crew" },
     { ID: "environment", LABEL: "Cabin & environment" },
   ] as const,
+  // How far back a chart can be asked to look. Each channel keeps at most
+  // VITALS_HISTORY.MAX_POINTS_PER_CHANNEL points at its own cadence, so a 1 Hz
+  // channel holds about two minutes, a five-second channel ten, and a
+  // once-a-minute channel about two hours. Longer ranges -- a day, a month, a
+  // year -- would draw an axis with nothing on most of it, so the options stop
+  // where the history does, and "All" is whatever the channel is holding.
+  RANGES: [
+    { ID: "1m", LABEL: "1 min", SECONDS: 60 },
+    { ID: "5m", LABEL: "5 min", SECONDS: 300 },
+    { ID: "30m", LABEL: "30 min", SECONDS: 1800 },
+    { ID: "all", LABEL: "All", SECONDS: null },
+  ] as const,
+  RANGES_LABEL: "Chart timeframe",
+  DEFAULT_RANGE: "all" as const,
   NOT_MEASURED: "Not measured",
   NO_VALUE: "—",
   LOADING: "Loading the dictionary…",
@@ -184,6 +214,8 @@ export const MEASUREMENTS = {
   FALLBACK_SPAN_FRACTION: 0.05,
   FALLBACK_SPAN_FLOOR: 0.001,
 };
+
+export type MeasurementRangeId = (typeof MEASUREMENTS.RANGES)[number]["ID"];
 
 export const VITALS_CHART = {
   MARGIN: { top: 8, right: 12, bottom: 0, left: 0 },

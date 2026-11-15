@@ -1,29 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { CircleAlert, Check, MessageSquare, SendHorizontal } from "lucide-react";
+import { MessageSquare, SendHorizontal } from "lucide-react";
 import { assistantErrorDetail, postAssistant } from "../api/Service.ts";
 import type { ChatMessage } from "../api/Service.ts";
-import { ASSISTANT, FINDING_STATUS_LABELS } from "../Constants.ts";
-import { useTelemetryStore } from "../store/useTelemetryStore.ts";
+import { ASSISTANT } from "../Constants.ts";
 import "../assets/css/HealthAssistant.css";
 
+// The conversation about the findings; the detections themselves are their own
+// tab (ConditionsPanel). The assistant reads them on the backend, so the
+// starter question needs nothing from this panel.
 const HealthAssistant = () => {
-  const findingInfo = useTelemetryStore((state) => state.dictionary?.findings);
-  const findings = useTelemetryStore((state) => state.findings);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const transcript = useRef<HTMLDivElement>(null);
 
-  const findingList = Object.values(findings);
-  const hasFindings = findingList.length > 0;
-
   // Pin the newest message by scrolling this panel's own region, not by asking
   // the browser to bring an element into view: that walks every scrollable
   // ancestor, and on a viewport shorter than the dashboard's minimum height it
-  // scrolls the page itself, taking the header with it. An empty transcript
-  // leaves the findings list where it loaded, at the top.
+  // scrolls the page itself, taking the header with it. With nothing sent yet
+  // there is nothing to pin, so the region is left where it loaded.
   useEffect(() => {
     const region = transcript.current;
     if (region === null || (messages.length === 0 && !isSending && error === null)) return;
@@ -65,44 +62,6 @@ const HealthAssistant = () => {
         className="vitals-dashboard-panel-content vitals-dashboard-health-assistant-content"
         ref={transcript}
       >
-        {!hasFindings && <p className="vitals-dashboard-findings-empty">No findings yet.</p>}
-        <ul className="vitals-dashboard-findings">
-          {findingList.map((finding) => {
-            const level = finding.status;
-            const isFlagged = level === "warning" || level === "critical";
-            const StatusIcon = isFlagged ? CircleAlert : Check;
-
-            return (
-              <li className="vitals-dashboard-finding" key={finding.id}>
-                <div className="vitals-dashboard-finding-heading">
-                  <h3 className="vitals-dashboard-finding-name">
-                    {findingInfo?.[finding.id]?.name ?? finding.id}
-                  </h3>
-                  <span className={`vitals-dashboard-finding-status is-${level}`}>
-                    <StatusIcon className="vitals-dashboard-status-icon" />
-                    {FINDING_STATUS_LABELS[level]}
-                  </span>
-                </div>
-                {isFlagged && (
-                  <>
-                    {typeof finding.values.qsofa_score === "number" && (
-                      <p className="vitals-dashboard-finding-triggers">
-                        NEWS2 {String(finding.values.news2_score)} / qSOFA{" "}
-                        {finding.values.qsofa_score}
-                        {typeof finding.values.il6_source_channel === "string" &&
-                          ` · IL-6: ${finding.values.il6_source_channel}`}
-                      </p>
-                    )}
-                    <p className="vitals-dashboard-finding-triggers">
-                      {finding.triggers.join(" · ")}
-                    </p>
-                    <p className="vitals-dashboard-finding-action">{finding.action}</p>
-                  </>
-                )}
-              </li>
-            );
-          })}
-        </ul>
         <div className="vitals-dashboard-chat" aria-live="polite">
           {messages.length === 0 && !isSending && (
             <button

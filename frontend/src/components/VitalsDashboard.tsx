@@ -4,6 +4,8 @@ import { DASHBOARD_TABS, MEASUREMENTS } from "../Constants.ts";
 import type { DashboardTabId } from "../Constants.ts";
 import { useVitalsDashboardInit } from "../hooks/useVitalsDashboardInit.ts";
 import BodyScan from "./BodyScan.tsx";
+import ConditionsPanel from "./ConditionsPanel.tsx";
+import EnvironmentPicker from "./EnvironmentPicker.tsx";
 import EnvironmentSwitcher from "./EnvironmentSwitcher.tsx";
 import HealthAssistant from "./HealthAssistant.tsx";
 import MeasurementsPanel from "./MeasurementsPanel.tsx";
@@ -15,6 +17,9 @@ import "../assets/css/VitalsDashboard.css";
 const VitalsDashboard = () => {
   const { failedReadings, environmentId } = useVitalsDashboardInit();
   const [tab, setTab] = useState<DashboardTabId>(DASHBOARD_TABS.VITALS.ID);
+  // Deliberately not persisted: a reload returns to the picker rather than
+  // resuming in whichever environment the backend happens to still hold.
+  const [hasChosenEnvironment, setHasChosenEnvironment] = useState(false);
 
   const environmentClassName = environmentId === null ? "" : ` is-environment-${environmentId}`;
   const panelId = (id: DashboardTabId) => `vitals-dashboard-tabpanel-${id}`;
@@ -37,29 +42,45 @@ const VitalsDashboard = () => {
           />
           <h1 className="vitals-dashboard-title m-0">HydroGraph</h1>
         </div>
-        <nav className="vitals-dashboard-tabs" role="tablist" aria-label={MEASUREMENTS.TABS_LABEL}>
-          {Object.values(DASHBOARD_TABS).map((option) => (
-            <button
-              key={option.ID}
-              id={tabId(option.ID)}
-              className="vitals-dashboard-tab"
-              type="button"
-              role="tab"
-              aria-selected={tab === option.ID}
-              aria-controls={panelId(option.ID)}
-              onClick={() => setTab(option.ID)}
+        {/* Until an environment is chosen there is nothing to navigate and
+            nothing to switch: the picker owns the whole content row. */}
+        {hasChosenEnvironment && (
+          <>
+            <nav
+              className="vitals-dashboard-tabs"
+              role="tablist"
+              aria-label={MEASUREMENTS.TABS_LABEL}
             >
-              {option.LABEL}
-            </button>
-          ))}
-        </nav>
-        <EnvironmentSwitcher />
+              {Object.values(DASHBOARD_TABS).map((option) => (
+                <button
+                  key={option.ID}
+                  id={tabId(option.ID)}
+                  className="vitals-dashboard-tab"
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === option.ID}
+                  aria-controls={panelId(option.ID)}
+                  onClick={() => setTab(option.ID)}
+                >
+                  {option.LABEL}
+                </button>
+              ))}
+            </nav>
+            <EnvironmentSwitcher />
+          </>
+        )}
       </header>
 
-      {/* One view is mounted at a time: the store holds every reading, so
-          switching back costs nothing, and the body scan's 3D canvas is not
-          kept alive behind the list. */}
-      {tab === DASHBOARD_TABS.VITALS.ID ? (
+      {!hasChosenEnvironment && (
+        <main className="vitals-dashboard-layout grid min-h-0 gap-4">
+          <EnvironmentPicker onChosen={() => setHasChosenEnvironment(true)} />
+        </main>
+      )}
+
+      {/* One view is mounted at a time: the store holds every reading and
+          finding, so switching back costs nothing, and the body scan's 3D
+          canvas is not kept alive behind the other tabs. */}
+      {hasChosenEnvironment && tab === DASHBOARD_TABS.VITALS.ID && (
         <main
           id={panelId(DASHBOARD_TABS.VITALS.ID)}
           role="tabpanel"
@@ -70,7 +91,18 @@ const VitalsDashboard = () => {
           <BodyScan />
           <HealthAssistant />
         </main>
-      ) : (
+      )}
+      {hasChosenEnvironment && tab === DASHBOARD_TABS.CONDITIONS.ID && (
+        <main
+          id={panelId(DASHBOARD_TABS.CONDITIONS.ID)}
+          role="tabpanel"
+          aria-labelledby={tabId(DASHBOARD_TABS.CONDITIONS.ID)}
+          className="vitals-dashboard-layout grid min-h-0 gap-4"
+        >
+          <ConditionsPanel />
+        </main>
+      )}
+      {hasChosenEnvironment && tab === DASHBOARD_TABS.MEASUREMENTS.ID && (
         <main
           id={panelId(DASHBOARD_TABS.MEASUREMENTS.ID)}
           role="tabpanel"

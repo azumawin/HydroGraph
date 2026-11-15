@@ -1,7 +1,7 @@
 // Run with `npm test` (node's built-in runner; no test dependency).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { groupByScope, measurementMinSpan } from "./measurements.ts";
+import { groupByScope, measurementMinSpan, pointsInRange } from "./measurements.ts";
 import type { ChannelInfo } from "./api/types.ts";
 
 const channel = (scope: ChannelInfo["scope"]): ChannelInfo => ({
@@ -40,4 +40,35 @@ void test("a curated vital keeps its own axis span; other channels scale with th
   assert.equal(measurementMinSpan(undefined, -40, 0.05, 0.001), 2, "magnitude, not sign");
   assert.equal(measurementMinSpan(undefined, 0, 0.05, 0.001), 0.001, "floor at zero");
   assert.equal(measurementMinSpan(undefined, undefined, 0.05, 0.001), 0.001, "floor when unread");
+});
+
+// The window the timeframe buttons select. Minute-scale windows are what the
+// data supports: 120 points per channel at cadences from 1 s to 60 s.
+const NEWEST = Date.UTC(2026, 10, 14, 12);
+const point = (secondsAgo: number) => ({ timestamp: NEWEST - secondsAgo * 1000, value: 1 });
+const series = [point(1800), point(600), point(240), point(30), point(0)];
+
+void test("a null range draws the whole history", () => {
+  assert.deepEqual(pointsInRange(series, null), series);
+  assert.deepEqual(pointsInRange([], null), []);
+  assert.deepEqual(pointsInRange([], 60), []);
+});
+
+void test("a range keeps the points inside it, measured back from the newest", () => {
+  assert.deepEqual(pointsInRange(series, 60), [point(30), point(0)]);
+  assert.deepEqual(pointsInRange(series, 300), [point(240), point(30), point(0)]);
+  assert.deepEqual(pointsInRange(series, 1800), series, "the boundary point is inside");
+});
+
+void test("a range wider than the history keeps all of it", () => {
+  assert.deepEqual(pointsInRange(series, 86400), series);
+});
+
+void test("the newest point is always in range, so no chart goes empty", () => {
+  // The window ends at the newest reading, not at the clock: a 1 Hz channel
+  // holds two minutes and a once-a-minute channel two hours, and a finished run
+  // keeps neither up to date.
+  const stale = [point(7200), point(7140)];
+  assert.deepEqual(pointsInRange(stale, 30), [point(7140)]);
+  assert.deepEqual(pointsInRange(stale, 300), stale);
 });

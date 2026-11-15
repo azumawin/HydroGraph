@@ -41,16 +41,20 @@ def test_healthy_run_fills_every_vital_and_flags_nothing(
 
     for label in VITALS:
         expect(ui.status(ui.vital(dashboard, label))).to_have_text(MEASURED, timeout=15000)
-    # Six original findings plus the combined blood pressure assessment.
-    expect(dashboard.locator(".vitals-dashboard-finding")).to_have_count(7, timeout=15000)
 
     run.wait()
     assert_delivered_cleanly(run.counters(), backend)
     for label in ["Heart rate", "Blood oxygen", "Body temperature"]:
         assert ui.chart_points(ui.vital(dashboard, label)) >= 3, label
+    expect(dashboard.locator(".vitals-dashboard-reading-status.is-critical")).to_have_count(0)
+
+    # The detections are their own tab; the store collected them while the
+    # vitals tab was the one mounted.
+    ui.tab(dashboard, "Health conditions").click()
+    # Six original findings plus the combined blood pressure assessment.
+    expect(dashboard.locator(".vitals-dashboard-finding")).to_have_count(7, timeout=15000)
     expect(dashboard.locator(".vitals-dashboard-finding-status.is-warning")).to_have_count(0)
     expect(dashboard.locator(".vitals-dashboard-finding-status.is-critical")).to_have_count(0)
-    expect(dashboard.locator(".vitals-dashboard-reading-status.is-critical")).to_have_count(0)
 
 
 def test_charts_and_values_update_live_during_a_run(
@@ -93,6 +97,7 @@ def test_reload_mid_run_resumes_live_updates(dashboard: Page, backend: Backend, 
     wait_for_more_points(dashboard, "Heart rate", than=1)
 
     dashboard.reload()
+    ui.enter(dashboard)
 
     for label in VITALS:
         expect(ui.status(ui.vital(dashboard, label))).to_have_text(MEASURED, timeout=5000)
@@ -105,6 +110,9 @@ def test_hypercapnia_scenario_escalates_on_screen(
 ) -> None:
     run = simulate("badscenario2.toml", speed=30, duration=420)
 
+    # Watch the detection escalate on its own tab, then come back for the
+    # vitals and the body scan it is built from.
+    ui.tab(dashboard, "Health conditions").click()
     hypoxia = ui.finding(dashboard, "Hypoxia & CO2 exposure")
     expect(ui.finding_status(hypoxia)).to_have_text("Nominal", timeout=15000)
     expect(ui.finding_status(hypoxia)).to_have_text("Warning", timeout=30000)
@@ -112,6 +120,7 @@ def test_hypercapnia_scenario_escalates_on_screen(
         "ppCO2 > 3.0 mmHg"
     )
 
+    ui.tab(dashboard, "Vitals").click()
     oxygen = ui.vital(dashboard, "Blood oxygen")
     expect(ui.status(oxygen)).to_have_text("Warning", timeout=30000)
     expect(ui.status(ui.vital(dashboard, "Heart rate"))).to_have_text("Warning", timeout=30000)
@@ -127,6 +136,7 @@ def test_sans_scenario_reaches_critical(dashboard: Page, backend: Backend, simul
     # The scenario itself progresses early; telemetry runs at real-time speed.
     run = simulate("badscenario1.toml", speed=1, duration=135)
 
+    ui.tab(dashboard, "Health conditions").click()
     sans = ui.finding(dashboard, "SANS & cephalic fluid shift")
     expect(ui.finding_status(sans)).to_have_text("Nominal", timeout=15000)
     expect(ui.finding_status(sans)).to_have_text("Warning", timeout=75000)
@@ -134,6 +144,8 @@ def test_sans_scenario_reaches_critical(dashboard: Page, backend: Backend, simul
     expect(sans.locator(".vitals-dashboard-finding-triggers")).to_have_text(
         "jugular distension > 1.8%"
     )
+
+    ui.tab(dashboard, "Vitals").click()
     expect(ui.region_status(ui.region(dashboard, "Head & neck"))).to_have_text("Critical")
 
     run.wait()

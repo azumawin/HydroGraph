@@ -22,8 +22,10 @@ def test_empty_dashboard_before_any_reading(dashboard: Page) -> None:
         expect(ui.status(row)).to_have_text("Not measured")
         expect(ui.value(row)).to_have_text(re.compile("^—(/—)?$"))
         expect(row.locator(".vitals-dashboard-chart-message")).to_have_text("No readings yet.")
-    expect(dashboard.locator(".vitals-dashboard-findings-empty")).to_have_text("No findings yet.")
     expect(ui.region_status(ui.region(dashboard, "Upper body"))).to_have_text("No reading")
+
+    ui.tab(dashboard, "Health conditions").click()
+    expect(dashboard.locator(".vitals-dashboard-findings-empty")).to_have_text("No findings yet.")
 
 
 def test_readings_appear_in_display_units(dashboard: Page, backend: Backend) -> None:
@@ -114,7 +116,9 @@ def test_blood_pressure_status_uses_pair_and_live_shock_index(
     expect(ui.status(row)).to_have_text("Not measured")
     backend.post("bp_diastolic", 80 * MMHG, "Pa")
     expect(ui.status(row)).to_have_text("Nominal")
-    expect(row.locator(".vitals-dashboard-reading-assessment")).to_contain_text("MAP 93.3 mmHg")
+    # A row that is not flagged prints no assessment line: the finding's derived
+    # values stay in its payload rather than under the chart.
+    expect(row.locator(".vitals-dashboard-reading-assessment")).to_have_count(0)
 
     backend.post("bp_systolic", 130 * MMHG, "Pa", minutes=1)
     expect(ui.status(row)).to_have_text("Warning")
@@ -126,10 +130,10 @@ def test_blood_pressure_status_uses_pair_and_live_shock_index(
     expect(ui.status(row)).to_have_text("Nominal")
     backend.post("heart_rate", 120 / 60, "s^-1", minutes=2)
     expect(ui.status(row)).to_have_text("Critical")
-    expect(row.locator(".vitals-dashboard-reading-assessment")).to_contain_text("Shock index 1.00")
     expect(row.locator(".vitals-dashboard-reading-assessment")).to_contain_text("shock index > 0.9")
 
     dashboard.reload()
+    ui.enter(dashboard)
     expect(ui.status(ui.vital(dashboard, "Blood pressure"))).to_have_text("Critical")
     backend.post("heart_rate", 72 / 60, "s^-1", minutes=3)
     expect(ui.status(ui.vital(dashboard, "Blood pressure"))).to_have_text("Nominal")
@@ -188,6 +192,7 @@ def test_single_severity_finding_shows_as_warning_with_triggers_and_action(
     backend.post("bone_ntx_pct_baseline", 0.30, "1")
     backend.post("urine_volume_24h", 1.5e-3, "m^3")
 
+    ui.tab(dashboard, "Health conditions").click()
     bone = ui.finding(dashboard, "Bone demineralization & renal stone risk")
     expect(ui.finding_status(bone)).to_have_text("Warning")
     expect(bone.locator(".vitals-dashboard-finding-triggers")).to_have_text(
@@ -203,6 +208,7 @@ def test_severity_finding_escalates_and_recovers(dashboard: Page, backend: Backe
     backend.post("ambient_dose_rate", 5e-9, "Sv/s", scope="environment")
     backend.post("spe_flag", True, "boolean", minutes=1, scope="environment")
 
+    ui.tab(dashboard, "Health conditions").click()
     radiation = ui.finding(dashboard, "Radiation dose & solar particle events")
     expect(ui.finding_status(radiation)).to_have_text("Critical")
     expect(radiation.locator(".vitals-dashboard-finding-action")).to_contain_text("storm shelter")
@@ -217,6 +223,7 @@ def test_finding_combines_crew_and_cabin_readings(dashboard: Page, backend: Back
     backend.post("spo2", 0.97, "1")
     backend.post("ambient_ppco2", 3.5 * MMHG, "Pa", scope="environment")
 
+    ui.tab(dashboard, "Health conditions").click()
     hypoxia = ui.finding(dashboard, "Hypoxia & CO2 exposure")
     expect(ui.finding_status(hypoxia)).to_have_text("Warning")
     expect(hypoxia.locator(".vitals-dashboard-finding-triggers")).to_have_text("ppCO2 > 3.0 mmHg")
@@ -247,6 +254,7 @@ def test_reload_restores_the_latest_state(dashboard: Page, backend: Backend) -> 
     expect(ui.value(ui.vital(dashboard, "Heart rate"))).to_have_text("70")
 
     dashboard.reload()
+    ui.enter(dashboard)
 
     heart_rate = ui.vital(dashboard, "Heart rate")
     expect(ui.value(heart_rate)).to_have_text("70")
@@ -267,6 +275,7 @@ def test_history_fills_the_charts_on_first_load(
         backend.post("bp_diastolic", (78 + minute) * MMHG, "Pa", minutes=minute)
 
     page.goto(frontend)
+    ui.enter(page)
 
     heart_rate = ui.vital(page, "Heart rate")
     expect(ui.chart(heart_rate)).to_have_attribute(

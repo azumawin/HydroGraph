@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Literal, Protocol
 
 from .clock import Clock, timestamp
-from .frequency import FREQUENCIES, LAB_DEMO_CALENDAR, Calendar
+from .frequency import FREQUENCIES, LAB_DEMO_CALENDAR, Calendar, lab_demo_interval
 from .models import CGM_WINDOW_S, AstronautProfile, Observation, Reading, Settings
 from .physiology import (
     DAY,
@@ -274,7 +274,9 @@ class Scheduler:
                     # Only the untouched protocol calendar is compressed: a
                     # scenario target keeps the schedule its fault gave it.
                     owner_rule = Rule(
-                        rule.group, interval=settings.lab_demo_interval_s, calendar=calendar
+                        rule.group,
+                        interval=lab_demo_interval(settings.lab_demo_interval_s, settings.speed),
+                        calendar=calendar,
                     )
                 due = owner_rule.next_after(0)
                 if due is not None:

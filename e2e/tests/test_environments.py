@@ -79,6 +79,7 @@ def test_switch_reaches_every_dashboard_and_survives_restart(
 ) -> None:
     other = dashboard.context.new_page()
     other.goto(frontend)
+    ui.enter(other)
     expect(ui.environment_select(other)).to_have_value("iss_leo")
 
     ui.environment_select(dashboard).select_option("mars_surface")
@@ -90,6 +91,9 @@ def test_switch_reaches_every_dashboard_and_survives_restart(
     backend.stop()
     backend.start()
     dashboard.reload()
+    # The picker marks the environment the restarted backend still holds.
+    expect(ui.environment_card(dashboard, "Mars surface")).to_contain_text("In effect")
+    ui.enter(dashboard, "Mars surface")
     expect(ui.environment_select(dashboard)).to_have_value("mars_surface")
 
 
@@ -107,6 +111,7 @@ def test_radiation_is_graded_against_the_selected_environment(
     backend.post("ambient_integrated_dose", 0.001, "Sv", scope="environment")
     backend.post("ambient_dose_rate", 70 * USV_H, "Sv/s", scope="environment")
     backend.post("spe_flag", False, "boolean", scope="environment")
+    ui.tab(dashboard, "Health conditions").click()
     radiation = ui.finding(dashboard, "Radiation dose & solar particle events")
 
     # 70 uSv/h is 55.4 above the ISS background but only 12.9 above the Moon's
@@ -133,6 +138,7 @@ def test_running_simulator_follows_the_dashboard(
     ui.environment_select(dashboard).select_option("lunar_surface")
 
     wait_for_dose_rate(backend, 57.1)
+    ui.tab(dashboard, "Health conditions").click()
     radiation = ui.finding(dashboard, "Radiation dose & solar particle events")
     expect(ui.finding_status(radiation)).to_have_text("Nominal")  # background, not a spike
 

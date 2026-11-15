@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-hidden="true">
+  <title>Low Earth orbit: the Earth limb seen from a station</title>
+  <defs>
+    <linearGradient id="iss-space" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#05070f"/>
+      <stop offset="1" stop-color="#2c3a4a"/>
+    </linearGradient>
+    <linearGradient id="iss-earth" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#7194b8"/>
+      <stop offset="0.55" stop-color="#4b6580"/>
+      <stop offset="1" stop-color="#23344a"/>
+    </linearGradient>
+    <linearGradient id="iss-glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7194b8" stop-opacity="0"/>
+      <stop offset="1" stop-color="#9fc4e8" stop-opacity="0.85"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" fill="url(#iss-space)"/>
+  <g fill="#ffffff">
+    <circle cx="28" cy="24" r="1.1" opacity="0.9"/>
+    <circle cx="74" cy="12" r="0.8" opacity="0.7"/>
+    <circle cx="126" cy="31" r="1" opacity="0.8"/>
+    <circle cx="188" cy="16" r="0.7" opacity="0.6"/>
+    <circle cx="232" cy="38" r="1.1" opacity="0.85"/>
+    <circle cx="286" cy="22" r="0.8" opacity="0.7"/>
+    <circle cx="258" cy="66" r="0.7" opacity="0.5"/>
+    <circle cx="52" cy="58" r="0.7" opacity="0.5"/>
+  </g>
+  <path d="M-40 180 A 260 260 0 0 1 360 180 Z" fill="url(#iss-earth)"/>
+  <path d="M-40 180 A 260 260 0 0 1 360 180 Z" fill="none" stroke="url(#iss-glow)" stroke-width="5"/>
+  <g opacity="0.5" fill="#9fc4e8">
+    <ellipse cx="118" cy="150" rx="34" ry="7"/>
+    <ellipse cx="214" cy="164" rx="26" ry="5"/>
+  </g>
+  <g stroke="#cfd8e3" stroke-width="2.4" stroke-linecap="round">
+    <path d="M196 54 H268"/>
+    <path d="M232 44 V64"/>
+  </g>
+  <g fill="#3d5a7a" stroke="#8ea8c6" stroke-width="1">
+    <rect x="200" y="36" width="24" height="15" rx="1.5"/>
+    <rect x="240" y="36" width="24" height="15" rx="1.5"/>
+    <rect x="200" y="57" width="24" height="15" rx="1.5"/>
+    <rect x="240" y="57" width="24" height="15" rx="1.5"/>
+  </g>
+  <rect x="226" y="50" width="12" height="8" rx="2" fill="#e6ecf3"/>
+</svg>

@@ -1,17 +1,8 @@
 import { Globe } from "lucide-react";
 import type { ChangeEvent } from "react";
-import { ENVIRONMENT_FORMAT, ENVIRONMENT_LABELS } from "../Constants.ts";
+import { ENVIRONMENT_LABELS } from "../Constants.ts";
+import { environmentFacts } from "../environments.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
-
-const formatCommDelay = (seconds: number) =>
-  seconds < ENVIRONMENT_FORMAT.SECONDS_PER_MINUTE
-    ? `${ENVIRONMENT_FORMAT.NUMBER.format(seconds)} s`
-    : `${ENVIRONMENT_FORMAT.NUMBER.format(seconds / ENVIRONMENT_FORMAT.SECONDS_PER_MINUTE)} min`;
-
-const formatDayLength = (hours: number) =>
-  hours <= ENVIRONMENT_FORMAT.MAX_HOURS_SHOWN
-    ? `${ENVIRONMENT_FORMAT.NUMBER.format(hours)} h`
-    : `${ENVIRONMENT_FORMAT.NUMBER.format(hours / ENVIRONMENT_FORMAT.HOURS_PER_DAY)} days`;
 
 const EnvironmentSwitcher = () => {
   const environments = useTelemetryStore((state) => state.dictionary?.environments);
@@ -21,27 +12,11 @@ const EnvironmentSwitcher = () => {
 
   const selectedEnvironment = environmentId === null ? undefined : environments?.[environmentId];
 
+  // The same four numbers the picker's cards show, formatted the same way.
   const facts =
     selectedEnvironment === undefined
       ? []
-      : [
-          {
-            LABEL: ENVIRONMENT_LABELS.GRAVITY,
-            VALUE: `${ENVIRONMENT_FORMAT.NUMBER.format(selectedEnvironment.gravity_g)} g`,
-          },
-          {
-            LABEL: ENVIRONMENT_LABELS.COMM_DELAY,
-            VALUE: formatCommDelay(selectedEnvironment.comm_delay_rt_s),
-          },
-          {
-            LABEL: ENVIRONMENT_LABELS.DAY_LENGTH,
-            VALUE: formatDayLength(selectedEnvironment.day_length_h),
-          },
-          {
-            LABEL: ENVIRONMENT_LABELS.RADIATION,
-            VALUE: `${ENVIRONMENT_FORMAT.NUMBER.format(selectedEnvironment.baseline_dose_rate_usv_h)} µSv/h`,
-          },
-        ];
+      : environmentFacts(selectedEnvironment, ENVIRONMENT_LABELS);
 
   const handleEnvironmentChange = (event: ChangeEvent<HTMLSelectElement>) => {
     void selectEnvironment(event.target.value);
@@ -72,9 +47,9 @@ const EnvironmentSwitcher = () => {
       </label>
       <dl className="vitals-dashboard-environment-facts">
         {facts.map((fact) => (
-          <div className="vitals-dashboard-environment-fact" key={fact.LABEL}>
-            <dt className="vitals-dashboard-environment-fact-label">{fact.LABEL}</dt>
-            <dd className="vitals-dashboard-environment-fact-value">{fact.VALUE}</dd>
+          <div className="vitals-dashboard-environment-fact" key={fact.label}>
+            <dt className="vitals-dashboard-environment-fact-label">{fact.label}</dt>
+            <dd className="vitals-dashboard-environment-fact-value">{fact.value}</dd>
           </div>
         ))}
       </dl>

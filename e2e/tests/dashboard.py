@@ -2,9 +2,30 @@
 
 import re
 
-from playwright.sync_api import Locator, Page
+from playwright.sync_api import Locator, Page, expect
 
 POINTS = re.compile(r"(\d+) recorded timestamps")
+DEFAULT_ENVIRONMENT = "ISS, low Earth orbit"
+
+
+def environment_card(page: Page, name: str) -> Locator:
+    """One mission environment's card on the picker that opens the app."""
+    heading = page.locator(
+        ".vitals-dashboard-environment-card-name", has_text=re.compile(f"^{re.escape(name)}$")
+    )
+    return page.locator(".vitals-dashboard-environment-card").filter(has=heading)
+
+
+def enter(page: Page, name: str = DEFAULT_ENVIRONMENT) -> None:
+    """Choose a mission environment, leaving the dashboard open behind it.
+
+    Every page load starts on the picker: the choice is per load, so a reload
+    asks again. Choosing the environment already in effect changes nothing.
+    """
+    card = environment_card(page, name)
+    expect(card).to_be_visible(timeout=15000)
+    card.click()
+    expect(page.locator(".vitals-dashboard-environment-picker")).to_have_count(0)
 
 
 def vital(page: Page, label: str) -> Locator:
@@ -36,6 +57,24 @@ def chart_points(row: Locator) -> int:
     match = POINTS.search(chart(row).get_attribute("aria-label") or "")
     assert match is not None
     return int(match.group(1))
+
+
+def chat_starter(page: Page) -> Locator:
+    """The assistant's suggested question, shown until the chat has messages."""
+    return page.get_by_role("button", name="Summarize findings and advise")
+
+
+def chat_input(page: Page) -> Locator:
+    return page.get_by_label("Ask about the findings…")
+
+
+def chat_send(page: Page) -> Locator:
+    return page.get_by_role("button", name="Send")
+
+
+def chat_messages(page: Page, role: str = "") -> Locator:
+    """The transcript, or just its user/assistant/error/pending messages."""
+    return page.locator(f".vitals-dashboard-chat-message{f'.is-{role}' if role else ''}")
 
 
 def finding(page: Page, name: str) -> Locator:
@@ -87,3 +126,10 @@ def measurement_value(row: Locator) -> Locator:
 
 def measurement_status(row: Locator) -> Locator:
     return row.locator(".vitals-dashboard-reading-status")
+
+
+def measurement_range(page: Page, label: str) -> Locator:
+    """One timeframe button of the all-measurements tab, e.g. "5 min"."""
+    return page.get_by_role("group", name="Chart timeframe").get_by_role(
+        "button", name=label, exact=True
+    )

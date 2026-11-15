@@ -11,47 +11,58 @@
 }
 
 .vitals-dashboard .vitals-dashboard-measurements-count {
-  margin-left: auto;
   color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
-/* Each scope is a labelled list of full-width rows; the label runs a hairline
-   out to the right edge so the groups read as sections without a solid block
-   behind them. */
-.vitals-dashboard .vitals-dashboard-measurement-group {
+/* The timeframe every chart in the list is drawn for: the dashboard's segmented
+   control, sized down to sit on the panel header's baseline. */
+.vitals-dashboard .vitals-dashboard-measurement-ranges {
   display: flex;
-  flex-direction: column;
+  gap: 2px;
+  margin-left: auto;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-glass-fill);
 }
 
-.vitals-dashboard .vitals-dashboard-measurement-group-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0;
+.vitals-dashboard .vitals-dashboard-measurement-range {
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 999px;
   color: var(--color-text-secondary);
+  background: transparent;
+  font: inherit;
   font-size: 12px;
-  font-weight: 600;
-  line-height: 16px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-weight: 500;
+  line-height: 18px;
+  cursor: pointer;
 
-  &::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--color-divider);
+  &:hover {
+    color: var(--color-text);
+  }
+
+  &[aria-pressed="true"] {
+    color: var(--color-text);
+    background: var(--color-surface-opaque);
+    box-shadow: inset 0 1px 0 var(--color-edge-highlight);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
   }
 }
 
-.vitals-dashboard .vitals-dashboard-measurement-group-count {
-  padding: 0 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
+/* Each scope is a plain run of full-width rows with no heading above it: the
+   rows carry the structure, and the gap between the groups is what separates
+   crew from cabin. The scope still names the group for a screen reader. */
+.vitals-dashboard .vitals-dashboard-measurement-group {
+  display: flex;
+  flex-direction: column;
 }
 
 /* One channel per row: the reading on the left, its history filling the rest,

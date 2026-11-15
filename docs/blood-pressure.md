@@ -30,7 +30,9 @@ in reconnect snapshots and serves it through `/api/health-conditions/`. The
 health assistant receives it through the same findings pipeline.
 
 The dashboard's blood pressure row uses this combined finding for its status,
-and displays MAP, available shock index and triggered criteria. Individual
+and lists its triggered criteria when it is flagged. MAP and the available shock
+index are not printed under the chart: they stay in the finding's values, where
+the health assistant and `/api/health-conditions/` read them. Individual
 pressure reading evaluations remain `unspecified`, since a single channel does
 not supply the pair or shock index.
 

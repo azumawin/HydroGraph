@@ -11,10 +11,13 @@ import type { TooltipContentProps } from "recharts";
 import { VITALS_CHART, VITALS_FORMAT } from "../Constants.ts";
 import { vitalChartAxis } from "../chartAxis.ts";
 import type { VitalMetric } from "../Constants.ts";
+import { pointsInRange } from "../measurements.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
 
 type VitalHistoryChartProps = {
   metric: VitalMetric;
+  // Seconds of history to draw, newest first; null draws everything held.
+  rangeSeconds?: number | null;
 };
 
 const VitalHistoryTooltip = ({ active, payload, label }: TooltipContentProps) => {
@@ -38,7 +41,7 @@ const VitalHistoryTooltip = ({ active, payload, label }: TooltipContentProps) =>
   );
 };
 
-const VitalHistoryChart = ({ metric }: VitalHistoryChartProps) => {
+const VitalHistoryChart = ({ metric, rangeSeconds = null }: VitalHistoryChartProps) => {
   const history = useTelemetryStore((state) => state.history);
   const channels = useTelemetryStore((state) => state.dictionary?.channels);
   const isLoadingTelemetry = useTelemetryStore((state) => state.dictionary === null);
@@ -46,7 +49,7 @@ const VitalHistoryChart = ({ metric }: VitalHistoryChartProps) => {
   const pointsByTimestamp = new Map<number, { timestamp: number; [channel: string]: number }>();
 
   for (const series of metric.SERIES) {
-    for (const point of history[series.CHANNEL] ?? []) {
+    for (const point of pointsInRange(history[series.CHANNEL] ?? [], rangeSeconds)) {
       const chartPoint = pointsByTimestamp.get(point.timestamp) ?? { timestamp: point.timestamp };
       chartPoint[series.CHANNEL] = point.value;
       pointsByTimestamp.set(point.timestamp, chartPoint);

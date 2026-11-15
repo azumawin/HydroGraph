@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Check, CircleAlert, Gauge, List, Minus, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -7,7 +8,7 @@ import {
   VITALS_MIN_SPAN_BY_CHANNEL,
   formatReadingValue,
 } from "../Constants.ts";
-import type { VitalMetric } from "../Constants.ts";
+import type { MeasurementRangeId, VitalMetric } from "../Constants.ts";
 import type { ChannelInfo } from "../api/Service.ts";
 import { groupByScope, measurementMinSpan } from "../measurements.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
@@ -24,9 +25,10 @@ type MeasurementRowProps = {
   id: string;
   info: ChannelInfo;
   reading: VitalReading | undefined;
+  rangeSeconds: number | null;
 };
 
-const MeasurementRow = ({ id, info, reading }: MeasurementRowProps) => {
+const MeasurementRow = ({ id, info, reading, rangeSeconds }: MeasurementRowProps) => {
   const evaluation = reading?.evaluation;
   const isFlagged = evaluation === "warning" || evaluation === "critical";
   const StatusIcon = evaluation === undefined ? Minus : isFlagged ? CircleAlert : Check;
@@ -65,7 +67,7 @@ const MeasurementRow = ({ id, info, reading }: MeasurementRowProps) => {
       </div>
       {info.value_type === "number" && (
         <div className="vitals-dashboard-measurement-history">
-          <VitalHistoryChart metric={metric} />
+          <VitalHistoryChart metric={metric} rangeSeconds={rangeSeconds} />
         </div>
       )}
       <div className="vitals-dashboard-measurement-footer">
@@ -83,6 +85,11 @@ const MeasurementRow = ({ id, info, reading }: MeasurementRowProps) => {
 const MeasurementsPanel = () => {
   const dictionary = useTelemetryStore((state) => state.dictionary);
   const readings = useTelemetryStore((state) => state.readings);
+  const [rangeId, setRangeId] = useState<MeasurementRangeId>(MEASUREMENTS.DEFAULT_RANGE);
+
+  // One timeframe for the whole tab, so the rows stay comparable. Anything the
+  // list does not recognise falls back to the channel's whole history.
+  const rangeSeconds = MEASUREMENTS.RANGES.find((option) => option.ID === rangeId)?.SECONDS ?? null;
 
   const groups =
     dictionary === null
@@ -97,6 +104,23 @@ const MeasurementsPanel = () => {
       <header className="vitals-dashboard-panel-header">
         <List className="vitals-dashboard-icon" />
         <h2 className="vitals-dashboard-panel-title m-0">{MEASUREMENTS.TITLE}</h2>
+        <div
+          className="vitals-dashboard-measurement-ranges"
+          role="group"
+          aria-label={MEASUREMENTS.RANGES_LABEL}
+        >
+          {MEASUREMENTS.RANGES.map((option) => (
+            <button
+              key={option.ID}
+              type="button"
+              className="vitals-dashboard-measurement-range"
+              aria-pressed={option.ID === rangeId}
+              onClick={() => setRangeId(option.ID)}
+            >
+              {option.LABEL}
+            </button>
+          ))}
+        </div>
         {dictionary !== null && (
           <span className="vitals-dashboard-measurements-count">
             {Object.keys(dictionary.channels).length} channels
@@ -111,17 +135,21 @@ const MeasurementsPanel = () => {
         )}
         {dictionary !== null &&
           groups.map((group) => (
-            <section className="vitals-dashboard-measurement-group" key={group.scope}>
-              <h3 className="vitals-dashboard-measurement-group-title">
-                <span>{MEASUREMENTS.SCOPES.find((scope) => scope.ID === group.scope)?.LABEL}</span>
-                <span className="vitals-dashboard-measurement-group-count">
-                  {group.channels.length}
-                </span>
-              </h3>
+            <section
+              className="vitals-dashboard-measurement-group"
+              key={group.scope}
+              aria-label={MEASUREMENTS.SCOPES.find((scope) => scope.ID === group.scope)?.LABEL}
+            >
               {group.channels.map((id) => {
                 const info = dictionary.channels[id];
                 return info === undefined ? null : (
-                  <MeasurementRow key={id} id={id} info={info} reading={readings[id]} />
+                  <MeasurementRow
+                    key={id}
+                    id={id}
+                    info={info}
+                    reading={readings[id]}
+                    rangeSeconds={rangeSeconds}
+                  />
                 );
               })}
             </section>

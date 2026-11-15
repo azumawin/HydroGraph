@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-hidden="true">
+  <title>Lunar surface: regolith and craters under a black sky, Earth overhead</title>
+  <defs>
+    <linearGradient id="moon-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#05050a"/>
+      <stop offset="1" stop-color="#1b1b1f"/>
+    </linearGradient>
+    <linearGradient id="moon-ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a8a8a"/>
+      <stop offset="0.5" stop-color="#5c5c5c"/>
+      <stop offset="1" stop-color="#3c3c3c"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" fill="url(#moon-sky)"/>
+  <g fill="#ffffff">
+    <circle cx="40" cy="20" r="0.9" opacity="0.8"/>
+    <circle cx="96" cy="36" r="0.7" opacity="0.6"/>
+    <circle cx="150" cy="14" r="1" opacity="0.75"/>
+    <circle cx="276" cy="28" r="0.8" opacity="0.7"/>
+    <circle cx="300" cy="58" r="0.7" opacity="0.5"/>
+  </g>
+  <g transform="translate(232 44)">
+    <circle r="13" fill="#4b6580"/>
+    <path d="M-13 0 A 13 13 0 0 1 13 0 Z" fill="#7194b8" opacity="0.55"/>
+    <circle r="13" fill="none" stroke="#9fc4e8" stroke-width="1" opacity="0.7"/>
+    <ellipse cx="-3" cy="4" rx="7" ry="4" fill="#8fae86" opacity="0.65"/>
+  </g>
+  <path d="M0 116 L48 104 L104 112 L168 98 L232 110 L286 100 L320 108 V180 H0 Z" fill="url(#moon-ground)"/>
+  <g fill="#2f2f2f" opacity="0.55">
+    <ellipse cx="74" cy="146" rx="30" ry="9"/>
+    <ellipse cx="208" cy="160" rx="42" ry="11"/>
+    <ellipse cx="146" cy="130" rx="14" ry="4"/>
+  </g>
+  <g fill="#9a9a9a" opacity="0.7">
+    <ellipse cx="74" cy="143" rx="30" ry="8"/>
+    <ellipse cx="208" cy="157" rx="42" ry="10"/>
+    <ellipse cx="146" cy="128" rx="14" ry="3.5"/>
+  </g>
+  <g fill="#6b6b6b">
+    <path d="M28 124 l7 -9 l8 9 z"/>
+    <path d="M262 136 l9 -11 l10 11 z"/>
+  </g>
+</svg>

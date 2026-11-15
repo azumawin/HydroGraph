@@ -16,7 +16,7 @@ import pytest
 from pydantic import ValidationError
 
 from imitacija.clock import ManualClock
-from imitacija.frequency import LAB_DEMO_CALENDAR
+from imitacija.frequency import LAB_DEMO_CALENDAR, lab_demo_interval
 from imitacija.main import load_settings
 from imitacija.models import Observation, Settings
 from imitacija.physiology import crew_values
@@ -78,12 +78,16 @@ def test_each_sparse_channel_fills_its_chart_from_the_first_interval(config: str
     items = acquire(settings, 120)
     assert items == acquire(settings, 120)
 
+    # An accelerated scenario publishes no faster than the rate floor allows.
+    step = lab_demo_interval(INTERVAL, settings.speed)
+    due = [float(t) for t in range(int(step), 121, int(step))]
+
     for name in CHANNEL_NAMES:
         startup = [o for o in items if o.reading.channel == name and o.sample_kind != "scheduled"]
         samples = scheduled(items, name)
         assert [o.acquired_s for o in startup] == [0], name
-        assert [o.acquired_s for o in samples] == [float(t) for t in range(5, 121, 5)], name
-        assert [o.sequence for o in samples] == list(range(2, 26)), name
+        assert [o.acquired_s for o in samples] == due, name
+        assert [o.sequence for o in samples] == list(range(2, len(due) + 2)), name
         # A trend, not the same stored value published again.
         assert len({float(o.reading.value) for o in samples}) > 5, name
 
@@ -190,6 +194,26 @@ def test_the_compressed_calendar_raises_no_alert_of_its_own() -> None:
     assert (first - worst["body_mass"][0]) / first * 100 < 1.0
 
 
+def test_an_accelerated_run_publishes_no_faster_than_the_backend_can_store() -> None:
+    """Thirteen channels at once, at a speed the transport cannot absorb, cost
+    the dashboard points rather than winning any: the bounded delivery queue
+    thins the busiest channels, which at a shared interval includes the vitals
+    already being drawn. The floor keeps each demo channel at one sample per
+    wall second, so an accelerated run still fills its charts.
+    """
+    assert lab_demo_interval(INTERVAL, 1) == INTERVAL, "the demo's own speed is unchanged"
+    assert lab_demo_interval(INTERVAL, 30) == 30
+    assert lab_demo_interval(60, 30) == 60, "a slower configured interval wins"
+
+    settings = Settings(enabled_channels=("cortisol_saliva",), lab_demo_interval_s=INTERVAL)
+    fast = settings.model_copy(update={"speed": 30})
+    acquired = [o.acquired_s for o in scheduled(acquire(fast, 120), "cortisol_saliva")]
+
+    assert acquired == [30.0, 60.0, 90.0, 120.0]
+    # One sample per wall second at this speed, where 5s would have been six.
+    assert len(acquired) / (120 / fast.speed) == 1.0
+
+
 def test_demo_metadata_and_validation() -> None:
     settings = Settings(lab_demo_interval_s=INTERVAL)
     entries = {
@@ -199,6 +223,11 @@ def test_demo_metadata_and_validation() -> None:
     plain = {
         c.channel: c for c in dictionary(Settings().environment, 3600, Settings()).channels
     }
+
+    accelerated = dictionary(settings.environment, 0, settings.model_copy(update={"speed": 30}))
+    for entry in accelerated.channels:
+        if entry.channel in CHANNEL_NAMES:
+            assert "dashboard demo: every 30.0s" in entry.collection_schedule
 
     for name in CHANNEL_NAMES:
         assert "dashboard demo: every 5.0s" in entries[name].collection_schedule

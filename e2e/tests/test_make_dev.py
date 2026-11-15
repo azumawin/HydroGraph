@@ -100,6 +100,7 @@ def test_make_dev_streams_sparse_vitals_and_cleans_up(page: Page, tmp_path: Path
         wait_for("http://127.0.0.1:8000/api/health/")
         wait_for("http://127.0.0.1:5173/")
         page.goto("http://127.0.0.1:5173/")
+        ui.enter(page)
         pressure = ui.vital(page, "Blood pressure")
         glucose = ui.vital(page, "Blood sugar")
         expect(ui.chart(pressure)).to_have_attribute(
@@ -135,6 +136,7 @@ def test_make_dev_streams_sparse_vitals_and_cleans_up(page: Page, tmp_path: Path
             assert {r["evaluation"] for r in readings} <= {"nominal", "unspecified"}, channel
 
         page.reload()
+        ui.enter(page)
         expect(ui.chart(glucose)).to_have_attribute(
             "aria-label",
             re.compile(r"Blood sugar history\. (?:[2-9]|\d{2,}) recorded timestamps\."),

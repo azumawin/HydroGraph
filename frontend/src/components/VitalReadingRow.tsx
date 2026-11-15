@@ -99,16 +99,11 @@ const VitalReadingRow = ({
             ))}
           </span>
         </div>
-        {finding && (
-          <div className="vitals-dashboard-reading-assessment">
-            {typeof finding.values.map_mmhg === "number" && (
-              <span>MAP {VITALS_FORMAT.VALUE.format(finding.values.map_mmhg)} mmHg</span>
-            )}
-            {typeof finding.values.shock_index === "number" && (
-              <span>Shock index {finding.values.shock_index.toFixed(2)}</span>
-            )}
-            {isFlagged && <span>{finding.triggers.join(" · ")}</span>}
-          </div>
+        {/* Why the row is flagged, and nothing else: the finding's derived
+            values (MAP, shock index) stay in its payload for the assistant and
+            /api/health-conditions/ to use. */}
+        {finding && isFlagged && (
+          <div className="vitals-dashboard-reading-assessment">{finding.triggers.join(" · ")}</div>
         )}
       </div>
     </article>

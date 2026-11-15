@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Literal
 
-from .frequency import FREQUENCIES, LAB_DEMO_CALENDAR
+from .frequency import FREQUENCIES, LAB_DEMO_CALENDAR, lab_demo_interval
 from .models import Environment, FrozenModel, Settings
 from .scenarios import EVA_CHANNELS, HYPERCAPNIA_CHANNELS, INFECTION_CHANNELS, SANS_CHANNELS
 from .units import MMHG_TO_PA
@@ -776,9 +776,10 @@ def dictionary(
             f"averaging that window's raw samples; replaces the 5-minute CGM window"
         )
     if settings and settings.lab_demo_interval_s is not None:
+        effective = lab_demo_interval(settings.lab_demo_interval_s, settings.speed)
         for group, calendar in LAB_DEMO_CALENDAR.items():
             overrides[group] = (
-                f"dashboard demo: every {settings.lab_demo_interval_s}s, each sample "
+                f"dashboard demo: every {effective}s, each sample "
                 f"{calendar.step}s further along this channel's own calendar from "
                 f"{calendar.first}s; results are not held for laboratory processing"
             )

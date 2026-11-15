@@ -1,0 +1,100 @@
+/* The tab's one scroll region, with the same gutter and hairline scrollbar as
+   the other panels'. The cards sit in a responsive grid rather than one
+   full-width column: a finding is a short name, status, triggers and action,
+   and stretching that prose across the whole dashboard reads badly. */
+.vitals-dashboard .vitals-dashboard-conditions-content {
+  flex: 1;
+  min-height: 0;
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.vitals-dashboard .vitals-dashboard-conditions-count {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.vitals-dashboard .vitals-dashboard-findings {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  align-content: start;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vitals-dashboard .vitals-dashboard-findings-empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.vitals-dashboard .vitals-dashboard-finding {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-divider);
+  border-radius: 16px;
+  background: var(--color-glass-fill);
+  box-shadow: inset 0 1px 0 var(--color-glass-reflection);
+}
+
+.vitals-dashboard .vitals-dashboard-finding-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vitals-dashboard .vitals-dashboard-finding-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.vitals-dashboard .vitals-dashboard-finding-status {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+
+  &.is-nominal {
+    color: var(--color-status-nominal);
+  }
+
+  &.is-warning {
+    color: var(--color-status-warning);
+  }
+
+  &.is-critical {
+    color: var(--color-status-critical);
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-finding-triggers,
+.vitals-dashboard .vitals-dashboard-finding-action {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.vitals-dashboard .vitals-dashboard-finding-triggers {
+  color: var(--color-text-secondary);
+}

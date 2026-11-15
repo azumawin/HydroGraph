@@ -121,6 +121,45 @@ def test_every_body_region_in_the_dictionary_is_drawn_by_the_dashboard() -> None
     assert used <= drawn, sorted(used - drawn)
 
 
+def dashboard_block(start: str, end: str) -> str:
+    """One block of the dashboard's Constants.ts, by the names around it."""
+    source = DASHBOARD_CONSTANTS.read_text()
+    block = source[source.index(start) :]
+    return block[: block.index(end)]
+
+
+def test_every_channel_and_finding_the_vitals_tab_addresses_exists() -> None:
+    """The vitals tab names its five rows' channels, and the pressure row's
+    combined finding, by id in VITALS_METRICS.
+
+    Nothing reconciles those names with core at runtime: a renamed channel
+    leaves that row reading "Not measured" and its chart empty for the whole
+    demo, and a renamed finding silently drops the row back to grading each
+    pressure alone. Neither raises anywhere, so the ids are pinned here.
+    """
+    metrics = dashboard_block("VITALS_METRICS", "VITALS_MIN_SPAN_BY_CHANNEL")
+    channels = set(re.findall(r'CHANNEL: "([a-z0-9_]+)"', metrics))
+    findings = set(re.findall(r'FINDING_ID: "([a-z0-9_]+)"', metrics))
+
+    assert len(channels) == 6, sorted(channels)  # five rows; pressure has a pair
+    assert findings == {"blood_pressure_1_4"}, sorted(findings)
+    assert channels <= set(CHANNELS), sorted(channels - set(CHANNELS))
+    assert findings <= set(FINDINGS), sorted(findings - set(FINDINGS))
+
+
+def test_every_channel_scope_has_a_group_in_the_all_measurements_tab() -> None:
+    """The tab groups its rows by scope and renders only the scopes it lists.
+
+    groupByScope keeps a channel only if its scope is one of them, so a new
+    scope in core would drop those channels off the tab with nothing to show
+    that they are missing.
+    """
+    scopes = set(re.findall(r'ID: "([a-z_]+)"', dashboard_block("SCOPES: [", "] as const,")))
+
+    assert scopes == {"crew", "environment"}, sorted(scopes)
+    assert {entry["scope"] for entry in CHANNELS.values()} <= scopes
+
+
 # ------------------------------------------------------------------ the history
 
 
