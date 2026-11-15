@@ -53,12 +53,14 @@
   color: var(--color-status-warning);
 }
 
+/* The legend's own rows carry the model's colours, so a part of the body and
+   its row read as the same state. */
 .vitals-dashboard .vitals-dashboard-body-region-status.is-critical {
-  color: var(--color-status-critical);
+  color: var(--color-body-critical);
 }
 
 .vitals-dashboard .vitals-dashboard-body-region-status.is-nominal {
-  color: var(--color-status-nominal);
+  color: var(--color-body-nominal);
 }
 
 .vitals-dashboard .vitals-dashboard-body-region-dot {

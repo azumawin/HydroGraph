@@ -48,14 +48,14 @@ export type BodyRegion = (typeof BODY_REGIONS)[keyof typeof BODY_REGIONS];
 
 export const BODY_REGION_IDS = Object.values(BODY_REGIONS);
 
-// The legend's own colours: a part reads green, amber or red exactly as its row
-// does, and stays neutral while nothing in it has been read. "No threshold" is
-// a reading the specs grade no cutoff for, so it is measured but not coloured.
+// The model's colours, shared with the legend beside it. Nominal is the default
+// the whole body is drawn in, so warning and critical are the only states that
+// stand out; green and red are the body's own fuller tokens, where the amber is
+// the one the rest of the dashboard uses.
 export const BODY_MODEL_THEME = {
-  NEUTRAL: "--color-body-neutral",
-  NOMINAL: "--color-status-nominal",
+  NOMINAL: "--color-body-nominal",
   WARNING: "--color-status-warning",
-  CRITICAL: "--color-status-critical",
+  CRITICAL: "--color-body-critical",
 };
 
 export const BODY_EVALUATION_PRIORITY = {

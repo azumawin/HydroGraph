@@ -18,11 +18,14 @@ const BodyModel = ({ regionEvaluations }: BodyModelProps) => {
   const invalidate = useThree((state) => state.invalidate);
 
   const theme = getComputedStyle(canvas);
-  const neutralColor = theme.getPropertyValue(BODY_MODEL_THEME.NEUTRAL).trim();
+  // Green is the body's default: it reads healthy until something is flagged,
+  // and only a warning or a critical reading paints over it. A part no channel
+  // measures, and a reading the specs set no cutoff for, both stay green; the
+  // legend beside the model is where "No reading" is still spelled out.
+  const defaultColor = theme.getPropertyValue(BODY_MODEL_THEME.NOMINAL).trim();
   const evaluationColors = {
-    nominal: theme.getPropertyValue(BODY_MODEL_THEME.NOMINAL).trim(),
-    // Measured, but the specs grade no cutoff for it: nothing to colour.
-    unspecified: neutralColor,
+    nominal: defaultColor,
+    unspecified: defaultColor,
     warning: theme.getPropertyValue(BODY_MODEL_THEME.WARNING).trim(),
     critical: theme.getPropertyValue(BODY_MODEL_THEME.CRITICAL).trim(),
   };
@@ -69,7 +72,7 @@ const BodyModel = ({ regionEvaluations }: BodyModelProps) => {
         </bufferGeometry>
         {BODY_REGION_IDS.map((region, materialIndex) => {
           const evaluation = regionEvaluations[region];
-          const color = evaluation === undefined ? neutralColor : evaluationColors[evaluation];
+          const color = evaluation === undefined ? defaultColor : evaluationColors[evaluation];
 
           return (
             <meshStandardMaterial

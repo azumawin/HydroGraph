@@ -22,7 +22,10 @@
   --color-text: #f7f7f7;
   --color-text-secondary: #dedede;
   --color-accent: #e7e7e7;
-  --color-body-neutral: #a6a6a6;
+  /* The body scan is read at a glance across a whole model, so its green and
+     red are fuller than the muted ones the status pills carry. */
+  --color-body-nominal: #30d158;
+  --color-body-critical: #ff3b30;
   --color-status-warning: #edb65b;
   --color-status-critical: #ef6969;
   --color-status-nominal: #83d4ac;
