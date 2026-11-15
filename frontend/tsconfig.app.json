@@ -23,5 +23,8 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // The chart-axis test is a Node program; tsconfig.node.json type-checks it
+  // so the browser app keeps its own types.
+  "exclude": ["src/**/*.test.ts"]
 }

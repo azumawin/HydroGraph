@@ -100,6 +100,10 @@ export type VitalMetric = {
   LABEL: string;
   ICON: LucideIcon;
   FINDING_ID?: string;
+  // The narrowest y-axis window this vital is read in, in its display unit. A
+  // resting SpO2 moves by about 0.01 %, so an axis fitted to the data alone
+  // draws sensor noise as a full-height slope under three identical labels.
+  MIN_SPAN: number;
   SERIES: readonly VitalSeries[];
 };
 
@@ -107,6 +111,7 @@ export const VITALS_METRICS = {
   HEART_RATE: {
     LABEL: "Heart rate",
     ICON: HeartPulse,
+    MIN_SPAN: 10,
     SERIES: [
       { CHANNEL: "heart_rate", LABEL: "Heart rate", COLOR: "var(--color-chart-heart-rate)" },
     ],
@@ -115,6 +120,7 @@ export const VITALS_METRICS = {
     LABEL: "Blood pressure",
     ICON: Activity,
     FINDING_ID: "blood_pressure_1_4",
+    MIN_SPAN: 10,
     SERIES: [
       { CHANNEL: "bp_systolic", LABEL: "Systolic", COLOR: "var(--color-chart-systolic)" },
       { CHANNEL: "bp_diastolic", LABEL: "Diastolic", COLOR: "var(--color-chart-diastolic)" },
@@ -123,11 +129,13 @@ export const VITALS_METRICS = {
   BLOOD_SUGAR: {
     LABEL: "Blood sugar",
     ICON: Droplet,
+    MIN_SPAN: 1,
     SERIES: [{ CHANNEL: "glucose", LABEL: "Blood sugar", COLOR: "var(--color-chart-blood-sugar)" }],
   },
   BODY_TEMPERATURE: {
     LABEL: "Body temperature",
     ICON: Thermometer,
+    MIN_SPAN: 1,
     SERIES: [
       {
         CHANNEL: "body_temperature",
@@ -139,6 +147,7 @@ export const VITALS_METRICS = {
   BLOOD_OXYGEN: {
     LABEL: "Blood oxygen",
     ICON: Wind,
+    MIN_SPAN: 2,
     SERIES: [{ CHANNEL: "spo2", LABEL: "SpO2", COLOR: "var(--color-chart-oxygen)" }],
   },
 } satisfies Record<string, VitalMetric>;

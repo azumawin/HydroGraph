@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import { VITALS_CHART, VITALS_FORMAT } from "../Constants.ts";
+import { vitalChartAxis } from "../chartAxis.ts";
 import type { VitalMetric } from "../Constants.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
 
@@ -65,6 +66,17 @@ const VitalHistoryChart = ({ metric }: VitalHistoryChartProps) => {
     );
   }
 
+  const axis = vitalChartAxis(
+    metric.SERIES.flatMap((series) =>
+      chartData.flatMap((point) => {
+        const value = point[series.CHANNEL];
+        return typeof value === "number" ? [value] : [];
+      }),
+    ),
+    metric.MIN_SPAN,
+    VITALS_CHART.TICK_COUNT,
+  );
+
   return (
     <div
       className="vitals-dashboard-chart"
@@ -87,10 +99,11 @@ const VitalHistoryChart = ({ metric }: VitalHistoryChartProps) => {
             minTickGap={VITALS_CHART.MIN_TICK_GAP}
           />
           <YAxis
-            domain={["auto", "auto"]}
-            tickFormatter={VITALS_FORMAT.VALUE.format.bind(VITALS_FORMAT.VALUE)}
+            domain={axis.domain}
+            ticks={axis.ticks}
+            interval={0}
+            tickFormatter={axis.formatTick}
             tick={VITALS_CHART.TICK}
-            tickCount={VITALS_CHART.TICK_COUNT}
             width={VITALS_CHART.Y_AXIS_WIDTH}
             axisLine={false}
             tickLine={false}

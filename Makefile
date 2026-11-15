@@ -47,9 +47,10 @@ open: ## Open the frontend in the browser
 dev: ## Fresh demo database + backend + frontend + simulator; Ctrl+C stops all
 	$(PYTHON) scripts/dev.py --config "$(CONFIG)" $(if $(SPEED),--speed "$(SPEED)") $(BP_DEMO_ARG) $(GLUCOSE_DEMO_ARG) $(if $(filter 0,$(OPEN_BROWSER)),--no-open)
 
-test: ## Run backend, core and simulator tests
+test: ## Run backend, core, simulator and dashboard tests
 	cd backend && uv run pytest -q
 	cd imitacija && uv run pytest -q
+	cd frontend && npm test
 
 e2e: ## Browser tests: simulator -> backend -> frontend (see e2e/README.md)
 	cd e2e && uv run pytest -q
