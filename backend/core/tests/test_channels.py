@@ -6,7 +6,7 @@ Values are in the SI wire units the simulator sends.
 import unittest
 from typing import get_args
 
-from core.channels import CHANNELS, Evaluation, evaluate_reading
+from core.channels import CHANNELS, SCHEDULES, Evaluation, evaluate_reading
 from core.environments import ENVIRONMENTS
 
 MMHG = 133.322  # Pa
@@ -138,3 +138,9 @@ class TestDisplay(unittest.TestCase):
                     self.assertEqual(
                         info["display"], {"unit": "", "scale": 1.0, "offset": 0.0}
                     )
+
+
+def test_every_schedule_names_a_known_channel_with_a_positive_interval() -> None:
+    for channel, interval in SCHEDULES.items():
+        assert channel in CHANNELS
+        assert interval > 0

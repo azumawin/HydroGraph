@@ -89,7 +89,7 @@ export type MainPanelTabId = (typeof MAIN_PANEL_TABS)[number]["ID"];
 
 export const MEASUREMENTS = {
   SCOPE_LABELS: { crew: "Crew", environment: "Habitat" },
-  COLUMNS: ["Measurement", "Latest", "Status", "Measured", "Change"],
+  COLUMNS: ["Measurement", "Latest", "Status", "Measured", "Next", "Change"],
   NO_READING: "No reading",
   NOW_REFRESH_MS: 30000,
   CHANGE_PRECISION: 10,
@@ -130,6 +130,26 @@ export const formatTimeAgo = (timestamp: number, now: number): string => {
     RELATIVE_TIME_UNITS.find((unit) => elapsedSeconds >= unit.SECONDS) ??
     RELATIVE_TIME_UNITS[RELATIVE_TIME_UNITS.length - 1];
   return RELATIVE_TIME.format(-Math.floor(elapsedSeconds / SECONDS), UNIT);
+};
+
+export const SCHEDULE = {
+  MIN_GRACE_S: 120,
+  UPCOMING_MIN_INTERVAL_S: 3600,
+  UPCOMING_WINDOW_S: 86400,
+};
+
+const INTERVAL_UNITS = [
+  { LABEL: "d", SECONDS: 86400 },
+  { LABEL: "h", SECONDS: 3600 },
+  { LABEL: "min", SECONDS: 60 },
+  { LABEL: "s", SECONDS: 1 },
+] as const;
+
+export const formatInterval = (seconds: number): string => {
+  const { LABEL, SECONDS } =
+    INTERVAL_UNITS.find((unit) => seconds >= unit.SECONDS) ??
+    INTERVAL_UNITS[INTERVAL_UNITS.length - 1];
+  return `${ENVIRONMENT_FORMAT.NUMBER.format(Math.round((seconds / SECONDS) * 10) / 10)} ${LABEL}`;
 };
 
 export const VITALS_HISTORY = {

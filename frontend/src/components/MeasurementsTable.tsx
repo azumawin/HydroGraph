@@ -9,6 +9,8 @@ import {
 import { useNow } from "../hooks/useNow.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
 import type { VitalHistoryPoint } from "../store/useTelemetryStore.ts";
+import { channelSchedule } from "../utils/schedule.ts";
+import ScheduleCell from "./ScheduleCell.tsx";
 
 const describeChange = (points: VitalHistoryPoint[] | undefined) => {
   if (points === undefined || points.length < 2) return undefined;
@@ -94,6 +96,9 @@ const MeasurementsTable = () => {
                         {formatTimeAgo(Date.parse(reading.measured_at), now)}
                       </time>
                     )}
+                  </td>
+                  <td className="vitals-dashboard-measurements-cell">
+                    <ScheduleCell schedule={channelSchedule(channel, reading, now)} />
                   </td>
                   <td className="vitals-dashboard-measurements-cell">
                     {change !== undefined && ChangeIcon !== undefined && (

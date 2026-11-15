@@ -20,6 +20,7 @@ from .assessment import (
 from .channels import (
     ACVPU,
     CHANNELS,
+    SCHEDULES,
     ChannelInfo,
     Display,
     Evaluation,
@@ -47,6 +48,7 @@ __all__ = [
     "DEFAULT_ENVIRONMENT",
     "ENVIRONMENTS",
     "FINDINGS",
+    "SCHEDULES",
     "ChannelInfo",
     "Display",
     "EnvironmentInfo",

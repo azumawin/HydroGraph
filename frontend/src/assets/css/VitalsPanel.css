@@ -263,19 +263,23 @@
   text-align: left;
 
   &:nth-child(1) {
-    width: 30%;
+    width: 25%;
   }
 
   &:nth-child(2) {
-    width: 17%;
+    width: 15%;
   }
 
   &:nth-child(3) {
-    width: 15%;
+    width: 13%;
   }
 
   &:nth-child(4) {
-    width: 15%;
+    width: 13%;
+  }
+
+  &:nth-child(5) {
+    width: 14%;
   }
 }
 
@@ -519,4 +523,65 @@
 
 .vitals-dashboard .vitals-dashboard-advice-card-action {
   margin: 0;
+}
+
+.vitals-dashboard .vitals-dashboard-schedule {
+  display: grid;
+
+  &.is-overdue,
+  &.is-missing {
+    & .vitals-dashboard-schedule-summary {
+      color: var(--color-status-warning);
+      font-weight: 500;
+    }
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-schedule-interval {
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.vitals-dashboard .vitals-dashboard-checks {
+  display: grid;
+  gap: 8px;
+}
+
+.vitals-dashboard .vitals-dashboard-checks-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.vitals-dashboard .vitals-dashboard-checks-empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.vitals-dashboard .vitals-dashboard-checks-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vitals-dashboard .vitals-dashboard-checks-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 13px;
+  line-height: 18px;
+
+  &.is-late .vitals-dashboard-checks-detail {
+    color: var(--color-status-warning);
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-checks-detail {
+  color: var(--color-text-secondary);
+  text-align: right;
 }

@@ -58,6 +58,7 @@ def test_connect_sends_dictionary_then_latest_per_channel() -> None:
         "display": {"unit": "mmHg", "scale": 1 / 133.322, "offset": 0.0},
         "body_regions": ["heart", "chest"],
         "explanation": CHANNELS["bp_systolic"]["explanation"],
+        "schedule_s": 3600.0,
     }
     assert sorted(latest) == sorted(
         [

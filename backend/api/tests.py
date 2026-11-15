@@ -437,3 +437,9 @@ def test_infection_explicit_context_and_optional_assays(
         {"X-Simulation-Scope": "crew"},
     )
     assert response.status_code == 400
+
+
+def test_dictionary_sends_each_channel_schedule() -> None:
+    channels = dictionary_payload()["channels"]
+    assert channels["heart_rate"]["schedule_s"] == 60.0
+    assert channels["troponin_i"]["schedule_s"] is None

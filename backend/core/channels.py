@@ -457,6 +457,48 @@ CHANNELS: Final[Mapping[str, ChannelInfo]] = MappingProxyType(
 )
 
 
+_MINUTE = 60.0
+_HOUR = 3600.0
+_DAY = 86400.0
+
+SCHEDULES: Final[Mapping[str, float]] = MappingProxyType(
+    {
+        "heart_rate": _MINUTE,
+        "hrv_rmssd": _MINUTE,
+        "respiratory_rate": _MINUTE,
+        "spo2": 1.0,
+        "body_temperature": 1.0,
+        "glucose": 5 * _MINUTE,
+        "bp_systolic": _HOUR,
+        "bp_diastolic": _HOUR,
+        # five waking-hour samples; the longest gap is overnight, 23:00 to 07:00
+        "cortisol_saliva": 8 * _HOUR,
+        "vitamin_d_25oh": 30 * _DAY,
+        "urinary_ntx": 7 * _DAY,
+        "bone_ntx_pct_baseline": 7 * _DAY,
+        "urine_volume_24h": _DAY,
+        # 07:00 and 18:30 daily; the longest gap is 18:30 to 07:00
+        "urine_specific_gravity": 12.5 * _HOUR,
+        "body_mass": 12.5 * _HOUR,
+        "viral_ebv_detected": 2 * _DAY,
+        "viral_vzv_detected": 2 * _DAY,
+        "viral_cmv_detected": 2 * _DAY,
+        "ambient_ppco2": 1.0,
+        "ambient_light_lux": 1.0,
+        "ambient_dose_rate": 1.0,
+        "ambient_integrated_dose": _MINUTE,
+        "spe_flag": 1.0,
+    }
+)
+"""Expected seconds between readings of each routinely sampled channel.
+
+Follows the simulator's acquisition schedule (``imitacija`` ``frequency.py``
+and ``scheduler.py``). Event-driven and scenario-only channels (troponin,
+lactate, IL-6, sweat, eye screens, cephalic strain, EEG, context flags) have no
+schedule and are left out.
+"""
+
+
 def evaluate_reading(
     channel: str, value: float | bool | str, *, environment: EnvironmentInfo
 ) -> Evaluation:

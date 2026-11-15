@@ -18,6 +18,7 @@ from core import (
     CHANNELS,
     ENVIRONMENTS,
     FINDINGS,
+    SCHEDULES,
     Display,
     EnvironmentInfo,
     Evaluation,
@@ -61,6 +62,7 @@ class ChannelEntry(TypedDict):
     display: Display
     body_regions: list[str]
     explanation: str
+    schedule_s: float | None
 
 
 class FindingEntry(TypedDict):
@@ -111,6 +113,7 @@ def dictionary_payload() -> DictionaryPayload:
                 "display": info["display"],
                 "body_regions": list(info["body_regions"]),
                 "explanation": info["explanation"],
+                "schedule_s": SCHEDULES.get(key),
             }
             for key, info in CHANNELS.items()
         },

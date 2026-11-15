@@ -2,6 +2,7 @@ import { ADVICE, FINDING_STATUS_LABELS, formatCommDelay } from "../Constants.ts"
 import type { TelemetryFinding } from "../api/Service.ts";
 import { useTelemetryStore } from "../store/useTelemetryStore.ts";
 import { BODY_EVALUATION_PRIORITY } from "./model/ModelConstants.ts";
+import ScheduledChecks from "./ScheduledChecks.tsx";
 
 type ActiveFinding = TelemetryFinding & { status: "warning" | "critical" };
 
@@ -70,6 +71,7 @@ const AdviceTab = () => {
           </li>
         ))}
       </ol>
+      <ScheduledChecks />
     </div>
   );
 };

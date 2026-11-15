@@ -38,6 +38,7 @@ export type ChannelInfo = {
   display: ChannelDisplay;
   body_regions: string[];
   explanation: string;
+  schedule_s: number | null;
 };
 
 export type FindingInfo = {
@@ -101,7 +102,8 @@ const isChannelInfo = (value: unknown): value is ChannelInfo =>
   typeof value.unit === "string" &&
   isChannelDisplay(value.display) &&
   isStringArray(value.body_regions) &&
-  typeof value.explanation === "string";
+  typeof value.explanation === "string" &&
+  (typeof value.schedule_s === "number" || value.schedule_s === null);
 
 const isFindingInfo = (value: unknown): value is FindingInfo =>
   isRecord(value) && typeof value.name === "string" && isStringArray(value.channels);

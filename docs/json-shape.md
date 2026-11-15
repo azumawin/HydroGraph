@@ -134,7 +134,8 @@ join it to readings by `channel` and to findings by `id`.
       "unit": "Pa",
       "display": { "unit": "mmHg", "scale": 0.0075006, "offset": 0.0 },
       "body_regions": ["heart", "chest"],
-      "explanation": "Why this is measured, what it means…"
+      "explanation": "Why this is measured, what it means…",
+      "schedule_s": 3600
     }
   },
   "findings": {
@@ -152,6 +153,10 @@ join it to readings by `channel` and to findings by `id`.
 - `display` converts a numeric value for people: `value * scale + offset`, in
   `display.unit`, the spec's clinical unit (mmHg, bpm, °C, µSv/h, ...). It is `""`
   with scale 1 for booleans and dimensionless ratios.
+- `schedule_s` is the expected seconds between readings of a routinely sampled
+  channel (`core.SCHEDULES`, following the simulator's schedule); `null` for
+  event-driven and scenario-only channels. The frontend flags a channel as overdue
+  from it.
 - `findings` has all 10 findings; `channels` lists each one's inputs, empty for
   the three that are not monitored.
 - `environments` has four entries, keyed by id, in dropdown order: `iss_leo`, `lunar_surface`,
