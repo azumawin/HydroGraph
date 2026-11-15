@@ -75,6 +75,7 @@ def main() -> int:
     parser.add_argument("--config", default="config/healthy.toml")
     parser.add_argument("--speed", type=float)
     parser.add_argument("--bp-demo-interval", type=float)
+    parser.add_argument("--glucose-demo-interval", type=float)
     parser.add_argument("--no-open", action="store_true")
     args = parser.parse_args()
     services: dict[str, subprocess.Popen] = {}
@@ -104,7 +105,12 @@ def main() -> int:
                 print(
                     f"Fresh demo session: {args.config}; speed={args.speed or 'from config'}.\n"
                     "Previous recordings are kept in the standalone backend database.\n"
-                    "Glucose: every 5 simulated minutes (first at 343s).\n"
+                    + (
+                        f"Glucose demo: samples every {args.glucose_demo_interval} "
+                        "simulated seconds.\n"
+                        if args.glucose_demo_interval is not None
+                        else "Glucose: every 5 simulated minutes (first at 343s).\n"
+                    )
                     + (
                         f"BP demo: paired samples every {args.bp_demo_interval} simulated seconds."
                         if args.bp_demo_interval is not None
@@ -144,6 +150,10 @@ def main() -> int:
                     command.extend(["--speed", str(args.speed)])
                 if args.bp_demo_interval is not None:
                     command.extend(["--bp-demo-interval", str(args.bp_demo_interval)])
+                if args.glucose_demo_interval is not None:
+                    command.extend(
+                        ["--glucose-demo-interval", str(args.glucose_demo_interval)]
+                    )
                 simulator = start("simulator", command, "imitacija")
                 if not args.no_open:
                     start(

@@ -78,17 +78,26 @@ services:
       dockerfile: docker/imitacija.Dockerfile
     environment:
       # One of the TOMLs in imitacija/config/, without the extension:
+      #   badscenario1   SANS / cephalic fluid shift (the scenario we demo)
       #   healthy        nominal crew and cabin
-      #   badscenario1   SANS / cephalic fluid shift
       #   badscenario2   hypercapnia
       #   badscenario3   EVA dehydration
       #   badscenario4   acute infection
       #   research_demo  six months of sparse labs in ~26 seconds
-      SCENARIO: ${SCENARIO:-healthy}
+      SCENARIO: ${SCENARIO:-badscenario1}
       # Simulation seconds per wall second; unset keeps the scenario's own pace.
       SPEED: ${SPEED-}
       # Stop after this many simulation seconds; unset runs until Ctrl+C.
       DURATION: ${DURATION-}
+      # Paired synthetic pressure trends every N simulated seconds, as the
+      # Makefile's BP_DEMO_INTERVAL does. Without it the dashboard shows blood
+      # pressure once at boot and then not again for 8 simulated hours, which is
+      # when the real cuff protocol takes its first reading. 0 restores it.
+      BP_DEMO_INTERVAL: ${BP_DEMO_INTERVAL:-5}
+      # The same for blood sugar, whose CGM window otherwise holds the chart at
+      # one boot point until its first completed result 343 simulated seconds
+      # in. 0 restores the 5-minute window.
+      GLUCOSE_DEMO_INTERVAL: ${GLUCOSE_DEMO_INTERVAL:-5}
       BACKEND_URL: http://backend:8000
     depends_on:
       backend:

@@ -27,6 +27,7 @@ def load_settings(
     speed: float | None,
     duration: float | None,
     bp_demo_interval: float | None = None,
+    glucose_demo_interval: float | None = None,
 ) -> Settings:
     """Load configuration only; generated observations are never written to this path."""
     raw = tomllib.loads(path.read_text()) if path is not None else {}
@@ -36,6 +37,8 @@ def load_settings(
         raw["duration_s"] = duration
     if bp_demo_interval is not None:
         raw["bp_demo_interval_s"] = bp_demo_interval
+    if glucose_demo_interval is not None:
+        raw["glucose_demo_interval_s"] = glucose_demo_interval
     return Settings.model_validate(raw)
 
 
@@ -122,6 +125,12 @@ async def _run_worker(settings: Settings, preview: PreviewState | None) -> None:
                 f"{settings.bp_demo_interval_s}s",
                 file=sys.stderr,
             )
+        if settings.glucose_demo_interval_s is not None:
+            print(
+                "blood sugar demo: synthetic CGM trend every "
+                f"{settings.glucose_demo_interval_s}s",
+                file=sys.stderr,
+            )
         stop = asyncio.Event()
         loop = asyncio.get_running_loop()
         installed: list[signal.Signals] = []
@@ -171,6 +180,12 @@ def main() -> None:
         help="enable synthetic paired pressure trends at this simulation-second interval",
     )
     parser.add_argument(
+        "--glucose-demo-interval",
+        type=float,
+        help="enable a synthetic CGM trend at this simulation-second interval, instead of "
+        "the 5-minute sensor window whose first result lands at 343s",
+    )
+    parser.add_argument(
         "--dictionary", action="store_true", help="print static metadata JSON and exit"
     )
     parser.add_argument(
@@ -188,7 +203,13 @@ def main() -> None:
     try:
         if not 1 <= args.port <= 65535:
             raise ValueError("preview port must be between 1 and 65535")
-        settings = load_settings(args.config, args.speed, args.duration, args.bp_demo_interval)
+        settings = load_settings(
+            args.config,
+            args.speed,
+            args.duration,
+            args.bp_demo_interval,
+            args.glucose_demo_interval,
+        )
         # Validate registry-dependent names even when only exporting configuration.
         Scheduler(settings, RealClock(settings.speed), _DiscardSink())
         if args.dictionary:

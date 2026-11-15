@@ -770,6 +770,11 @@ def dictionary(
             f"dashboard demo: paired synthetic trends every {settings.bp_demo_interval_s}s; "
             "replaces cuff, scenario and stand-test timing"
         )
+    if settings and settings.glucose_demo_interval_s is not None:
+        overrides["glucose"] = (
+            f"dashboard demo: synthetic trend every {settings.glucose_demo_interval_s}s, "
+            f"averaging that window's raw samples; replaces the 5-minute CGM window"
+        )
     return Dictionary(
         environment=environment,
         acute_infection_scenario=(
@@ -805,7 +810,11 @@ def dictionary(
                 source_unit=c.source_unit,
                 unit=c.unit,
                 method=(
-                    c.method + "; synthetic dashboard trend with bounded paired variation"
+                    c.method + "; synthetic dashboard trend with bounded variation"
+                    if c.group == "glucose"
+                    and settings is not None
+                    and settings.glucose_demo_interval_s is not None
+                    else c.method + "; synthetic dashboard trend with bounded paired variation"
                     if c.group == "bp"
                     and settings is not None
                     and settings.bp_demo_interval_s is not None
@@ -817,7 +826,13 @@ def dictionary(
                     else c.method
                 ),
                 collection_schedule=overrides.get(c.group, c.schedule),
-                window_s=c.window_s,
+                window_s=(
+                    settings.glucose_demo_interval_s
+                    if c.group == "glucose"
+                    and settings
+                    and settings.glucose_demo_interval_s is not None
+                    else c.window_s
+                ),
                 availability_delay_s=lab_delay_s if c.lab else 0,
                 citations=(c.source,),
                 value_schema="enum:ALERT,CONFUSION,VOICE,PAIN,UNRESPONSIVE"
@@ -829,7 +844,12 @@ def dictionary(
                 frequency_matrix_rows=FREQUENCIES[c.group].rows,
                 frequency_basis=(
                     "explicit dashboard demo override"
-                    if c.group == "bp" and settings and settings.bp_demo_interval_s is not None
+                    if (c.group == "bp" and settings and settings.bp_demo_interval_s is not None)
+                    or (
+                        c.group == "glucose"
+                        and settings
+                        and settings.glucose_demo_interval_s is not None
+                    )
                     else "docs/frequency_table.md"
                 ),
                 enabled=settings is None or c.id in effective_channels(settings),

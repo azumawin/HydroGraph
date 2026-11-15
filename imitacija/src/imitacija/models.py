@@ -238,6 +238,10 @@ class AcuteInfectionScenario(FrozenModel):
         return self
 
 
+CGM_WINDOW_S = 300.0
+"""The CGM's own sensor window, which puts its first completed result at 343 s."""
+
+
 class Settings(FrozenModel):
     """All timing is simulation seconds except explicitly named wall-clock fields."""
 
@@ -265,6 +269,9 @@ class Settings(FrozenModel):
     bp_session_duration_s: float | None = Field(default=None, gt=0)
     # Explicit dashboard demo override; None retains the protocol's cuff schedule.
     bp_demo_interval_s: float | None = Field(default=None, ge=0.1, le=60)
+    # Explicit dashboard demo override; None retains the CGM's 5-minute window,
+    # whose first completed result is 343 s into the run.
+    glucose_demo_interval_s: float | None = Field(default=None, ge=0.1, le=60)
     exercise_test_days: tuple[int, ...] = (0,)
     queue_capacity: int = Field(default=512, ge=1, le=100000)
     max_age_s: float = Field(default=86400 * 7, gt=0)
