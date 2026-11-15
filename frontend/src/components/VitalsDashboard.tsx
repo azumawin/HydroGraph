@@ -1,4 +1,4 @@
-import nasaLogo from "../assets/images/nasa-logo.svg";
+import nasaLogo from "../assets/images/space-apps-logo.png";
 import { useState } from "react";
 import { useVitalsDashboardInit } from "../hooks/useVitalsDashboardInit.ts";
 import BodyScan from "./BodyScan.tsx";
@@ -29,7 +29,7 @@ const VitalsDashboard = () => {
         <div className="vitals-dashboard-brand flex items-center gap-3">
           <img
             src={nasaLogo}
-            alt="NASA"
+            alt="NASA Space Apps Challenge"
             className="vitals-dashboard-logo h-14 w-auto shrink-0 object-contain"
           />
           <h1 className="vitals-dashboard-title m-0">HydroGraph</h1>

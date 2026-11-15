@@ -33,7 +33,7 @@ documentation, and development tools support HydroGraph.
   [available upstream](https://github.com/DavidHDev/react-bits/tree/main/src/ts-default/Backgrounds/Plasma).
   Its license notice is preserved [below](#react-bits-license).
 - **[NASA](https://www.nasa.gov/)** — the NASA insignia appears in the dashboard
-  and browser favicon through [nasa-logo.svg](./src/assets/images/nasa-logo.svg).
+  and browser favicon through [space-apps-logo.png](./src/assets/images/space-apps-logo.png).
 
 HydroGraph's body model was created for this project. Its surface is generated
 procedurally in [createBodyGeometry.ts](./src/components/model/createBodyGeometry.ts)
