@@ -4,6 +4,7 @@ import { MAIN_PANEL_TABS } from "../Constants.ts";
 import type { MainPanelTabId } from "../Constants.ts";
 import AdviceTab from "./AdviceTab.tsx";
 import MeasurementsTable from "./MeasurementsTable.tsx";
+import RulesTab from "./RulesTab.tsx";
 import TrendsTab from "./TrendsTab.tsx";
 import VitalsReadings from "./VitalsReadings.tsx";
 import "../assets/css/VitalsPanel.css";
@@ -13,6 +14,7 @@ const TAB_CONTENT: Record<MainPanelTabId, ComponentType> = {
   measurements: MeasurementsTable,
   trends: TrendsTab,
   advice: AdviceTab,
+  rules: RulesTab,
 };
 
 const VitalsPanel = () => {

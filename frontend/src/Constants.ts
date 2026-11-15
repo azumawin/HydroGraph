@@ -2,6 +2,7 @@ import {
   Activity,
   Droplet,
   HeartPulse,
+  FileCode,
   List,
   Stethoscope,
   Thermometer,
@@ -17,6 +18,7 @@ export const TELEMETRY = {
   ENVIRONMENT_URL: `${BACKEND_URL}/api/environment/`,
   READINGS_URL: `${BACKEND_URL}/api/readings/`,
   ASSISTANT_URL: `${BACKEND_URL}/api/assistant/`,
+  RULES_URL: `${BACKEND_URL}/api/rules/`,
   EVENTS: {
     DICTIONARY: "dictionary",
     ENVIRONMENT: "environment",
@@ -70,6 +72,22 @@ export const ADVICE = {
   },
 };
 
+export const RULES = {
+  TEMPLATE: `ID = "resting_tachycardia"
+NAME = "Resting tachycardia"
+CHANNELS = ("heart_rate",)
+
+
+def evaluate(inputs):
+    bpm = inputs["latest"]["heart_rate"] * 60
+    if bpm > 120:
+        return {"status": "critical", "triggers": ["HR > 120 bpm"], "action": "Rest and recheck in 10 min", "bpm": bpm}
+    return {"status": "nominal", "triggers": [], "action": "No finding", "bpm": bpm}
+`,
+  FALLBACK_ERROR: "The rule change failed. Try again.",
+  LOAD_ERROR: "Could not load the rules.",
+};
+
 export const ASSISTANT = {
   PLACEHOLDER: "Ask about the findings…",
   SEND_LABEL: "Send",
@@ -83,6 +101,7 @@ export const MAIN_PANEL_TABS = [
   { ID: "measurements", LABEL: "All measurements", ICON: List },
   { ID: "trends", LABEL: "Trends", ICON: TrendingUp },
   { ID: "advice", LABEL: "Advice", ICON: Stethoscope },
+  { ID: "rules", LABEL: "Rules", ICON: FileCode },
 ] as const;
 
 export type MainPanelTabId = (typeof MAIN_PANEL_TABS)[number]["ID"];

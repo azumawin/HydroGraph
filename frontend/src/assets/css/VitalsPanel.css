@@ -585,3 +585,218 @@
   color: var(--color-text-secondary);
   text-align: right;
 }
+
+.vitals-dashboard .vitals-dashboard-rules {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 24px 24px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-button {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &.is-primary {
+    border-color: var(--color-accent);
+    color: var(--color-background);
+    background: var(--color-accent);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-rules-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-source {
+  min-height: 240px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text);
+  background: var(--color-glass-tint);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  line-height: 18px;
+  resize: vertical;
+  outline: none;
+
+  &:focus {
+    border-color: var(--color-accent);
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-rules-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-error {
+  margin: 0;
+  color: var(--color-status-critical);
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.vitals-dashboard .vitals-dashboard-rules-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-switch {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: var(--color-border);
+  appearance: none;
+  cursor: pointer;
+
+  &::after {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-text);
+    content: "";
+    transition: transform 0.15s;
+  }
+
+  &:checked {
+    background: var(--color-status-nominal);
+
+    &::after {
+      transform: translateX(14px);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-rules-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-tag {
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--color-text-secondary);
+  background: var(--color-glass-tint);
+  font-size: 12px;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-link {
+  padding: 0;
+  border: 0;
+  color: var(--color-text-secondary);
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-text);
+  }
+
+  &.is-danger:hover {
+    color: var(--color-status-critical);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-rules-meta {
+  margin: 0 0 0 42px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-details {
+  margin-left: 42px;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-summary {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.vitals-dashboard .vitals-dashboard-rules-code {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--color-glass-tint);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  line-height: 16px;
+}
