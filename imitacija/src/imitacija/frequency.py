@@ -81,3 +81,48 @@ FREQUENCIES: dict[str, Frequency] = {
     "radiation_dose": Frequency("60s integrated monitor dose publication", 1, 60, rows=(10,)),
     "spe": Frequency("1Hz SPE heartbeat, independent of crew state", 1, 1, rows=(10,)),
 }
+
+
+@dataclass(frozen=True)
+class Calendar:
+    """Where a dashboard-demo sample sits on a sparse channel's own calendar.
+
+    ``samples`` bounds a group that only acquires inside a daily window: the
+    demo replays that window instead of polling a patch that is dry or a
+    specimen that does not exist.
+    """
+
+    first: float
+    step: float
+    samples: int | None = None
+
+    def instant(self, index: int) -> float:
+        """Protocol time of this group's index-th demo sample."""
+        return self.first + (index % self.samples if self.samples else index) * self.step
+
+
+# Assay, 24h-specimen and spot-collection protocols put their next result hours,
+# days or a month out, so a dashboard run shows their startup baseline and
+# nothing else. The demo publishes these groups at a fixed interval and evaluates
+# each sample one step further along their own calendar: the trend is this
+# simulator's trajectory sampled coarsely, never a value invented for the chart.
+# Each step is the group's own cadence, except where its trajectory moves more
+# slowly than that cadence and finer steps are what show a trend at all.
+LAB_DEMO_CALENDAR: dict[str, Calendar] = {
+    "cortisol": Calendar(7 * 3600, 4 * 3600),
+    "troponin": Calendar(3600, 3600),
+    "lactate": Calendar(17 * 3600, 1800),
+    # Monthly assay, but its seasonal curve runs over 90 days: a month per
+    # sample would step a third of that curve at a time.
+    "vitamin": Calendar(30 * 86400, 5 * 86400),
+    "il6": Calendar(3600, 3600),
+    "mass": Calendar(7 * 3600, 11.5 * 3600),
+    "usg": Calendar(7 * 3600, 11.5 * 3600),
+    "urine": Calendar(86400, 86400),
+    "ntx": Calendar(7 * 86400, 7 * 86400),
+    # Local sweat has no resting acquisition, so these replay the daily active
+    # and wet bout (roughly 16.8h to 18.6h). The summary's windows overlap at
+    # this step; a demo trend is not a sequence of disjoint 60s integrations.
+    "sweat": Calendar(17 * 3600, 40, samples=145),
+    "sweat_summary": Calendar(17 * 3600, 40, samples=145),
+}

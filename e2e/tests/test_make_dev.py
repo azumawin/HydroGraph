@@ -28,6 +28,7 @@ def test_make_accepts_lowercase_speed(target: str) -> None:
     )
     assert '--speed "30"' in result.stdout or "--speed 30" in result.stdout
     assert "--bp-demo-interval 5" in result.stdout
+    assert "--lab-demo-interval 5" in result.stdout
 
 
 def test_make_can_disable_pressure_demo() -> None:
@@ -39,6 +40,20 @@ def test_make_can_disable_pressure_demo() -> None:
         check=True,
     )
     assert "--bp-demo-interval" not in result.stdout
+    # One demo override is independent of the others.
+    assert "--lab-demo-interval 5" in result.stdout
+
+
+def test_make_can_disable_the_assay_and_specimen_demo() -> None:
+    result = subprocess.run(
+        ["make", "-n", "dev", "LAB_DEMO_INTERVAL=0"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "--lab-demo-interval" not in result.stdout
+    assert "--bp-demo-interval 5" in result.stdout
 
 
 def test_dev_refuses_an_occupied_port_before_starting_services() -> None:
@@ -109,6 +124,15 @@ def test_make_dev_streams_sparse_vitals_and_cleans_up(page: Page, tmp_path: Path
             response = httpx.get("http://127.0.0.1:8000/api/readings/", params={"channel": channel})
             shown = {round(r["value"] / 133.322, 1) for r in response.json()["readings"][channel]}
             assert len(shown) > 2
+
+        # Calendar-driven assays and specimens, whose next real result is hours,
+        # days or a month out, follow the same demo path onto the chart.
+        for channel in ("cortisol_saliva", "urine_volume_24h", "sweat_rate"):
+            response = httpx.get("http://127.0.0.1:8000/api/readings/", params={"channel": channel})
+            readings = response.json()["readings"][channel]
+            assert len(readings) > 2, channel
+            assert len({r["value"] for r in readings}) > 2, channel
+            assert {r["evaluation"] for r in readings} <= {"nominal", "unspecified"}, channel
 
         page.reload()
         expect(ui.chart(glucose)).to_have_attribute(

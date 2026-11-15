@@ -1,0 +1,124 @@
+.vitals-dashboard .vitals-dashboard-measurements-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 28px;
+  min-height: 0;
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.vitals-dashboard .vitals-dashboard-measurements-count {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Each scope is a labelled list of full-width rows; the label runs a hairline
+   out to the right edge so the groups read as sections without a solid block
+   behind them. */
+.vitals-dashboard .vitals-dashboard-measurement-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.vitals-dashboard .vitals-dashboard-measurement-group-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  &::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--color-divider);
+  }
+}
+
+.vitals-dashboard .vitals-dashboard-measurement-group-count {
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/* One channel per row: the reading on the left, its history filling the rest,
+   and the prose underneath spanning both. Matches the vitals tab's rows. */
+.vitals-dashboard .vitals-dashboard-measurement {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 8px 24px;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.vitals-dashboard .vitals-dashboard-measurement:last-child {
+  border-bottom: 0;
+}
+
+.vitals-dashboard .vitals-dashboard-measurement-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.vitals-dashboard .vitals-dashboard-measurement-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.vitals-dashboard .vitals-dashboard-measurement-value {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.vitals-dashboard .vitals-dashboard-measurement-history {
+  min-width: 0;
+}
+
+/* Always the full width of the row, so a channel without a chart still reads
+   as one block rather than leaving the second column dangling. */
+.vitals-dashboard .vitals-dashboard-measurement-footer {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.vitals-dashboard .vitals-dashboard-measurement-explanation {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.vitals-dashboard .vitals-dashboard-measurement-time {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}

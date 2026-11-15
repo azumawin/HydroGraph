@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Literal, Protocol
 
 from .clock import Clock, timestamp
-from .frequency import FREQUENCIES
+from .frequency import FREQUENCIES, LAB_DEMO_CALENDAR, Calendar
 from .models import CGM_WINDOW_S, AstronautProfile, Observation, Reading, Settings
 from .physiology import (
     DAY,
@@ -51,6 +51,9 @@ class Rule:
     group: str
     phase: float = 0
     interval: float | None = None
+    # Set only by the dashboard demo: the sample index maps onto the group's
+    # own protocol calendar instead of standing for the acquisition instant.
+    calendar: Calendar | None = None
     points: tuple[float, ...] = ()
     repeat: float | None = None
     end: float | None = None
@@ -262,6 +265,17 @@ class Scheduler:
                     # One paired stream replaces the cuff/scenario/stand-test
                     # schedule only when the dashboard demo is explicitly enabled.
                     owner_rule = Rule("bp", interval=settings.bp_demo_interval_s)
+                calendar = LAB_DEMO_CALENDAR.get(rule.group)
+                if (
+                    settings.lab_demo_interval_s is not None
+                    and calendar is not None
+                    and owner_rule is rule
+                ):
+                    # Only the untouched protocol calendar is compressed: a
+                    # scenario target keeps the schedule its fault gave it.
+                    owner_rule = Rule(
+                        rule.group, interval=settings.lab_demo_interval_s, calendar=calendar
+                    )
                 due = owner_rule.next_after(0)
                 if due is not None:
                     self._push(due, owner_rule, scope, owner)
@@ -295,6 +309,17 @@ class Scheduler:
         self.counter += 1
         heapq.heappush(self.events, Event(due, self.counter, rule, scope, owner))
 
+    def _sampled(self, rule: Rule, instant: float) -> float:
+        """Protocol time this acquisition stands for, normally the instant itself.
+
+        Under the dashboard demo a sparse group's samples walk its own calendar
+        instead (see Calendar), one step per interval. Derived from the instant,
+        never from a counter, so a late or coalesced poll cannot shift the walk.
+        """
+        if rule.calendar is None or rule.interval is None:
+            return instant
+        return rule.calendar.instant(max(0, round(instant / rule.interval) - 1))
+
     def acquire(self, event: Event, instant: float) -> None:
         """Create result values at actual acquisition time; late polls coalesce, never replay."""
         profile: AstronautProfile | None = (
@@ -302,15 +327,16 @@ class Scheduler:
         )
         values: dict[str, float | bool | str]
         scenario = self.settings.sans_scenario
+        sampled = self._sampled(event.rule, instant)
         if event.rule.group == "eeg_cfe" and self.settings.hypercapnia_scenario is not None:
-            values = dict(hypercapnia_eeg_values(instant, self.settings.hypercapnia_scenario))
+            values = dict(hypercapnia_eeg_values(sampled, self.settings.hypercapnia_scenario))
         elif event.rule.group in {"cephalic", "eye_screen"} and scenario is not None:
-            values = sans_values(event.rule.group, instant, scenario)
+            values = sans_values(event.rule.group, sampled, scenario)
         else:
             values = (
                 crew_values(
                     event.rule.group,
-                    instant,
+                    sampled,
                     profile,
                     self.settings.seed,
                     self.settings.sans_scenario,
@@ -322,7 +348,7 @@ class Scheduler:
                 if profile is not None
                 else environment_values(
                     event.rule.group,
-                    instant,
+                    sampled,
                     self.settings.environment,
                     self.settings.seed,
                     hypercapnia=self.settings.hypercapnia_scenario,
@@ -336,7 +362,9 @@ class Scheduler:
             # independent publication clocks. Never emit the sibling on this tick.
             if c.group != event.rule.group:
                 continue
-            self._publish(c, value, event.owner, event.scope, instant)
+            self._publish(
+                c, value, event.owner, event.scope, instant, demo=event.rule.calendar is not None
+            )
 
     def _publish(
         self,
@@ -347,6 +375,7 @@ class Scheduler:
         instant: float,
         *,
         startup: bool = False,
+        demo: bool = False,
     ) -> None:
         """Convert once and enqueue immutable data with explicit sampling provenance."""
         key = (owner, channel.id)
@@ -371,7 +400,9 @@ class Scheduler:
         )
         # Startup fixtures are already available profile values, not a newly drawn
         # laboratory specimen. Communication delay still applies to their delivery.
-        lab_delay = self.settings.lab_delay_s if channel.lab and not startup else 0
+        # A demo-paced assay is held no longer either: the synthetic laboratory
+        # hour would outlast the dashboard run that asked for the trend.
+        lab_delay = self.settings.lab_delay_s if channel.lab and not (startup or demo) else 0
         self.sink.submit(
             Observation(
                 reading=reading,

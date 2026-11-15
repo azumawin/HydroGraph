@@ -14,13 +14,20 @@ const HealthAssistant = () => {
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const transcriptEnd = useRef<HTMLDivElement>(null);
+  const transcript = useRef<HTMLDivElement>(null);
 
   const findingList = Object.values(findings);
   const hasFindings = findingList.length > 0;
 
+  // Pin the newest message by scrolling this panel's own region, not by asking
+  // the browser to bring an element into view: that walks every scrollable
+  // ancestor, and on a viewport shorter than the dashboard's minimum height it
+  // scrolls the page itself, taking the header with it. An empty transcript
+  // leaves the findings list where it loaded, at the top.
   useEffect(() => {
-    transcriptEnd.current?.scrollIntoView({ block: "end" });
+    const region = transcript.current;
+    if (region === null || (messages.length === 0 && !isSending && error === null)) return;
+    region.scrollTop = region.scrollHeight;
   }, [messages, isSending, error]);
 
   const send = async (content: string) => {
@@ -54,7 +61,10 @@ const HealthAssistant = () => {
         <MessageSquare className="vitals-dashboard-icon" />
         <h2 className="vitals-dashboard-panel-title m-0">Health assistant</h2>
       </header>
-      <div className="vitals-dashboard-panel-content min-h-0 flex-1 overflow-y-auto p-6">
+      <div
+        className="vitals-dashboard-panel-content vitals-dashboard-health-assistant-content"
+        ref={transcript}
+      >
         {!hasFindings && <p className="vitals-dashboard-findings-empty">No findings yet.</p>}
         <ul className="vitals-dashboard-findings">
           {findingList.map((finding) => {
@@ -114,7 +124,6 @@ const HealthAssistant = () => {
             </p>
           )}
           {error && <p className="vitals-dashboard-chat-message is-error">{error}</p>}
-          <div ref={transcriptEnd} />
         </div>
       </div>
       <form className="vitals-dashboard-chat-composer" onSubmit={handleSubmit}>

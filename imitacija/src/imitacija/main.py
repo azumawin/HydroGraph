@@ -28,6 +28,7 @@ def load_settings(
     duration: float | None,
     bp_demo_interval: float | None = None,
     glucose_demo_interval: float | None = None,
+    lab_demo_interval: float | None = None,
 ) -> Settings:
     """Load configuration only; generated observations are never written to this path."""
     raw = tomllib.loads(path.read_text()) if path is not None else {}
@@ -39,6 +40,8 @@ def load_settings(
         raw["bp_demo_interval_s"] = bp_demo_interval
     if glucose_demo_interval is not None:
         raw["glucose_demo_interval_s"] = glucose_demo_interval
+    if lab_demo_interval is not None:
+        raw["lab_demo_interval_s"] = lab_demo_interval
     return Settings.model_validate(raw)
 
 
@@ -131,6 +134,13 @@ async def _run_worker(settings: Settings, preview: PreviewState | None) -> None:
                 f"{settings.glucose_demo_interval_s}s",
                 file=sys.stderr,
             )
+        if settings.lab_demo_interval_s is not None:
+            print(
+                "assay and specimen demo: every "
+                f"{settings.lab_demo_interval_s}s along each channel's own calendar, "
+                "available immediately",
+                file=sys.stderr,
+            )
         stop = asyncio.Event()
         loop = asyncio.get_running_loop()
         installed: list[signal.Signals] = []
@@ -186,6 +196,12 @@ def main() -> None:
         "the 5-minute sensor window whose first result lands at 343s",
     )
     parser.add_argument(
+        "--lab-demo-interval",
+        type=float,
+        help="enable assay, 24h-specimen and spot-collection trends at this simulation-second "
+        "interval, instead of their own hourly, daily, weekly and monthly calendars",
+    )
+    parser.add_argument(
         "--dictionary", action="store_true", help="print static metadata JSON and exit"
     )
     parser.add_argument(
@@ -209,6 +225,7 @@ def main() -> None:
             args.duration,
             args.bp_demo_interval,
             args.glucose_demo_interval,
+            args.lab_demo_interval,
         )
         # Validate registry-dependent names even when only exporting configuration.
         Scheduler(settings, RealClock(settings.speed), _DiscardSink())

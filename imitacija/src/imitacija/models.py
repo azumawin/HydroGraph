@@ -272,6 +272,9 @@ class Settings(FrozenModel):
     # Explicit dashboard demo override; None retains the CGM's 5-minute window,
     # whose first completed result is 343 s into the run.
     glucose_demo_interval_s: float | None = Field(default=None, ge=0.1, le=60)
+    # Explicit dashboard demo override; None retains each sparse group's own
+    # calendar, whose next result is hours, days or a month after the baseline.
+    lab_demo_interval_s: float | None = Field(default=None, ge=0.1, le=60)
     exercise_test_days: tuple[int, ...] = (0,)
     queue_capacity: int = Field(default=512, ge=1, le=100000)
     max_age_s: float = Field(default=86400 * 7, gt=0)

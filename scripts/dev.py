@@ -76,6 +76,7 @@ def main() -> int:
     parser.add_argument("--speed", type=float)
     parser.add_argument("--bp-demo-interval", type=float)
     parser.add_argument("--glucose-demo-interval", type=float)
+    parser.add_argument("--lab-demo-interval", type=float)
     parser.add_argument("--no-open", action="store_true")
     args = parser.parse_args()
     services: dict[str, subprocess.Popen] = {}
@@ -112,9 +113,16 @@ def main() -> int:
                         else "Glucose: every 5 simulated minutes (first at 343s).\n"
                     )
                     + (
-                        f"BP demo: paired samples every {args.bp_demo_interval} simulated seconds."
+                        f"BP demo: paired samples every {args.bp_demo_interval} "
+                        "simulated seconds.\n"
                         if args.bp_demo_interval is not None
-                        else "BP uses the configured scenario/protocol schedule."
+                        else "BP uses the configured scenario/protocol schedule.\n"
+                    )
+                    + (
+                        f"Assay/specimen demo: samples every {args.lab_demo_interval} "
+                        "simulated seconds along each channel's own calendar."
+                        if args.lab_demo_interval is not None
+                        else "Assays and specimens use their own calendars."
                     ),
                     flush=True,
                 )
@@ -154,6 +162,8 @@ def main() -> int:
                     command.extend(
                         ["--glucose-demo-interval", str(args.glucose_demo_interval)]
                     )
+                if args.lab_demo_interval is not None:
+                    command.extend(["--lab-demo-interval", str(args.lab_demo_interval)])
                 simulator = start("simulator", command, "imitacija")
                 if not args.no_open:
                     start(

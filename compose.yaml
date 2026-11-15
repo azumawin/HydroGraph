@@ -98,6 +98,10 @@ services:
       # one boot point until its first completed result 343 simulated seconds
       # in. 0 restores the 5-minute window.
       GLUCOSE_DEMO_INTERVAL: ${GLUCOSE_DEMO_INTERVAL:-5}
+      # The same for the assays, 24h specimens and spot collections: their own
+      # calendars put the next result hours, days or a month out, so the
+      # dashboard holds one boot point for each. 0 restores those calendars.
+      LAB_DEMO_INTERVAL: ${LAB_DEMO_INTERVAL:-5}
       BACKEND_URL: http://backend:8000
     depends_on:
       backend:

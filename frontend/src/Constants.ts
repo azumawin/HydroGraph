@@ -152,6 +152,39 @@ export const VITALS_METRICS = {
   },
 } satisfies Record<string, VitalMetric>;
 
+// The curated span of each charted vital, by channel, so the all-measurements
+// view draws those channels exactly as the Vitals tab does.
+export const VITALS_MIN_SPAN_BY_CHANNEL: Record<string, number> = Object.fromEntries(
+  Object.values(VITALS_METRICS).flatMap((metric: VitalMetric) =>
+    metric.SERIES.map((series) => [series.CHANNEL, metric.MIN_SPAN]),
+  ),
+);
+
+export const DASHBOARD_TABS = {
+  VITALS: { ID: "vitals", LABEL: "Vitals" },
+  MEASUREMENTS: { ID: "measurements", LABEL: "All measurements" },
+} as const;
+
+export type DashboardTabId = (typeof DASHBOARD_TABS)[keyof typeof DASHBOARD_TABS]["ID"];
+
+// The all-measurements tab: every channel in the dictionary, one row each.
+export const MEASUREMENTS = {
+  TITLE: "All measurements",
+  TABS_LABEL: "Dashboard views",
+  SCOPES: [
+    { ID: "crew", LABEL: "Crew" },
+    { ID: "environment", LABEL: "Cabin & environment" },
+  ] as const,
+  NOT_MEASURED: "Not measured",
+  NO_VALUE: "—",
+  LOADING: "Loading the dictionary…",
+  CHART_COLOR: "var(--color-accent)",
+  // For numeric channels without a curated span: the axis is at least this
+  // fraction of the current value wide, and never narrower than the floor.
+  FALLBACK_SPAN_FRACTION: 0.05,
+  FALLBACK_SPAN_FLOOR: 0.001,
+};
+
 export const VITALS_CHART = {
   MARGIN: { top: 8, right: 12, bottom: 0, left: 0 },
   TICK: { fill: "var(--color-text-secondary)", fontSize: 11 },

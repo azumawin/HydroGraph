@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Literal
 
-from .frequency import FREQUENCIES
+from .frequency import FREQUENCIES, LAB_DEMO_CALENDAR
 from .models import Environment, FrozenModel, Settings
 from .scenarios import EVA_CHANNELS, HYPERCAPNIA_CHANNELS, INFECTION_CHANNELS, SANS_CHANNELS
 from .units import MMHG_TO_PA
@@ -775,6 +775,13 @@ def dictionary(
             f"dashboard demo: synthetic trend every {settings.glucose_demo_interval_s}s, "
             f"averaging that window's raw samples; replaces the 5-minute CGM window"
         )
+    if settings and settings.lab_demo_interval_s is not None:
+        for group, calendar in LAB_DEMO_CALENDAR.items():
+            overrides[group] = (
+                f"dashboard demo: every {settings.lab_demo_interval_s}s, each sample "
+                f"{calendar.step}s further along this channel's own calendar from "
+                f"{calendar.first}s; results are not held for laboratory processing"
+            )
     return Dictionary(
         environment=environment,
         acute_infection_scenario=(
@@ -833,7 +840,15 @@ def dictionary(
                     and settings.glucose_demo_interval_s is not None
                     else c.window_s
                 ),
-                availability_delay_s=lab_delay_s if c.lab else 0,
+                availability_delay_s=(
+                    0
+                    if settings is not None
+                    and settings.lab_demo_interval_s is not None
+                    and c.group in LAB_DEMO_CALENDAR
+                    else lab_delay_s
+                    if c.lab
+                    else 0
+                ),
                 citations=(c.source,),
                 value_schema="enum:ALERT,CONFUSION,VOICE,PAIN,UNRESPONSIVE"
                 if c.unit == "ACVPU"
@@ -849,6 +864,11 @@ def dictionary(
                         c.group == "glucose"
                         and settings
                         and settings.glucose_demo_interval_s is not None
+                    )
+                    or (
+                        c.group in LAB_DEMO_CALENDAR
+                        and settings
+                        and settings.lab_demo_interval_s is not None
                     )
                     else "docs/frequency_table.md"
                 ),

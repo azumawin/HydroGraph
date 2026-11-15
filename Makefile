@@ -13,7 +13,11 @@ BP_DEMO_ARG = $(if $(filter-out 0,$(BP_DEMO_INTERVAL)),--bp-demo-interval $(BP_D
 # whose first completed result is 343 simulated seconds into the run.
 GLUCOSE_DEMO_INTERVAL ?= 5
 GLUCOSE_DEMO_ARG = $(if $(filter-out 0,$(GLUCOSE_DEMO_INTERVAL)),--glucose-demo-interval $(GLUCOSE_DEMO_INTERVAL))
-SIM = uv run imitacija --config $(CONFIG) $(if $(SPEED),--speed $(SPEED)) $(BP_DEMO_ARG) $(GLUCOSE_DEMO_ARG)
+# Assays, 24h specimens and spot collections for the dashboard; 0 restores their
+# own hourly, daily, weekly and monthly calendars, which a demo never reaches.
+LAB_DEMO_INTERVAL ?= 5
+LAB_DEMO_ARG = $(if $(filter-out 0,$(LAB_DEMO_INTERVAL)),--lab-demo-interval $(LAB_DEMO_INTERVAL))
+SIM = uv run imitacija --config $(CONFIG) $(if $(SPEED),--speed $(SPEED)) $(BP_DEMO_ARG) $(GLUCOSE_DEMO_ARG) $(LAB_DEMO_ARG)
 FRONTEND_URL = http://127.0.0.1:5173
 VITE = ./node_modules/.bin/vite --host 127.0.0.1 --port 5173 --strictPort
 
@@ -45,7 +49,7 @@ open: ## Open the frontend in the browser
 	uv run --no-project python -m webbrowser $(FRONTEND_URL)
 
 dev: ## Fresh demo database + backend + frontend + simulator; Ctrl+C stops all
-	$(PYTHON) scripts/dev.py --config "$(CONFIG)" $(if $(SPEED),--speed "$(SPEED)") $(BP_DEMO_ARG) $(GLUCOSE_DEMO_ARG) $(if $(filter 0,$(OPEN_BROWSER)),--no-open)
+	$(PYTHON) scripts/dev.py --config "$(CONFIG)" $(if $(SPEED),--speed "$(SPEED)") $(BP_DEMO_ARG) $(GLUCOSE_DEMO_ARG) $(LAB_DEMO_ARG) $(if $(filter 0,$(OPEN_BROWSER)),--no-open)
 
 test: ## Run backend, core, simulator and dashboard tests
 	cd backend && uv run pytest -q

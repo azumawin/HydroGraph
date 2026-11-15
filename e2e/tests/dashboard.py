@@ -66,3 +66,24 @@ def environment_facts(page: Page) -> Locator:
 
 def root(page: Page) -> Locator:
     return page.locator(".vitals-dashboard")
+
+
+def tab(page: Page, label: str) -> Locator:
+    """One of the header tabs, e.g. "All measurements"."""
+    return page.get_by_role("tab", name=label)
+
+
+def measurement(page: Page, name: str) -> Locator:
+    """One row of the all-measurements tab, by the channel's display name."""
+    heading = page.locator(
+        ".vitals-dashboard-measurement-name", has_text=re.compile(f"^{re.escape(name)}$")
+    )
+    return page.locator(".vitals-dashboard-measurement").filter(has=heading)
+
+
+def measurement_value(row: Locator) -> Locator:
+    return row.locator(".vitals-dashboard-measurement-value")
+
+
+def measurement_status(row: Locator) -> Locator:
+    return row.locator(".vitals-dashboard-reading-status")

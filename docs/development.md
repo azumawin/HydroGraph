@@ -47,6 +47,18 @@ per second before delivery/rendering limits. `BP_DEMO_INTERVAL=10` changes the
 interval. `BP_DEMO_INTERVAL=0` restores the original pressure protocol without
 the demo modulation. The standalone CLI enables it with `--bp-demo-interval 5`.
 
+`make dev` and `make sim` also enable the assay and specimen demo every **5
+simulated seconds**. Cortisol, troponin, lactate, vitamin D, IL-6, body mass,
+urine volume, specific gravity, NTx and the sweat patch acquire on calendars
+whose next result is hours, days or a month away, so the all-measurements tab
+held one startup point for each of them. Every demo sample is this simulator's
+own value one step further along that channel's own calendar, delivered without
+the `lab_delay_s` laboratory hold; the values stay inside their nominal bands,
+so no new alert appears. `LAB_DEMO_INTERVAL=0` restores the calendars, and
+`--lab-demo-interval 5` enables the mode from the standalone CLI. A scenario
+that gives its target crew member an explicit schedule for one of these groups,
+such as the EVA mass points, keeps that schedule.
+
 The original schedules, with the pressure demo disabled, are:
 
 | Measurement | Healthy schedule after startup |

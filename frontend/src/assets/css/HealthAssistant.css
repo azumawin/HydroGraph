@@ -1,3 +1,18 @@
+/* The panel's single scroll region: the findings list with the transcript
+   underneath it, the composer pinned below it outside the scroll. The gutter and
+   the hairline scrollbar are the ones every other panel's scroll area uses. */
+.vitals-dashboard .vitals-dashboard-health-assistant-content {
+  flex: 1;
+  min-height: 0;
+  padding: 24px;
+  overflow-y: auto;
+  /* Reaching either end must not hand the scroll to the page behind the
+     fixed-height dashboard. */
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
 .vitals-dashboard .vitals-dashboard-findings {
   display: grid;
   gap: 8px;
